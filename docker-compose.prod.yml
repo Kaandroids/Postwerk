@@ -75,10 +75,13 @@ services:
     stop_grace_period: 40s
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/api/v1/health"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      start_period: 60s
-      retries: 3
+      # Cold JVM + JPA/Hibernate boot on the small VM takes ~130s (worse during `up --build`
+      # while Maven/Angular thrash swap). Keep the container in "starting" well past that so a
+      # slow-but-healthy backend isn't killed and the dependent frontend isn't aborted.
+      start_period: 240s
+      retries: 5
     deploy:
       resources:
         limits:
