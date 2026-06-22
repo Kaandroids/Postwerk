@@ -154,6 +154,10 @@ All AI system prompts are externalized into template files, loaded by `PromptSer
 - Custom read-only canvas (no Foblex Flow) with email packet animations
 - Must converse 2+ exchanges before building
 
+### Integrations (callable, trigger-less automations)
+- Second automation `kind`: `AUTOMATION` (default) vs `INTEGRATION` — a trigger-less reusable "function": `INPUT` (exactly 1, entry) → flow → `OUTPUT` (0/1, return), invoked from automations via the `INTEGRATION_CALL` node. Reuses the whole execution engine via the `kind` discriminator (migration **V60**).
+- Page `/dashboard/integrations`; the automation editor is reused with `INPUT`/`OUTPUT`/`INTEGRATION_CALL` nodes.
+
 ## Theme System & CSS Variables
 - **Definition:** `frontend/src/styles/_themes.scss`
 - **Service:** `ThemeService` — `theme` (`light`/`dark`), `darkVariant` (`slate`/`warm`/`plum`/`black`)
