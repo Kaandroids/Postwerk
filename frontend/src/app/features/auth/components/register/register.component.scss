@@ -75,6 +75,21 @@
   &:hover { text-decoration: underline; }
 }
 
+.success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: oklch(0.62 0.16 150 / 0.12);
+  color: var(--success);
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+
+.muted {
+  color: var(--fg-subtle);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }

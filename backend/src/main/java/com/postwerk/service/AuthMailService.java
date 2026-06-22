@@ -40,7 +40,7 @@ public class AuthMailService {
 
     public void sendVerificationEmail(User user, String token, String lang) {
         String language = normalize(lang);
-        String link = frontendBaseUrl + "/verify-email?token=" + encode(token);
+        String link = frontendBaseUrl + "/auth/verify-email?token=" + encode(token);
         Map<String, String> vars = Map.of(
                 "name", displayName(user),
                 "link", link,
@@ -52,7 +52,7 @@ public class AuthMailService {
 
     public void sendPasswordResetEmail(User user, String token, String lang) {
         String language = normalize(lang);
-        String link = frontendBaseUrl + "/reset-password?token=" + encode(token);
+        String link = frontendBaseUrl + "/auth/reset-password?token=" + encode(token);
         Map<String, String> vars = Map.of(
                 "name", displayName(user),
                 "link", link,

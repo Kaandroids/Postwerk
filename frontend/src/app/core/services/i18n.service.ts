@@ -115,6 +115,31 @@ const DICT: Record<Lang, Record<string, string>> = {
     reset_success_body: 'Wir haben einen Link an %email% gesendet. Prüfen Sie auch Ihren Spam-Ordner.',
     reset_resend: 'E-Mail erneut senden',
 
+    // Email verification
+    register_check_title: 'Bitte bestätige deine E-Mail',
+    register_check_body: 'Wir haben einen Bestätigungslink an %email% gesendet. Klicke darauf, um dein Konto zu aktivieren.',
+    register_check_hint: 'Prüfe auch deinen Spam-Ordner, falls die E-Mail nicht ankommt.',
+    register_resend: 'Bestätigungs-E-Mail erneut senden',
+    register_resend_done: 'E-Mail erneut gesendet. Prüfe dein Postfach.',
+    login_error_unverified: 'Bitte bestätige zuerst deine E-Mail-Adresse, um dich anzumelden.',
+    login_resend_verification: 'Bestätigungs-E-Mail erneut senden',
+    verify_progress_title: 'E-Mail wird bestätigt …',
+    verify_progress_body: 'Einen Moment, wir bestätigen deine E-Mail-Adresse.',
+    verify_success_title: 'E-Mail bestätigt',
+    verify_success_body: 'Dein Konto ist jetzt aktiv. Wir leiten dich weiter …',
+    verify_success_cta: 'Zum Dashboard',
+    verify_error_title: 'Link ungültig oder abgelaufen',
+    verify_error_body: 'Dieser Bestätigungslink ist ungültig oder abgelaufen. Fordere unten einen neuen an.',
+    verify_error_cta: 'Neuen Link senden',
+
+    // Password reset (set new password from the email link)
+    reset_confirm_title: 'Neues Passwort festlegen',
+    reset_confirm_subtitle: 'Wähle ein neues Passwort für dein Konto.',
+    reset_confirm_submit: 'Passwort speichern',
+    reset_confirm_error: 'Passwort konnte nicht zurückgesetzt werden. Der Link ist möglicherweise abgelaufen.',
+    reset_confirm_success_title: 'Passwort aktualisiert',
+    reset_confirm_success_body: 'Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.',
+
     legal_privacy: 'Datenschutzerklärung',
     legal_imprint: 'Impressum',
     legal_terms: 'AGB',
@@ -3671,6 +3696,31 @@ const DICT: Record<Lang, Record<string, string>> = {
     reset_success_title: 'Email sent',
     reset_success_body: "We sent a link to %email%. Check your spam folder if you don't see it.",
     reset_resend: 'Resend email',
+
+    // Email verification
+    register_check_title: 'Please confirm your email',
+    register_check_body: 'We sent a confirmation link to %email%. Click it to activate your account.',
+    register_check_hint: "Check your spam folder if the email doesn't arrive.",
+    register_resend: 'Resend confirmation email',
+    register_resend_done: 'Email resent. Check your inbox.',
+    login_error_unverified: 'Please confirm your email address before signing in.',
+    login_resend_verification: 'Resend confirmation email',
+    verify_progress_title: 'Confirming your email …',
+    verify_progress_body: 'One moment while we confirm your email address.',
+    verify_success_title: 'Email confirmed',
+    verify_success_body: 'Your account is now active. Redirecting you …',
+    verify_success_cta: 'Go to dashboard',
+    verify_error_title: 'Link invalid or expired',
+    verify_error_body: 'This confirmation link is invalid or has expired. Request a new one below.',
+    verify_error_cta: 'Send new link',
+
+    // Password reset (set new password from the email link)
+    reset_confirm_title: 'Set a new password',
+    reset_confirm_subtitle: 'Choose a new password for your account.',
+    reset_confirm_submit: 'Save password',
+    reset_confirm_error: 'Could not reset your password. The link may have expired.',
+    reset_confirm_success_title: 'Password updated',
+    reset_confirm_success_body: 'Your password has been changed. You can now sign in.',
 
     legal_privacy: 'Privacy Policy',
     legal_imprint: 'Imprint',

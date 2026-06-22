@@ -1,0 +1,51 @@
+<div class="form-card fade-enter">
+  @switch (state()) {
+    @case ('verifying') {
+      <div class="success-icon">
+        <app-icon name="mail" />
+      </div>
+      <h1 class="title">{{ i18n.t('verify_progress_title') }}</h1>
+      <p class="subtitle">{{ i18n.t('verify_progress_body') }}</p>
+    }
+    @case ('success') {
+      <div class="success-icon">
+        <app-icon name="check" />
+      </div>
+      <h1 class="title">{{ i18n.t('verify_success_title') }}</h1>
+      <p class="subtitle">{{ i18n.t('verify_success_body') }}</p>
+      <app-button variant="primary" routerLink="/dashboard">
+        {{ i18n.t('verify_success_cta') }}
+      </app-button>
+    }
+    @case ('error') {
+      <div class="success-icon error">
+        <app-icon name="alert" />
+      </div>
+      <h1 class="title">{{ i18n.t('verify_error_title') }}</h1>
+      <p class="subtitle">{{ i18n.t('verify_error_body') }}</p>
+
+      @if (resendDone()) {
+        <p class="subtitle muted">{{ i18n.t('register_resend_done') }}</p>
+      } @else {
+        <div class="form">
+          <app-input
+            [label]="i18n.t('email')"
+            type="email"
+            [placeholder]="i18n.t('login_emailPlaceholder')"
+            autocomplete="email"
+            inputId="verify-resend-email"
+            [ngModel]="resendEmail()"
+            (ngModelChange)="resendEmail.set($event)"
+            name="email"
+          />
+          <app-button variant="primary" (click)="resend()">
+            {{ i18n.t('verify_error_cta') }}
+          </app-button>
+        </div>
+      }
+      <div class="alt-cta">
+        <a routerLink="/auth/login" class="link-accent">← {{ i18n.t('reset_back') }}</a>
+      </div>
+    }
+  }
+</div>

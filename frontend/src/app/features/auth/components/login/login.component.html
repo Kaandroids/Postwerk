@@ -6,6 +6,18 @@
   <form class="form" (ngSubmit)="submit()" novalidate>
     <app-error-banner [message]="error()" />
 
+    @if (needsVerification()) {
+      <div class="alt-cta">
+        @if (resendDone()) {
+          <span class="muted">{{ i18n.t('register_resend_done') }}</span>
+        } @else {
+          <a href="#" class="link-accent" (click)="$event.preventDefault(); resend()">
+            {{ i18n.t('login_resend_verification') }}
+          </a>
+        }
+      </div>
+    }
+
     <app-input
       [label]="i18n.t('email')"
       type="email"

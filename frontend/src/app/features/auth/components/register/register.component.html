@@ -1,3 +1,25 @@
+@if (registeredEmail()) {
+  <div class="form-card fade-enter">
+    <div class="success-icon">
+      <app-icon name="mail" />
+    </div>
+    <h1 class="title">{{ i18n.t('register_check_title') }}</h1>
+    <p class="subtitle">{{ i18n.t('register_check_body', { email: registeredEmail()! }) }}</p>
+    <p class="subtitle">{{ i18n.t('register_check_hint') }}</p>
+    <app-button variant="primary" routerLink="/auth/login">
+      {{ i18n.t('reset_back') }}
+    </app-button>
+    <div class="alt-cta">
+      @if (resendDone()) {
+        <span class="muted">{{ i18n.t('register_resend_done') }}</span>
+      } @else {
+        <a href="#" class="link-accent" (click)="$event.preventDefault(); resend()">
+          {{ i18n.t('register_resend') }}
+        </a>
+      }
+    </div>
+  </div>
+} @else {
 <div class="form-card fade-enter">
   <div class="eyebrow">{{ i18n.t('brandTagline') }}</div>
   <h1 class="title">{{ i18n.t('register_title') }}</h1>
@@ -107,3 +129,4 @@
     <a routerLink="/auth/login" class="link-accent">{{ i18n.t('register_loginLink') }}</a>
   </div>
 </div>
+}
