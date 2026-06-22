@@ -29,11 +29,26 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /** Registers a new user account and returns JWT tokens. */
+    /** Registers a new user account (unverified) and emails a verification link. No tokens are issued. */
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                  HttpServletRequest httpRequest) {
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                      HttpServletRequest httpRequest) {
         return ResponseEntity.ok(authService.register(request, IpResolverUtil.extractIp(httpRequest)));
+    }
+
+    /** Confirms an email address from a verification token and returns JWT tokens (auto-login). */
+    @PostMapping("/verify-email")
+    public ResponseEntity<AuthResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request,
+                                                    HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.verifyEmail(request.token(), IpResolverUtil.extractIp(httpRequest)));
+    }
+
+    /** Re-sends the verification email to an unverified account (throttled; always 200). */
+    @PostMapping("/resend-verification")
+    public ResponseEntity<MessageResponse> resendVerification(@Valid @RequestBody ResendVerificationRequest request,
+                                                              HttpServletRequest httpRequest) {
+        authService.resendVerification(request.email(), request.lang(), IpResolverUtil.extractIp(httpRequest));
+        return ResponseEntity.ok(new MessageResponse("If an account exists, a verification email has been sent."));
     }
 
     /** Authenticates a user by email/password and returns JWT tokens. */
@@ -64,11 +79,19 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
     }
 
-    /** Initiates a password reset flow by sending a reset email. */
+    /** Initiates a password reset flow by sending a reset email (always 200; no account-existence leak). */
     @PostMapping("/reset-password")
     public ResponseEntity<MessageResponse> resetPassword(@RequestBody @Valid ResetPasswordRequest request,
                                                           HttpServletRequest httpRequest) {
-        authService.resetPasswordRequest(request.email(), IpResolverUtil.extractIp(httpRequest));
-        return ResponseEntity.ok(new MessageResponse("Password reset email sent"));
+        authService.resetPasswordRequest(request.email(), request.lang(), IpResolverUtil.extractIp(httpRequest));
+        return ResponseEntity.ok(new MessageResponse("If an account exists, a password reset email has been sent."));
+    }
+
+    /** Completes a password reset using the emailed token and a new password. */
+    @PostMapping("/reset-password/confirm")
+    public ResponseEntity<MessageResponse> confirmReset(@RequestBody @Valid PasswordResetConfirmRequest request,
+                                                        HttpServletRequest httpRequest) {
+        authService.resetPassword(request.token(), request.newPassword(), IpResolverUtil.extractIp(httpRequest));
+        return ResponseEntity.ok(new MessageResponse("Password has been reset successfully."));
     }
 }

@@ -244,7 +244,8 @@ public class AdminServiceImpl implements AdminService {
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", targetUserId.toString()));
         // Delegates to the normal self-service flow (audit + reset-email); never exposes/sets a password.
-        authService.resetPasswordRequest(user.getEmail(), ipAddress);
+        // Language defaults to English (admin-triggered; recipient's UI locale isn't known here).
+        authService.resetPasswordRequest(user.getEmail(), null, ipAddress);
     }
 
     @Override

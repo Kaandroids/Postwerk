@@ -1,0 +1,9 @@
+Hi {{name}},
+
+Welcome to Postwerk! Please confirm your email address to activate your account:
+
+{{link}}
+
+This link expires in {{expiryHours}} hours. If you didn't create a Postwerk account, you can safely ignore this email.
+
+- Postwerk

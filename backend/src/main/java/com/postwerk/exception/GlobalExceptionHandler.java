@@ -43,6 +43,18 @@ public class GlobalExceptionHandler {
                                       long maxAllowed, String planName, String message,
                                       Instant timestamp) {}
 
+    /** Error response for a login blocked by an unverified email, with a machine-readable code. */
+    public record VerificationRequiredResponse(int status, String code, String message,
+                                               String email, Instant timestamp) {}
+
+    /** Handles login attempts before email verification (HTTP 403, code EMAIL_NOT_VERIFIED). */
+    @ExceptionHandler(EmailNotVerifiedException.class)
+    public ResponseEntity<VerificationRequiredResponse> handleEmailNotVerified(EmailNotVerifiedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new VerificationRequiredResponse(403, "EMAIL_NOT_VERIFIED", ex.getMessage(),
+                        ex.getEmail(), Instant.now()));
+    }
+
     /** Handles quota exceeded errors (HTTP 429). */
     @ExceptionHandler(QuotaExceededException.class)
     public ResponseEntity<QuotaErrorResponse> handleQuota(QuotaExceededException ex) {

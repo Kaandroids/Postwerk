@@ -29,6 +29,7 @@ public final class TestFixtures {
                 .fullName(TEST_NAME)
                 .company("Test Corp")
                 .phone("+49123456789")
+                .emailVerified(true)
                 .marketingOptIn(false)
                 .privacyAcceptedAt(Instant.now())
                 .termsAcceptedAt(Instant.now())
@@ -157,11 +158,11 @@ public final class TestFixtures {
     }
 
     public static RegisterRequest createRegisterRequest() {
-        return new RegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, "Test Corp", "+49123456789", false, true);
+        return new RegisterRequest(TEST_NAME, TEST_EMAIL, TEST_PASSWORD, "Test Corp", "+49123456789", false, true, null, null);
     }
 
     public static RegisterRequest createRegisterRequest(String email) {
-        return new RegisterRequest(TEST_NAME, email, TEST_PASSWORD, "Test Corp", "+49123456789", false, true);
+        return new RegisterRequest(TEST_NAME, email, TEST_PASSWORD, "Test Corp", "+49123456789", false, true, null, null);
     }
 
     public static LoginRequest createLoginRequest() {

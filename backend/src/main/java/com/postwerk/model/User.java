@@ -61,6 +61,15 @@ public class User {
     @Column(name = "staff_role_since")
     private Instant staffRoleSince;
 
+    /** Whether the user has confirmed ownership of their email address. New sign-ups start false. */
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    /** When the email address was confirmed; null until verified. */
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
     @Column(name = "marketing_opt_in", nullable = false)
     private boolean marketingOptIn;
 
