@@ -59,6 +59,31 @@ services:
     networks:
       - backend-net
 
+  # Dev-only mail catcher: the backend sends verification/reset mail here instead of the internet.
+  # SMTP on 1025; web UI at http://localhost:8025. Not part of the prod stack (prod uses Resend).
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: postwerk-mailpit
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend-net
+
   backend:
     build:
       context: ./backend
