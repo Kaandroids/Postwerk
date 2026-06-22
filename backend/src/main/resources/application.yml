@@ -41,6 +41,24 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
+  # System/transactional email (verification, password reset). Only used when app.mail.enabled=true;
+  # otherwise a logging fallback is wired so tests and no-mail dev still start. Mailpit in dev,
+  # Resend (smtp.resend.com) in prod — both are plain SMTP, only env differs.
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: gemini-2.5-flash
@@ -147,6 +165,15 @@ springdoc:
 
 app:
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  # Base URL of the Angular frontend — used to build clickable email links (verify, reset).
+  # In prod the frontend and API share the domain (Caddy path-routes); in dev the SPA is on :4200.
+  frontend-base-url: ${APP_FRONTEND_BASE_URL:http://localhost:4200}
+  mail:
+    # When false (default), email is logged instead of sent (tests / no-mail dev). Set true in
+    # any environment that has spring.mail.* configured (Mailpit dev, Resend prod).
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:noreply@postwerk.io}
+    from-name: ${MAIL_FROM_NAME:Postwerk}
   jwt:
     secret: ${JWT_SECRET}
     access-token-expiration-ms: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:900000}

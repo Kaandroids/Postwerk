@@ -33,13 +33,9 @@ test.describe('Register', () => {
     await expect(page).toHaveURL(/\/auth\/register/);
   });
 
-  test('should register successfully', async ({ page }) => {
+  test('should register and show the verification prompt', async ({ page }) => {
     const api = new MockApi();
-    api
-      .post('/api/v1/auth/register', mockRegisterResponse)
-      .get('/api/v1/users/me', { id: 1, email: 'new@example.com', fullName: 'Test User' })
-      .get('/api/v1/email-accounts', [])
-      .get(/\/folders/, []);
+    api.post('/api/v1/auth/register', mockRegisterResponse);
     await api.apply(page);
 
     await registerPage.register({
@@ -48,7 +44,8 @@ test.describe('Register', () => {
       password: 'StrongPass123!',
       confirm: 'StrongPass123!',
     });
-    await expect(page).toHaveURL(/\/dashboard/);
+    // Registration no longer logs in — the user must confirm their email first.
+    await expect(registerPage.checkEmail).toBeVisible();
   });
 
   test('should navigate to login page', async ({ page }) => {

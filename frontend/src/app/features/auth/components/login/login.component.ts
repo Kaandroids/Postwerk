@@ -30,9 +30,15 @@ export class LoginComponent {
   fieldErr = signal<Record<string, boolean>>({});
   loading = signal(false);
 
+  // Shown when login is blocked because the email isn't verified yet.
+  needsVerification = signal(false);
+  resendDone = signal(false);
+
   async submit(): Promise<void> {
     this.error.set('');
     this.fieldErr.set({});
+    this.needsVerification.set(false);
+    this.resendDone.set(false);
 
     if (!this.email() || !this.password()) {
       this.error.set(this.i18n.t('login_error_required'));
@@ -49,7 +55,19 @@ export class LoginComponent {
       return;
     }
 
+    if (result.needsVerification) {
+      this.needsVerification.set(true);
+      this.error.set(this.i18n.t('login_error_unverified'));
+      return;
+    }
+
     this.error.set(result.error || this.i18n.t('login_error_password'));
     this.fieldErr.set({ email: true, password: true });
+  }
+
+  async resend(): Promise<void> {
+    if (!this.email()) return;
+    await this.auth.resendVerification(this.email(), this.i18n.lang());
+    this.resendDone.set(true);
   }
 }

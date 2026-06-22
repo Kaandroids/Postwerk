@@ -5,7 +5,15 @@ export const mockLoginResponse = {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3MTYwMDAwMDAsImV4cCI6OTk5OTk5OTk5OX0.fake',
 };
 
+// Registration no longer issues tokens — it returns a "verification required" envelope and the
+// user must confirm their email before logging in.
 export const mockRegisterResponse = {
+  verificationRequired: true,
+  email: 'new@example.com',
+};
+
+// The /auth/verify-email endpoint logs the user in (returns tokens) once the link is opened.
+export const mockVerifyEmailResponse = {
   ...mockLoginResponse,
 };
 

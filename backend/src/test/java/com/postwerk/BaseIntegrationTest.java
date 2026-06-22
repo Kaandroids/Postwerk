@@ -39,9 +39,19 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected UserRepository userRepository;
 
-    protected AuthResponse registerAndLogin(String email) {
+    /** Registers a new account and marks its email verified (without logging in). */
+    protected void registerVerified(String email) {
         RegisterRequest req = TestFixtures.createRegisterRequest(email);
-        return authService.register(req, TestFixtures.TEST_IP);
+        authService.register(req, TestFixtures.TEST_IP);
+        User user = userRepository.findByEmail(email).orElseThrow();
+        user.setEmailVerified(true);
+        userRepository.saveAndFlush(user);
+    }
+
+    protected AuthResponse registerAndLogin(String email) {
+        // Registration no longer issues tokens (account starts unverified); verify, then log in.
+        registerVerified(email);
+        return authService.login(new LoginRequest(email, TestFixtures.TEST_PASSWORD), TestFixtures.TEST_IP);
     }
 
     protected String registerAndGetToken(String email) {

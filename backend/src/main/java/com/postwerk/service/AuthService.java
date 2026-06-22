@@ -2,12 +2,16 @@ package com.postwerk.service;
 
 import com.postwerk.dto.auth.*;
 import com.postwerk.exception.AuthException;
+import com.postwerk.exception.EmailNotVerifiedException;
 import com.postwerk.model.AuditAction;
 import com.postwerk.model.Plan;
 import com.postwerk.model.User;
 import com.postwerk.repository.PlanRepository;
 import com.postwerk.repository.UserRepository;
 import java.time.Instant;
+import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -24,6 +28,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository userRepository;
     private final PlanRepository planRepository;
     private final PasswordEncoder passwordEncoder;
@@ -35,6 +41,9 @@ public class AuthService {
     private final AuditService auditService;
     private final LoginRateLimitService rateLimitService;
     private final OrganizationService organizationService;
+    private final VerificationTokenService verificationTokenService;
+    private final AuthMailService authMailService;
+    private final WizardService wizardService;
 
     public AuthService(UserRepository userRepository,
                        PlanRepository planRepository,
@@ -46,7 +55,10 @@ public class AuthService {
                        CustomUserDetailsService userDetailsService,
                        AuditService auditService,
                        LoginRateLimitService rateLimitService,
-                       OrganizationService organizationService) {
+                       OrganizationService organizationService,
+                       VerificationTokenService verificationTokenService,
+                       AuthMailService authMailService,
+                       WizardService wizardService) {
         this.userRepository = userRepository;
         this.planRepository = planRepository;
         this.passwordEncoder = passwordEncoder;
@@ -58,9 +70,18 @@ public class AuthService {
         this.auditService = auditService;
         this.rateLimitService = rateLimitService;
         this.organizationService = organizationService;
+        this.verificationTokenService = verificationTokenService;
+        this.authMailService = authMailService;
+        this.wizardService = wizardService;
     }
 
-    public AuthResponse register(RegisterRequest request, String ipAddress) {
+    /**
+     * Registers a new account in the UNVERIFIED state. No tokens are issued — the user must confirm
+     * their email before they can log in. A wizard session (from the /getstarted flow) is claimed
+     * server-side here, while it is still fresh in Redis, so its automation survives the (possibly
+     * long) gap until the user verifies.
+     */
+    public RegisterResponse register(RegisterRequest request, String ipAddress) {
         if (userRepository.existsByEmail(request.email())) {
             throw new AuthException("Registration failed. Please try again or use a different email.");
         }
@@ -72,6 +93,7 @@ public class AuthService {
                 .fullName(request.fullName())
                 .company(request.company())
                 .phone(request.phone())
+                .emailVerified(false)
                 .marketingOptIn(request.marketingOptIn())
                 .privacyAcceptedAt(now)
                 .termsAcceptedAt(now)
@@ -86,13 +108,35 @@ public class AuthService {
         // resources have an owning organization from day one.
         organizationService.provisionPersonalOrg(user);
 
+        // Claim the wizard session now (best-effort) — see method javadoc for why this happens at
+        // register time rather than after login.
+        claimWizardSession(request.wizardSessionId(), user.getId(), ipAddress);
+
         auditService.log(user.getId(), AuditAction.USER_REGISTERED, ipAddress);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-        String accessToken = jwtService.generateAccessToken(userDetails);
-        String refreshToken = refreshTokenService.create(user.getEmail());
+        // Send the verification link. Best-effort inside AuthMailService; the user can resend.
+        String token = verificationTokenService.createVerificationToken(user.getId());
+        authMailService.sendVerificationEmail(user, token, request.lang());
 
-        return new AuthResponse(accessToken, refreshToken, jwtService.getAccessTokenExpirationMs(), user.getRole().name());
+        return new RegisterResponse(true, user.getEmail());
+    }
+
+    /**
+     * Materializes a /getstarted wizard session's resources into the freshly created account.
+     * Best-effort: any failure (session expired, IP mismatch, not in "ready" phase) is logged and
+     * swallowed so it never blocks registration — the user still gets their account.
+     */
+    private void claimWizardSession(String wizardSessionId, UUID userId, String ipAddress) {
+        if (wizardSessionId == null || wizardSessionId.isBlank()) {
+            return;
+        }
+        try {
+            UUID sessionId = UUID.fromString(wizardSessionId.trim());
+            wizardService.claimSession(sessionId, userId, ipAddress);
+        } catch (Exception e) {
+            log.warn("Wizard claim during registration failed for user {} (session {}): {}",
+                    userId, wizardSessionId, e.getMessage());
+        }
     }
 
     public AuthResponse login(LoginRequest request, String ipAddress) {
@@ -140,6 +184,14 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new AuthException("User not found"));
 
+        // Gate: the account must have a confirmed email before it can log in. Credentials were
+        // already verified above, so this is a distinct, recoverable state (resend verification).
+        if (!user.isEmailVerified()) {
+            auditService.log(user.getId(), AuditAction.USER_LOGIN,
+                    "Blocked: email not verified", ipAddress);
+            throw new EmailNotVerifiedException(user.getEmail());
+        }
+
         // Update last login info
         user.setLastLoginAt(Instant.now());
         user.setLastLoginIp(ipAddress);
@@ -176,7 +228,51 @@ public class AuthService {
         return new AuthResponse(newAccessToken, newRefreshToken, jwtService.getAccessTokenExpirationMs(), role);
     }
 
-    public void resetPasswordRequest(String email, String ipAddress) {
+    /**
+     * Confirms an email address from a verification token and logs the user in (issues tokens).
+     * The token is single-use (consumed from Redis).
+     */
+    public AuthResponse verifyEmail(String token, String ipAddress) {
+        UUID userId = verificationTokenService.consumeVerificationToken(token);
+        if (userId == null) {
+            throw new AuthException("This verification link is invalid or has expired.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("This verification link is invalid or has expired."));
+
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            user.setEmailVerifiedAt(Instant.now());
+            userRepository.save(user);
+            auditService.log(user.getId(), AuditAction.EMAIL_VERIFIED, ipAddress);
+        }
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String accessToken = jwtService.generateAccessToken(userDetails);
+        String refreshToken = refreshTokenService.create(user.getEmail());
+        return new AuthResponse(accessToken, refreshToken, jwtService.getAccessTokenExpirationMs(), user.getRole().name());
+    }
+
+    /**
+     * Re-sends the verification email to an unverified account. Always returns normally (no signal
+     * of whether the email exists) and is throttled by a short per-email cooldown.
+     */
+    public void resendVerification(String email, String lang, String ipAddress) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || user.isEmailVerified() || verificationTokenService.isResendOnCooldown(email)) {
+            return;
+        }
+        verificationTokenService.markResendSent(email);
+        String token = verificationTokenService.createVerificationToken(user.getId());
+        authMailService.sendVerificationEmail(user, token, lang);
+        auditService.log(user.getId(), AuditAction.VERIFICATION_EMAIL_RESENT, ipAddress);
+    }
+
+    /**
+     * Initiates a password reset by emailing a single-use reset link. Always returns normally so it
+     * never reveals whether an account exists for the given address.
+     */
+    public void resetPasswordRequest(String email, String lang, String ipAddress) {
         User user = userRepository.findByEmail(email).orElse(null);
         auditService.log(
                 user != null ? user.getId() : null,
@@ -184,7 +280,36 @@ public class AuthService {
                 "Email: " + email,
                 ipAddress
         );
-        // Actual email sending not implemented — log only
+        if (user == null) {
+            return;
+        }
+        String token = verificationTokenService.createResetToken(user.getId());
+        authMailService.sendPasswordResetEmail(user, token, lang);
+    }
+
+    /**
+     * Completes a password reset: validates the single-use token, sets the new password, and revokes
+     * all existing refresh tokens (sessions) for safety.
+     */
+    public void resetPassword(String token, String newPassword, String ipAddress) {
+        UUID userId = verificationTokenService.consumeResetToken(token);
+        if (userId == null) {
+            throw new AuthException("This password reset link is invalid or has expired.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AuthException("This password reset link is invalid or has expired."));
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // A reset implicitly proves email ownership — verify the account if it wasn't already.
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            user.setEmailVerifiedAt(Instant.now());
+        }
+        userRepository.save(user);
+
+        // Invalidate all active sessions — a reset should log out everywhere.
+        refreshTokenService.revokeAllForUser(user.getEmail());
+        auditService.log(user.getId(), AuditAction.PASSWORD_RESET_COMPLETED, ipAddress);
     }
 
     public void logout(String accessToken, String refreshToken, String ipAddress) {

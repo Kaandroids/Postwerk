@@ -13,6 +13,7 @@ export class RegisterPage {
   readonly loginLink: Locator;
   readonly errorBanner: Locator;
   readonly strengthMeter: Locator;
+  readonly checkEmail: Locator;
 
   constructor(private page: Page) {
     this.nameInput = page.locator('#reg-name');
@@ -27,6 +28,7 @@ export class RegisterPage {
     this.loginLink = page.locator('a[href*="login"]');
     this.errorBanner = page.locator('app-error-banner');
     this.strengthMeter = page.locator('app-strength-meter');
+    this.checkEmail = page.locator('[data-testid="register-check-email"]');
   }
 
   async goto() {

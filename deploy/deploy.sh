@@ -33,13 +33,22 @@ SPRING_PROFILES_ACTIVE=prod
 SERVER_PORT=8080
 FRONTEND_PORT=80
 APP_PUBLIC_BASE_URL=https://postwerk.io
+APP_FRONTEND_BASE_URL=https://postwerk.io
 CORS_ALLOWED_ORIGINS=https://postwerk.io,https://www.postwerk.io
 GEMINI_CHAT_MODEL=gemini-2.5-pro
+# Transactional email via Resend SMTP (Zoho keeps RECEIVING via MX; Resend only SENDS).
+MAIL_ENABLED=true
+MAIL_HOST=smtp.resend.com
+MAIL_PORT=587
+MAIL_USERNAME=resend
+MAIL_FROM=noreply@postwerk.io
+MAIL_FROM_NAME=Postwerk
 POSTGRES_PASSWORD=$(sec postwerk-postgres-password)
 REDIS_PASSWORD=$(sec postwerk-redis-password)
 JWT_SECRET=$(sec postwerk-jwt-secret)
 ENCRYPTION_KEY=$(sec postwerk-encryption-key)
 GEMINI_API_KEY=$(sec postwerk-gemini-api-key)
+MAIL_PASSWORD=$(sec postwerk-mail-password)
 EOF
 chmod 600 "$ENV_FILE"
 echo "    .env generated ($(wc -l < "$ENV_FILE") lines)."

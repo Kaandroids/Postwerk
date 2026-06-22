@@ -13,5 +13,9 @@ public record RegisterRequest(
         @Size(max = 100) String company,
         @Size(max = 30) String phone,
         boolean marketingOptIn,
-        @AssertTrue(message = "Terms and privacy policy must be accepted") boolean termsAccepted
+        @AssertTrue(message = "Terms and privacy policy must be accepted") boolean termsAccepted,
+        /** Optional UI language ("de"/"en") for the verification email. Defaults to English. */
+        @Size(max = 8) String lang,
+        /** Optional wizard session to claim into the new account (from the /getstarted flow). */
+        @Size(max = 64) String wizardSessionId
 ) {}
