@@ -139,7 +139,7 @@ All AI system prompts are externalized into template files, loaded by `PromptSer
 - `Role` enum: `USER`, `ADMIN` — stored in JWT, checked via `TokenService.isAdmin()`
 - Admin routes: `/api/v1/admin/**` protected with `hasRole("ADMIN")`
 - Frontend: `adminGuard`, `AdminService`, admin pages under `/dashboard/admin/*`
-- Plans: STARTER (AI disabled), PRO (€5 cap), ENTERPRISE (unlimited) — no payment integration yet
+- Plans (monthly `costLimitCents`): STARTER (€0.10, effectively AI-off), PRO (€5), BUSINESS (€20), ENTERPRISE (unlimited) — no payment integration yet
 
 ### AI Assistant Chat
 - **Backend:** `AiAssistantController` → `AiAssistantServiceImpl` → `AiToolRegistry` → Google Gemini API
@@ -248,10 +248,7 @@ Five surfaces under `features/marketplace/`: **Discover · Detail · Publish · 
   follows the org the install was made from (NOT the buyer's personal org). Duplicate-install guard + acquisition
   + cloned resources (`MarketplaceResourceCloner`) are all org-scoped on that active org.
   `saveAcquisitionConstants` rejects non-publishable names and encrypts secret values.
-- Controller `/api/v1/marketplace/...`: `GET/POST /listings`, `GET /listings/{id}`,
-  `POST /listings/{id}/install`, `DELETE /listings/{id}` (unpublish), `GET /library`,
-  `PUT /acquisitions/{id}/constants`, `PUT /acquisitions/{id}/accounts`,
-  `POST /acquisitions/{id}/activate`, `GET/POST /listings/{id}/reviews`.
+- Controller `MarketplaceController` (`/api/v1/marketplace/...`): listings CRUD + install, library, acquisition constants/accounts/activate, reviews (see the controller for exact routes).
 
 ### Frontend
 - `core/services/marketplace.service.ts` + `models/marketplace.model.ts`. All `mkt_*` i18n keys (DE+EN).
