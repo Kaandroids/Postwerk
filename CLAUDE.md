@@ -250,5 +250,6 @@ Five surfaces under `features/marketplace/`: **Discover · Detail · Publish · 
 ## Git
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
 - Feature branches: `feature/<name>`, bugfix: `fix/<name>`
+- **Commit frequently while building** — make small, logical, self-contained commits as you go (one per working step / file group), each one compiling/passing, instead of a single giant end-of-feature commit. Keeps the branch reviewable and easy to revert or bisect.
 - **`main` is PROTECTED (GitHub ruleset "Main Protection"): direct pushes are rejected.** NEVER `git push` to `main`. For EVERY change — even one-line/docs/hotfix — branch first (`feature/*`, `fix/*`, `docs/*`), commit there, push the branch, then open a PR to merge into `main`. Required approvals = 0 (solo), so the author can merge their own PR after checks pass.
 - Remotes: `origin` → `github.com/Kaandroids/Postwerk.git` (the live/public repo). The production VM deploys by pulling `main`.
