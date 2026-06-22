@@ -16,6 +16,11 @@
 </p>
 
 <p>
+  <a href="https://github.com/Kaandroids/Postwerk/actions/workflows/ci.yml"><img src="https://github.com/Kaandroids/Postwerk/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://codecov.io/gh/Kaandroids/Postwerk"><img src="https://codecov.io/gh/Kaandroids/Postwerk/branch/main/graph/badge.svg" alt="Coverage" /></a>
+</p>
+
+<p>
   <img src="https://img.shields.io/badge/Java-21-orange?logo=openjdk" alt="Java 21" />
   <img src="https://img.shields.io/badge/Spring%20Boot-3.4-green?logo=springboot" alt="Spring Boot 3.4" />
   <img src="https://img.shields.io/badge/Angular-19-red?logo=angular" alt="Angular 19" />
@@ -70,6 +75,19 @@ Postwerk is a full-stack SaaS platform that lets users connect their email accou
 - **Admin dashboard** — user management, plan administration, AI usage analytics, system stats
 - **Internationalization** — full German and English language support
 - **Dark/Light theme** — system-aware theme switching with CSS custom properties
+
+## Engineering Highlights
+
+> Short on time? These are the parts I'd point a reviewer at first — where most of the interesting engineering lives.
+
+- **DAG automation execution engine** — automations are graphs of typed nodes, each with its own processor/executor, run by a single engine rather than a switch statement. Supervised execution (AUTO / REVIEW / OFF), dry-run with per-node trace inspection, and reusable sub-flows ("integrations") invoked recursively with a depth guard.
+  → [`AutomationExecutorServiceImpl`](backend/src/main/java/com/postwerk/service/impl/AutomationExecutorServiceImpl.java) · [`service/executor/`](backend/src/main/java/com/postwerk/service/executor/)
+- **Conversational AI that builds automations** — a tool registry exposed to Google Gemini behind an `OPEN → PLANNING → BUILDING` phase machine, so write tools stay locked until the user confirms a plan.
+  → [`AiToolRegistry`](backend/src/main/java/com/postwerk/service/AiToolRegistry.java) · [`ConversationPhaseManager`](backend/src/main/java/com/postwerk/service/ConversationPhaseManager.java)
+- **Hybrid semantic search** — knowledge-base search fuses pgvector cosine similarity with Postgres full-text via **reciprocal rank fusion**, then an LLM match-judge applies a confidence threshold.
+  → [`KnowledgeBaseSearchServiceImpl`](backend/src/main/java/com/postwerk/service/impl/KnowledgeBaseSearchServiceImpl.java)
+- **One lint catalog, enforced on both sides** — backend (Java) and frontend (TypeScript) can't share code, so they share an issue-**code** vocabulary; the same validation rules gate the editor UI and block activation/publish server-side.
+  → [`AutomationValidator`](backend/src/main/java/com/postwerk/service/AutomationValidator.java) (Java) · `automation-lint.service.ts` (TS)
 
 ## Architecture
 
@@ -262,7 +280,7 @@ See [`.env.example`](.env.example) for the full list of required environment var
 
 Postwerk is a solo-built, full-stack portfolio project — designed and implemented end to end: the Spring Boot backend, the Angular frontend, the AI automation engine, the multi-tenant data model, and the GCP deployment (Terraform · Caddy · keyless Secret Manager). It runs as an open beta at [postwerk.io](https://postwerk.io).
 
-<!-- Optional: a short personal note — why you built it / the parts you found most interesting to engineer. -->
+I built Postwerk to push on the parts of full-stack work that are easy to hand-wave and hard to actually ship: a real execution engine instead of a pile of `if`s, multi-tenant isolation that holds at the query level, AI wired into the product through a typed tool registry rather than bolted on, and a production deployment I own end to end. The pieces I enjoyed engineering most were the node execution engine and the planning→building phase machine that lets the assistant change a live automation safely.
 
 ## License
 
