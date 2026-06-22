@@ -71,6 +71,15 @@ Postwerk/
 - `.env.example` documents required variables
 - Docker Compose reads `.env` automatically
 
+## Deployment (production)
+- **Live at https://postwerk.io** — open beta on a single **GCP Compute Engine VM** (Frankfurt, `europe-west3`) running `docker-compose.prod.yml`.
+- **Front door = Caddy** (`docker/caddy/Caddyfile`): reverse-proxy (`/api/*`→backend, `/*`→frontend) + automatic Let's Encrypt HTTPS. Replaces nginx in prod; Postgres/Redis/backend/frontend have NO published host ports.
+- **Deploy:** `deploy/deploy.sh` on the VM — `git fetch && git reset --hard origin/main` → pull secrets from **Google Secret Manager** (keyless via the VM service account) → generate `.env` → `docker compose -f docker-compose.prod.yml up -d --build`. Flyway auto-migrates on boot.
+- **Secrets live ONLY in Google Secret Manager + the VM `.env`** (generated, gitignored) — NEVER in the repo.
+- **IaC:** Terraform in `terraform/` (VM, reserved static IP, firewall 22/80/443, dedicated service account).
+- **Backend MUST stay single-instance** — `@Scheduled` IMAP sync / GDPR jobs / KB embedding worker / delayed-email send have no idempotency yet, so do NOT scale the backend horizontally.
+- **CI/CD (GitHub Actions): PLANNED, not built yet.**
+
 ## AI Prompt Templates (`backend/src/main/resources/prompts/`)
 
 All AI system prompts are externalized into template files, loaded by `PromptService`.
