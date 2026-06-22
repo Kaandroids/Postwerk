@@ -1,0 +1,17 @@
+<div class="cp-grid" role="radiogroup" [attr.aria-label]="ariaLabel()">
+  @for (c of presets(); track c) {
+    <button
+      type="button"
+      class="cp-swatch"
+      role="radio"
+      [attr.aria-checked]="value() === c"
+      [style.--swatch]="c"
+      [attr.data-active]="value() === c ? '1' : '0'"
+      (click)="valueChange.emit(c)"
+    ></button>
+  }
+  <div class="cp-custom-wrap">
+    <input type="color" class="cp-native" [value]="value()" (input)="onNative($event)" />
+    <button type="button" class="cp-swatch cp-custom"><app-icon name="plus" /></button>
+  </div>
+</div>

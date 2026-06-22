@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and adjust. terraform.tfvars is gitignored.
+project_id = "postwerk"
+region     = "europe-west3"
+zone       = "europe-west3-a"
+
+instance_name = "postwerk-beta"
+machine_type  = "e2-medium"
+
+# SECURITY: restrict SSH to your own IP (find it: https://ifconfig.me).
+# Leave as-is only for initial setup, then tighten:
+# ssh_source_ranges = ["203.0.113.4/32"]
+ssh_source_ranges = ["0.0.0.0/0"]

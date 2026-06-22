@@ -1,0 +1,196 @@
+<app-page-content>
+  <div class="an-head">
+    <div class="an-head-titles">
+      <div class="dash-eyebrow">
+        {{ i18n.t('an_pretitle') }}@if (orgName()) { · {{ orgName() }}}@if (mailbox()) { · {{ mailbox() }}}
+      </div>
+      <h1 class="dash-title">{{ i18n.t('an_title') }}</h1>
+      <div class="dash-subtitle">{{ subtitle() }}</div>
+    </div>
+    <div class="an-head-controls">
+      <div class="an-range" role="group" [attr.aria-label]="i18n.t('an_title')" data-testid="analytics-range">
+        @for (r of ranges; track r) {
+          <button [attr.data-active]="range() === r ? '1' : '0'" [attr.data-testid]="'analytics-range-' + r" (click)="setRange(r)">
+            {{ i18n.t('an_range_' + r) }}
+          </button>
+        }
+      </div>
+      <button class="an-refresh" [attr.data-spin]="refreshing() ? '1' : '0'" (click)="refresh()"
+              data-testid="analytics-refresh" [attr.aria-label]="i18n.t('an_refresh')" [attr.title]="i18n.t('an_refresh')">
+        <app-icon name="refresh" />
+      </button>
+    </div>
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (loading()) {
+    <div data-testid="analytics-skeleton">
+      <div class="an-kpi">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) { <div class="an-sk an-sk-kpi"></div> }
+      </div>
+      <div class="an-grid"><div class="an-sk an-sk-chart"></div><div class="an-sk an-sk-chart"></div></div>
+      <div class="an-grid"><div class="an-sk an-sk-tall"></div><div class="an-sk an-sk-tall"></div></div>
+    </div>
+  } @else if (error()) {
+    <!-- error banner shown above -->
+  } @else if (empty()) {
+    <app-empty-state
+      [title]="i18n.t('an_empty_title')"
+      [sub]="i18n.t('an_empty_sub')"
+      [ctaLabel]="i18n.t('an_empty_cta')"
+      ctaIcon="plus"
+      ctaTestid="analytics-empty-cta"
+      (cta)="goToAutomations()" />
+  } @else if (data()) {
+    <!-- KPI strip -->
+    <div class="an-kpi">
+      @for (t of kpis(); track t.testid) {
+        <div class="an-tile" [attr.data-tone]="t.tone" [attr.data-testid]="t.testid">
+          <div class="an-tile-head">
+            <span class="an-tile-icon"><app-icon [name]="t.icon" /></span>
+            <span class="an-tile-label">{{ t.label }}</span>
+          </div>
+          <div class="an-tile-value" [style.color]="t.valueColor || null">{{ t.value }}</div>
+          <div class="an-tile-foot">
+            <span class="an-tile-sub">
+              @if (t.delta != null) {
+                <span class="an-delta" [attr.data-dir]="t.delta >= 0 ? 'up' : 'down'">
+                  {{ t.delta >= 0 ? '▲' : '▼' }} {{ abs(t.delta) }}%
+                </span>
+              }
+              {{ t.sub }}
+            </span>
+            @if (t.spark) { <app-sparkline [data]="t.spark.data" [tone]="t.spark.tone" /> }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Execution trend + AI cost -->
+    <div class="an-grid">
+      <div class="an-card" data-testid="analytics-exec-trend">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_exec_trend') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_exec_trend_sub') }}</div>
+          </div>
+          <div class="an-legend-inline">
+            <span class="an-leg"><span class="an-leg-dot" style="background: var(--success)"></span>{{ i18n.t('an_legend_success') }}</span>
+            <span class="an-leg"><span class="an-leg-dot" style="background: var(--danger)"></span>{{ i18n.t('an_legend_failed') }}</span>
+          </div>
+        </div>
+        <app-trend-chart [data]="data()!.executionTrend" testid="analytics-exec-trend-chart" />
+      </div>
+
+      <div class="an-card" data-testid="analytics-ai-cost">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_kpi_ai_usage') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_cost_sub') }}</div>
+          </div>
+          <div class="an-toggle" role="group" data-testid="analytics-cost-dim">
+            <button [attr.data-active]="costDim() === 'operation' ? '1' : '0'" (click)="costDim.set('operation')">{{ i18n.t('an_cost_by_op') }}</button>
+            <button [attr.data-active]="costDim() === 'model' ? '1' : '0'" (click)="costDim.set('model')">{{ i18n.t('an_cost_by_model') }}</button>
+          </div>
+        </div>
+        <app-donut [segments]="costSegments()" [centerValue]="costCenter()" [centerLabel]="i18n.t('an_kpi_this_month')" />
+        <div class="an-mini-cost-wrap">
+          <div class="an-mini-cost-label">{{ i18n.t('an_cost_daily') }}</div>
+          <app-mini-cost-line [data]="dailyCostSeries()" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Top automations + failure analysis -->
+    <div class="an-grid">
+      <div class="an-card" data-testid="analytics-top-automations">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_top') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_top_sub') }}</div>
+          </div>
+        </div>
+        <div class="an-table">
+          <div class="an-thead an-row an-top-cols">
+            <div>{{ i18n.t('an_col_automation') }}</div>
+            <button class="an-th-sort an-right" [attr.data-active]="sort() === 'runs' ? '1' : '0'" (click)="setSort('runs')">{{ i18n.t('an_col_runs') }}<app-icon name="selector" /></button>
+            <button class="an-th-sort" [attr.data-active]="sort() === 'success' ? '1' : '0'" (click)="setSort('success')">{{ i18n.t('an_col_success') }}<app-icon name="selector" /></button>
+            <div class="an-col-hideable an-right">{{ i18n.t('an_col_failed') }}</div>
+            <button class="an-th-sort an-col-hideable an-right" [attr.data-active]="sort() === 'lastrun' ? '1' : '0'" (click)="setSort('lastrun')">{{ i18n.t('an_col_lastrun') }}<app-icon name="selector" /></button>
+            <div></div>
+          </div>
+          @for (r of sortedAutomations(); track r.id) {
+            <div class="an-row an-top-cols an-row-click" data-testid="analytics-automation-row"
+                 role="link" tabindex="0" (click)="openDetail(r.id)" (keydown.enter)="openDetail(r.id)">
+              <div class="an-row-name">
+                <span class="an-row-dot" [style.background]="r.color || 'var(--accent)'"></span>
+                <span>{{ r.name }}</span>
+              </div>
+              <div class="an-right an-num">{{ r.runs | number }}</div>
+              <div class="an-rate-cell">
+                <span class="an-rate-val">{{ r.successRate }}%</span>
+                <app-bar [pct]="r.successRate" [tone]="successTone(r.successRate)" />
+              </div>
+              <div class="an-col-hideable an-right an-num">{{ r.failedRuns | number }}</div>
+              <div class="an-col-hideable an-right an-row-time">{{ rel(r.lastRunAt) }}</div>
+              <span class="an-row-chev"><app-icon name="chevronRight" /></span>
+            </div>
+          } @empty {
+            <div class="an-row-empty">—</div>
+          }
+        </div>
+      </div>
+
+      <div class="an-card" data-testid="analytics-failure-analysis">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_failure') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_failure_sub') }}</div>
+          </div>
+          <span class="an-flag">{{ i18n.t('an_badge_new_query') }}</span>
+        </div>
+        <div class="an-fail-list">
+          @for (f of data()!.failureAnalysis; track f.nodeType) {
+            <div class="an-fail-row">
+              <div class="an-fail-name">{{ nodeLabel(f.nodeType) }}</div>
+              <div class="an-fail-meta">{{ f.failures | number }} / {{ f.total | number }}</div>
+              <div class="an-fail-bar-wrap">
+                <app-bar [pct]="f.failRate" tone="danger" />
+                <span class="an-fail-rate">{{ f.failRate }}%</span>
+              </div>
+            </div>
+          } @empty {
+            <div class="an-row-empty">—</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Approvals throughput -->
+    <div class="an-card" data-testid="analytics-approvals">
+      <div class="an-card-head">
+        <div>
+          <div class="an-card-title">{{ i18n.t('an_approvals') }}</div>
+          <div class="an-card-sub">{{ i18n.t('an_approvals_sub') }}</div>
+        </div>
+        <span class="an-flag">{{ i18n.t('an_badge_new_query') }}</span>
+      </div>
+      <div class="an-appr">
+        @for (s of approvalStats(); track s.key) {
+          <div class="an-appr-stat">
+            <div class="an-appr-pill-row">
+              <span class="an-pill" [attr.data-tone]="s.tone"><span class="an-pill-dot"></span>{{ i18n.t(s.key) }}</span>
+            </div>
+            <div class="an-appr-val">{{ s.value | number }}</div>
+          </div>
+        }
+        <div class="an-appr-avg">
+          <span class="an-appr-avg-label">{{ i18n.t('an_appr_avg') }}</span>
+          <span class="an-appr-avg-val">{{ avgDecision() }}</span>
+        </div>
+        <button class="an-appr-link" (click)="goToApprovals()">{{ i18n.t('an_appr_link') }}<app-icon name="external" /></button>
+      </div>
+    </div>
+  }
+</app-page-content>

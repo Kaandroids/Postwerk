@@ -1,0 +1,302 @@
+@if (chat.isOpen()) {
+  <div class="chat-overlay" (click)="close()"></div>
+  <div class="chat-panel" role="dialog" aria-modal="true" aria-label="AI Chat">
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-avatar">
+          <app-icon name="sparkle" />
+        </div>
+        <div class="chat-header-info">
+          <span class="chat-title">{{ i18n.t('chat_title') }}</span>
+          <span class="chat-subtitle">{{ i18n.t('chat_subtitle') }}</span>
+        </div>
+      </div>
+      <div class="chat-model-toggle">
+        <button
+          class="chat-model-btn"
+          [class.active]="!isProModel()"
+          (click)="setModel('gemini-2.5-flash')"
+          data-testid="chat-model-flash"
+        >
+          &#x26A1; {{ i18n.t('chat_model_flash') }}
+        </button>
+        <button
+          class="chat-model-btn"
+          [class.active]="isProModel()"
+          (click)="setModel('gemini-2.5-pro')"
+          [title]="i18n.t('chat_model_pro_warning')"
+          data-testid="chat-model-pro"
+        >
+          &#x2726; {{ i18n.t('chat_model_pro') }}
+        </button>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-icon-btn" (click)="newChat()" [title]="i18n.t('chat_new')">
+          <app-icon name="plus" />
+        </button>
+        <button class="chat-icon-btn" (click)="toggleHistory()" [title]="i18n.t('chat_history')">
+          <app-icon name="clock" />
+        </button>
+        <button class="chat-icon-btn" (click)="close()" aria-label="Close">
+          <app-icon name="x" />
+        </button>
+      </div>
+    </div>
+
+    <!-- History dropdown -->
+    @if (showHistory()) {
+      <div class="chat-history">
+        @for (conv of chat.conversations(); track conv.id) {
+          <div class="chat-history-item" role="button" tabindex="0" (click)="selectConversation(conv.id)" (keydown.enter)="selectConversation(conv.id)" (keydown.space)="$event.preventDefault(); selectConversation(conv.id)">
+            <span class="chat-history-title">{{ conv.title || i18n.t('chat_new') }}</span>
+            <button class="chat-history-delete" (click)="deleteConversation($event, conv.id)" [title]="i18n.t('chat_delete')">
+              <app-icon name="trash" />
+            </button>
+          </div>
+        } @empty {
+          <div class="chat-history-empty">{{ i18n.t('chat_empty') }}</div>
+        }
+      </div>
+    }
+
+    <!-- Messages -->
+    <div class="chat-messages" #messagesContainer aria-live="polite">
+      @if (chat.messages().length === 0) {
+        <!-- Welcome message -->
+        <div class="chat-msg" data-role="assistant">
+          <div class="chat-msg-row">
+            <div class="chat-msg-avatar">
+              <app-icon name="sparkle" />
+            </div>
+            <div class="chat-msg-content">{{ i18n.t('chat_welcome') }}</div>
+          </div>
+        </div>
+
+        <!-- Suggestions -->
+        <div class="chat-suggestions">
+          <span class="chat-suggestions-label">{{ i18n.t('chat_suggestions') }}</span>
+          <div class="chat-suggestions-grid">
+            @for (s of starterPrompts; track s.key) {
+              <button class="chat-suggestion-card" (click)="useStarter(s.key)">
+                <app-icon [name]="s.icon" />
+                <div class="chat-suggestion-text">
+                  <span class="chat-suggestion-title">{{ i18n.t(s.key) }}</span>
+                  <span class="chat-suggestion-desc">{{ i18n.t(s.descKey) }}</span>
+                </div>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @for (msg of chat.messages(); track trackMessage($index, msg)) {
+        <div class="chat-msg" [attr.data-role]="msg.role">
+
+          <!-- System phase message -->
+          @if (msg.role === 'system') {
+            <div class="chat-system-msg" [attr.data-phase]="msg.phase" data-testid="chat-system-msg">
+              <app-icon [name]="phaseIcon(msg.phase)" />
+              <span>{{ phaseLabel(msg.phase) }}</span>
+            </div>
+          }
+          <!-- Error message -->
+          @else if (msg.error) {
+            <div class="chat-msg-error">
+              <span>{{ i18n.t('chat_error') }}</span>
+              <button class="chat-retry-btn" (click)="retry()">
+                <app-icon name="refresh" />
+                {{ i18n.t('chat_retry') }}
+              </button>
+            </div>
+          } @else {
+            <!-- Normal message -->
+            @if (msg.role === 'assistant') {
+              <div class="chat-msg-row">
+                <div class="chat-msg-avatar">
+                  <app-icon name="sparkle" />
+                </div>
+                <div class="chat-msg-content chat-markdown" [innerHTML]="renderMarkdown(msg.content)"></div>
+              </div>
+            } @else {
+              <div class="chat-msg-content">{{ msg.content }}</div>
+            }
+
+            <!-- Tool calls -->
+            @if (msg.toolCalls && msg.toolCalls.length > 0) {
+              <div class="chat-tool-calls">
+                @for (tc of msg.toolCalls; track $index) {
+                  <div class="chat-tool-call" [attr.data-success]="tc.success ? '1' : '0'" role="button" tabindex="0" (click)="toggleToolDetails($index)" (keydown.enter)="toggleToolDetails($index)" (keydown.space)="$event.preventDefault(); toggleToolDetails($index)">
+                    <div class="chat-tool-head">
+                      <span class="chat-tool-icon" [attr.data-success]="tc.success ? '1' : '0'">
+                        <app-icon [name]="tc.success ? toolIcon(tc) : 'x'" />
+                      </span>
+                      <span class="chat-tool-info">
+                        <span class="chat-tool-action">{{ toolAction(tc) }}: {{ toolResourceType(tc) }}</span>
+                        @if (toolResourceName(tc)) {
+                          <span class="chat-tool-name">{{ toolResourceName(tc) }}</span>
+                        }
+                      </span>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chat-tool-chev" [class.is-open]="expandedTools().has($index)"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                    @if (expandedTools().has($index)) {
+                      <div class="chat-tool-body">
+                        @if (isListTool(tc)) {
+                          <ul class="chat-tool-list">
+                            @for (item of getListItems(tc); track item) {
+                              <li>{{ item }}</li>
+                            }
+                          </ul>
+                          @if (getListCount(tc) > 10) {
+                            <span class="chat-tool-more">+{{ getListCount(tc) - 10 }} more</span>
+                          }
+                        } @else {
+                          @for (field of getToolFields(tc); track field.key) {
+                            <div class="chat-tool-field">
+                              <span class="chat-tool-field-label">{{ field.label }}</span>
+                              @if (field.type === 'color') {
+                                <span class="chat-tool-field-value">
+                                  <span class="chat-tool-color-dot" [style.background]="field.value"></span>
+                                  {{ field.value }}
+                                </span>
+                              } @else {
+                                <span class="chat-tool-field-value">{{ field.value }}</span>
+                              }
+                            </div>
+                          }
+                        }
+                      </div>
+                    }
+                    @if (tc.validationIssues && tc.validationIssues.length > 0) {
+                      <div class="chat-tool-validation">
+                        @for (vi of tc.validationIssues; track $index) {
+                          <div class="chat-tool-vi" [attr.data-sev]="vi.severity">
+                            <app-icon [name]="vi.severity === 'error' ? 'alertTriangle' : 'info'" />
+                            <span>{{ vi.message }}</span>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Copy button (assistant only) -->
+            @if (msg.role === 'assistant') {
+              <div class="chat-msg-actions">
+                <button class="chat-action-btn" (click)="copyMessage(msg.content, $index)" [title]="i18n.t('chat_copy')">
+                  <app-icon [name]="copiedIndex() === $index ? 'check' : 'copy'" />
+                </button>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      @if (chat.isLoading()) {
+        <div class="chat-msg" data-role="assistant">
+          <div class="chat-msg-row">
+            <div class="chat-msg-avatar">
+              <app-icon name="sparkle" />
+            </div>
+            @if (chat.streamingToolCalls().length > 0) {
+              <div class="chat-streaming-tools">
+                @for (tc of chat.streamingToolCalls(); track $index) {
+                  <div class="chat-tool-call" [attr.data-success]="tc.result === null ? 'pending' : (tc.success ? '1' : '0')">
+                    <div class="chat-tool-head">
+                      <span class="chat-tool-icon" [attr.data-success]="tc.result === null ? 'pending' : (tc.success ? '1' : '0')">
+                        @if (tc.result === null) {
+                          <span class="chat-tool-spinner"></span>
+                        } @else {
+                          <app-icon [name]="tc.success ? toolIcon(tc) : 'x'" />
+                        }
+                      </span>
+                      <span class="chat-tool-info">
+                        <span class="chat-tool-action">{{ toolAction(tc) }}: {{ toolResourceType(tc) }}</span>
+                        @if (toolResourceName(tc)) {
+                          <span class="chat-tool-name">{{ toolResourceName(tc) }}</span>
+                        }
+                      </span>
+                    </div>
+                  </div>
+                }
+                <span class="chat-status-text">{{ i18n.t('chat_status_working') }}</span>
+              </div>
+            } @else {
+              <div class="chat-msg-content chat-thinking">
+                <span class="chat-dot"></span>
+                <span class="chat-dot"></span>
+                <span class="chat-dot"></span>
+                <span class="chat-status-text">{{ i18n.t('chat_status_thinking') }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Planning phase bar -->
+    @if (chat.conversationPhase() === 'PLANNING' && !chat.isLoading()) {
+      <div class="chat-phase-bar" data-phase="planning" data-testid="chat-phase-bar-planning">
+        <div class="chat-phase-info">
+          <app-icon name="clipboard" />
+          <span>{{ i18n.t('chat_phase_planning') }}</span>
+        </div>
+        <div class="chat-phase-actions">
+          <button class="chat-phase-btn cancel" (click)="cancelPlan()" data-testid="chat-phase-cancel-btn">
+            <app-icon name="x" />
+            {{ i18n.t('chat_phase_cancel') }}
+          </button>
+          <button class="chat-phase-btn confirm" (click)="confirmPlan()" data-testid="chat-phase-confirm-btn">
+            <app-icon name="check" />
+            {{ i18n.t('chat_phase_confirm') }}
+          </button>
+        </div>
+      </div>
+    }
+
+    @if (chat.conversationPhase() === 'BUILDING' && chat.isLoading()) {
+      <div class="chat-phase-bar" data-phase="building" data-testid="chat-phase-bar-building">
+        <div class="chat-phase-info">
+          <span class="chat-phase-spinner"></span>
+          <span>{{ i18n.t('chat_phase_building') }}</span>
+        </div>
+      </div>
+    }
+
+    <!-- Input -->
+    @if (aiDisabled()) {
+      <div class="chat-disabled-cta" data-testid="chat-ai-disabled">
+        <app-icon name="lock" />
+        <span>{{ i18n.t('quota_ai_disabled') }}</span>
+        <a routerLink="/dashboard/plans" class="chat-upgrade-link">{{ i18n.t('quota_upgrade') }}</a>
+      </div>
+    } @else {
+      <div class="chat-input-wrap">
+        <div class="chat-input-area">
+          <textarea
+            class="chat-input"
+            #chatInput
+            [placeholder]="i18n.t('chat_placeholder')"
+            [ngModel]="inputText()"
+            (ngModelChange)="inputText.set($event)"
+            (keydown)="onKeydown($event)"
+            (input)="autoResize()"
+            rows="1"
+          ></textarea>
+          @if (chat.isLoading()) {
+            <button class="chat-stop-btn" (click)="cancel()" [title]="i18n.t('chat_cancelled')" aria-label="Cancel">
+              <app-icon name="square" />
+            </button>
+          } @else {
+            <button class="chat-send-btn" (click)="send()" [disabled]="!inputText().trim()" aria-label="Send">
+              <app-icon name="send" />
+            </button>
+          }
+        </div>
+        <span class="chat-disclaimer">{{ i18n.t('chat_disclaimer') }}</span>
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,53 @@
+<div class="tte-wrap" [attr.data-error]="hasError ? '1' : '0'">
+  <!-- Toolbar -->
+  <div class="tte-toolbar">
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('bold')"
+      title="Bold" (click)="toggleBold()">
+      <strong>B</strong>
+    </button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('italic')"
+      title="Italic" (click)="toggleItalic()">
+      <em>I</em>
+    </button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('underline')"
+      title="Underline" (click)="toggleUnderline()">
+      <u>U</u>
+    </button>
+
+    <span class="tte-sep"></span>
+
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('heading', { level: 1 })"
+      title="H1" (click)="toggleHeading(1)">H1</button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('heading', { level: 2 })"
+      title="H2" (click)="toggleHeading(2)">H2</button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('heading', { level: 3 })"
+      title="H3" (click)="toggleHeading(3)">H3</button>
+
+    <span class="tte-sep"></span>
+
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('link')"
+      title="Link" (click)="setLink()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      </svg>
+    </button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('bulletList')"
+      title="Bullet List" (click)="toggleBulletList()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+    </button>
+    <button type="button" class="tte-btn" [class.tte-btn-active]="isActive('orderedList')"
+      title="Ordered List" (click)="toggleOrderedList()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+        <path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Editor area -->
+  <div #editorEl class="tte-editor"></div>
+</div>

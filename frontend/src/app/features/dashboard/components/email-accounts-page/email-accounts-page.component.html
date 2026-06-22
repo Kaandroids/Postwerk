@@ -1,0 +1,341 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <!-- ═══ LIST VIEW ═══ -->
+    <div class="dash-page-head ek-head">
+      <div>
+        <div class="dash-eyebrow">{{ i18n.t('ea_pretitle') }}</div>
+        <h1 class="dash-title">{{ i18n.t('ea_list_title') }}</h1>
+        <div class="dash-subtitle">{{ i18n.t('ea_list_subtitle') }}</div>
+      </div>
+      <button class="ek-btn ek-btn-primary ek-add-btn" (click)="openAdd()">
+        <app-icon name="plus" />
+        {{ i18n.t('ea_list_add') }}
+      </button>
+    </div>
+
+    @if (accounts().length === 0) {
+      <!-- Empty state -->
+      <app-empty-state
+        [title]="i18n.t('ek_empty_title')"
+        [sub]="i18n.t('ek_empty_sub')"
+        [ctaLabel]="i18n.t('ek_empty_cta')"
+        [glyphColors]="['#3b82f6', '#10b981', '#6366f1']"
+        (cta)="openAdd()" />
+    } @else {
+      <!-- Summary tiles -->
+      <div class="ek-summary">
+        <div class="ek-sum">
+          <div class="ek-sum-label">{{ i18n.t('ek_sum_connected') }}</div>
+          <div class="ek-sum-value">{{ counts().all }}</div>
+          <div class="ek-sum-sub">
+            {{ counts().active }} {{ i18n.t('ek_sum_active') }}
+            @if (counts().paused > 0) {
+              <span> · {{ counts().paused }} {{ i18n.t('ek_sum_paused') }}</span>
+            }
+          </div>
+        </div>
+        <div class="ek-sum">
+          <div class="ek-sum-label">{{ i18n.t('ek_sum_today') }}</div>
+          <div class="ek-sum-value">{{ totalToday() }}</div>
+          <div class="ek-sum-sub">{{ i18n.t('ek_sum_messages') }}</div>
+        </div>
+        <div class="ek-sum">
+          <div class="ek-sum-label">{{ i18n.t('ek_sum_30d') }}</div>
+          <div class="ek-sum-value">{{ totalMonth() }}</div>
+          <div class="ek-sum-sub">{{ i18n.t('ek_sum_30d_sub') }}</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="ek-toolbar">
+        <div class="ek-filters">
+          @for (f of filters; track f.key) {
+            <button class="ek-filter" [attr.data-active]="filter() === f.key ? '1' : '0'" (click)="filter.set(f.key)">
+              {{ i18n.lang() === 'de' ? f.label_de : f.label_en }}
+              <span class="ek-filter-count">{{ counts()[f.key] }}</span>
+            </button>
+          }
+        </div>
+        <div class="ek-search">
+          <input [placeholder]="i18n.t('ek_search')" [value]="query()" (input)="query.set(v($event))" />
+        </div>
+      </div>
+
+      <!-- Account list -->
+      <div class="ek-list">
+        @for (acc of visibleAccounts(); track acc.id) {
+          <div class="ek-row" [attr.data-status]="statusKey(acc)">
+            <div class="ek-row-bar" [style.background]="colorHex(acc.color)"></div>
+
+            <div class="ek-row-head">
+              <div class="ek-avatar" [style.background]="colorHex(acc.color)">
+                {{ initials(acc.displayName || acc.email) }}
+                @if (acc.isDefault) {
+                  <span class="ek-avatar-star" [title]="i18n.t('ek_default_account')">
+                    <app-icon name="starFilled" />
+                  </span>
+                }
+              </div>
+
+              <div class="ek-row-text">
+                <div class="ek-row-name">
+                  {{ acc.displayName || acc.email }}
+                  <span class="ek-row-status" [attr.data-status]="statusKey(acc)">
+                    <span class="ek-status-dot"></span>
+                    {{ statusLabel(acc) }}
+                  </span>
+                </div>
+                <div class="ek-row-email">{{ acc.email }}</div>
+              </div>
+
+              <div class="ek-row-actions">
+                <button class="ek-icon-btn" [title]="i18n.t('ek_sync_now')" (click)="syncAccount(acc)">
+                  <app-icon name="refresh" />
+                </button>
+                <button class="ek-icon-btn" [title]="i18n.t('ea_edit')" (click)="openEdit(acc)">
+                  <app-icon name="edit" />
+                </button>
+                <button class="ek-icon-btn ek-icon-danger" [title]="i18n.t('ea_delete')" (click)="deleteAccount(acc)">
+                  <app-icon name="trash" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Meta line: capability badges + server info -->
+            <div class="ek-row-meta-line">
+              <span class="ek-cap-mini" [attr.data-on]="acc.readEnabled ? '1' : '0'">
+                <app-icon name="inbox" />
+                <span>IMAP</span>
+              </span>
+              <span class="ek-cap-mini" [attr.data-on]="acc.writeEnabled ? '1' : '0'">
+                <app-icon name="send" />
+                <span>SMTP</span>
+              </span>
+              <span class="ek-meta-dot">·</span>
+              <span class="ek-meta-text">
+                @if (acc.imapHost) {
+                  {{ acc.imapHost }}:{{ acc.imapPort || 993 }}
+                } @else {
+                  {{ i18n.t('ek_no_server') }}
+                }
+              </span>
+              @if (acc.syncFromDate) {
+                <span class="ek-meta-dot">·</span>
+                <span class="ek-meta-text">{{ i18n.t('ek_sync_since') }} {{ acc.syncFromDate }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        @if (visibleAccounts().length === 0) {
+          <div class="ek-no-results">{{ i18n.t('ek_no_results') }}</div>
+        }
+      </div>
+    }
+  } @else {
+    <!-- ═══ FORM VIEW ═══ -->
+    <div class="ek-form-head">
+      <button class="ek-back-btn" (click)="closePanel()">
+        <app-icon name="arrowLeft" />
+        <span>{{ i18n.t('ea_list_title') }}</span>
+      </button>
+      <h1 class="dash-title">
+        {{ editing() ? i18n.t('ek_panel_edit_eyebrow') : i18n.t('ek_panel_new_eyebrow') }}
+      </h1>
+      <div class="dash-subtitle">{{ i18n.t('ek_panel_sub') }}</div>
+    </div>
+
+    <div class="ek-split">
+      <!-- Left: form -->
+      <div class="ek-split-main">
+        @if (error()) {
+          <app-error-banner [message]="error()" />
+        }
+
+        <!-- Identity fieldset -->
+        <div class="ek-fieldset">
+          <div class="ek-fieldset-title">{{ i18n.t('ek_fs_account') }}</div>
+
+          <label class="ek-field">
+            <span class="ek-field-label">{{ i18n.t('ek_field_name') }}</span>
+            <input class="ek-input" [placeholder]="i18n.t('ek_field_name_ph')" [value]="formName()" (input)="formName.set(v($event))" />
+          </label>
+
+          <div class="ek-field-row">
+            <label class="ek-field" style="flex:2">
+              <span class="ek-field-label">{{ i18n.t('ea_email') }}</span>
+              <input class="ek-input" type="email" placeholder="name@domain.de" [value]="formEmail()" (input)="formEmail.set(v($event))" />
+            </label>
+            <label class="ek-field" style="flex:1">
+              <span class="ek-field-label">{{ i18n.t('ea_password') }}</span>
+              <span class="ek-input-wrap">
+                <input class="ek-input" [type]="showPwd() ? 'text' : 'password'" placeholder="••••••••••"
+                  [value]="formPassword()" (input)="formPassword.set(v($event))" />
+                <button type="button" class="ek-input-toggle" (click)="showPwd.set(!showPwd())">
+                  <app-icon [name]="showPwd() ? 'eyeOff' : 'eye'" />
+                </button>
+              </span>
+            </label>
+          </div>
+
+          <div class="ek-field-row">
+            <div class="ek-field" style="flex:1">
+              <span class="ek-field-label">{{ i18n.t('ea_color') }}</span>
+              <div class="ek-swatches">
+                @for (p of palette; track p.key) {
+                  <button type="button" class="ek-swatch"
+                    [attr.data-active]="formColor() === p.key ? '1' : '0'"
+                    [style.background]="p.hex"
+                    (click)="formColor.set(p.key)"></button>
+                }
+              </div>
+            </div>
+            <label class="ek-field" style="flex:1">
+              <span class="ek-field-label">{{ i18n.t('ea_sync_from') }}</span>
+              <input class="ek-input" type="date" [value]="formSyncSince()" (input)="formSyncSince.set(v($event))" />
+              <span class="ek-field-hint">{{ i18n.t('ea_sync_from_hint') }}</span>
+            </label>
+          </div>
+
+          <label class="ek-checkbox">
+            <input type="checkbox" [checked]="formIsDefault()" (change)="formIsDefault.set(!formIsDefault())" />
+            <span class="ek-checkbox-box">
+              @if (formIsDefault()) { <app-icon name="check" /> }
+            </span>
+            <span>{{ i18n.t('ea_set_default') }}</span>
+          </label>
+        </div>
+
+        <!-- Permissions fieldset -->
+        <div class="ek-fieldset">
+          <div class="ek-fieldset-title">{{ i18n.t('ea_permissions') }}</div>
+
+          <!-- IMAP -->
+          <div class="ek-cap-card" [class.is-on]="formImapEnabled()">
+            <div class="ek-cap-head">
+              <span class="ek-cap-icon"><app-icon name="inbox" /></span>
+              <div class="ek-cap-meta">
+                <div class="ek-cap-name">{{ i18n.t('ea_perm_read') }} <span class="ek-cap-sub">IMAP</span></div>
+                <div class="ek-cap-desc">{{ i18n.t('ea_perm_read_desc') }}</div>
+              </div>
+              <button type="button" class="ek-toggle" [attr.data-on]="formImapEnabled() ? '1' : '0'" (click)="formImapEnabled.set(!formImapEnabled())">
+                <span class="ek-toggle-knob"></span>
+              </button>
+            </div>
+            @if (formImapEnabled()) {
+              <div class="ek-cap-config">
+                <div class="ek-field-row">
+                  <label class="ek-field" style="flex:3">
+                    <span class="ek-field-label">Server</span>
+                    <input class="ek-input" placeholder="imap.example.com" [value]="formImapHost()" (input)="formImapHost.set(v($event))" />
+                  </label>
+                  <label class="ek-field" style="flex:1">
+                    <span class="ek-field-label">Port</span>
+                    <input class="ek-input" type="number" placeholder="993" [value]="formImapPort()" (input)="formImapPort.set(v($event))" />
+                  </label>
+                </div>
+                <div class="ek-cap-config-row">
+                  <label class="ek-checkbox">
+                    <input type="checkbox" [checked]="formImapSsl()" (change)="formImapSsl.set(!formImapSsl())" />
+                    <span class="ek-checkbox-box">@if (formImapSsl()) { <app-icon name="check" /> }</span>
+                    <span>{{ i18n.t('ea_ssl') }}</span>
+                  </label>
+                  <button type="button" class="ek-btn ek-btn-ghost" data-testid="test-imap-btn" [disabled]="imapTesting()" (click)="testImap()">
+                    @if (imapTesting()) {
+                      {{ i18n.t('ea_testing') }}
+                    } @else if (imapTestResult() === 'ok') {
+                      <span class="ek-test-ok"><app-icon name="check" /></span> {{ i18n.t('ek_connected') }}
+                    } @else if (imapTestResult() === 'fail') {
+                      <span class="ek-test-fail"><app-icon name="alertTriangle" /></span> {{ i18n.t('ek_failed') }}
+                    } @else {
+                      {{ i18n.t('ea_test_connection') }}
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- SMTP -->
+          <div class="ek-cap-card" [class.is-on]="formSmtpEnabled()">
+            <div class="ek-cap-head">
+              <span class="ek-cap-icon"><app-icon name="send" /></span>
+              <div class="ek-cap-meta">
+                <div class="ek-cap-name">{{ i18n.t('ea_perm_write') }} <span class="ek-cap-sub">SMTP</span></div>
+                <div class="ek-cap-desc">{{ i18n.t('ea_perm_write_desc') }}</div>
+              </div>
+              <button type="button" class="ek-toggle" [attr.data-on]="formSmtpEnabled() ? '1' : '0'" (click)="formSmtpEnabled.set(!formSmtpEnabled())">
+                <span class="ek-toggle-knob"></span>
+              </button>
+            </div>
+            @if (formSmtpEnabled()) {
+              <div class="ek-cap-config">
+                <div class="ek-field-row">
+                  <label class="ek-field" style="flex:3">
+                    <span class="ek-field-label">Server</span>
+                    <input class="ek-input" placeholder="smtp.example.com" [value]="formSmtpHost()" (input)="formSmtpHost.set(v($event))" />
+                  </label>
+                  <label class="ek-field" style="flex:1">
+                    <span class="ek-field-label">Port</span>
+                    <input class="ek-input" type="number" placeholder="465" [value]="formSmtpPort()" (input)="formSmtpPort.set(v($event))" />
+                  </label>
+                </div>
+                <div class="ek-cap-config-row">
+                  <label class="ek-checkbox">
+                    <input type="checkbox" [checked]="formSmtpSsl()" (change)="formSmtpSsl.set(!formSmtpSsl())" />
+                    <span class="ek-checkbox-box">@if (formSmtpSsl()) { <app-icon name="check" /> }</span>
+                    <span>{{ i18n.t('ea_ssl') }}</span>
+                  </label>
+                  <button type="button" class="ek-btn ek-btn-ghost" data-testid="test-smtp-btn" [disabled]="smtpTesting()" (click)="testSmtp()">
+                    @if (smtpTesting()) {
+                      {{ i18n.t('ea_testing') }}
+                    } @else if (smtpTestResult() === 'ok') {
+                      <span class="ek-test-ok"><app-icon name="check" /></span> {{ i18n.t('ek_connected') }}
+                    } @else if (smtpTestResult() === 'fail') {
+                      <span class="ek-test-fail"><app-icon name="alertTriangle" /></span> {{ i18n.t('ek_failed') }}
+                    } @else {
+                      {{ i18n.t('ea_test_connection') }}
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Form footer -->
+        <div class="ek-form-foot">
+          <button class="ek-btn ek-btn-secondary" data-testid="ek-cancel-btn" (click)="closePanel()">{{ i18n.t('ea_cancel') }}</button>
+          <button class="ek-btn ek-btn-primary" data-testid="ek-save-btn" [disabled]="loading()" (click)="saveForm()">
+            {{ loading() ? i18n.t('loading') : (editing() ? i18n.t('ea_edit_submit') : i18n.t('ek_connect_btn')) }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Right: info panel -->
+      <aside class="ek-split-side">
+        <div class="ek-info-card" data-tone="blue">
+          <span class="ek-info-icon ek-info-icon-blue"><app-icon name="inbox" /></span>
+          <div class="ek-info-body">
+            <div class="ek-info-title">{{ i18n.t('ek_info_imap_title') }}</div>
+            <div class="ek-info-text">{{ i18n.t('ek_info_imap_text') }}</div>
+          </div>
+        </div>
+        <div class="ek-info-card" data-tone="green">
+          <span class="ek-info-icon ek-info-icon-green"><app-icon name="send" /></span>
+          <div class="ek-info-body">
+            <div class="ek-info-title">{{ i18n.t('ek_info_smtp_title') }}</div>
+            <div class="ek-info-text">{{ i18n.t('ek_info_smtp_text') }}</div>
+          </div>
+        </div>
+        <div class="ek-info-card" data-tone="amber">
+          <span class="ek-info-icon ek-info-icon-amber"><app-icon name="shield" /></span>
+          <div class="ek-info-body">
+            <div class="ek-info-title">{{ i18n.t('ek_info_security_title') }}</div>
+            <div class="ek-info-text">{{ i18n.t('ek_info_security_text') }}</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  }
+</app-page-content>

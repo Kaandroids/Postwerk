@@ -1,0 +1,814 @@
+/* ── Page shell ───────────────────────────────────────────────── */
+.ps-page {
+  animation: enter-up-6 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+
+.ps-page-head-list {
+  margin-bottom: 24px;
+}
+
+/* ── Head actions ─────────────────────────────────────────────── */
+.ps-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-action-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.ps-action-btn:hover {
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+/* ── List view ───────────────────────────────────────────────── */
+.ps-add-btn {
+  appearance: none;
+  border: 0;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 0 18px;
+  height: 38px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.ps-add-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.ps-add-btn:active {
+  transform: translateY(0);
+}
+
+.ps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.ps-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  animation: enter-up-6 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+
+.ps-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.ps-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.ps-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.01em;
+}
+
+.ps-card-param-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: oklch(0.62 0.18 285 / 0.10);
+  color: oklch(0.55 0.18 285);
+  border: 0.5px solid oklch(0.62 0.18 285 / 0.22);
+  white-space: nowrap;
+}
+
+.ps-card-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ps-card-param-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--fg);
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+}
+
+.ps-card-param-pill-type {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--fg-subtle);
+}
+
+.ps-card-param-pill-list {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: oklch(0.62 0.18 285 / 0.12);
+  color: oklch(0.55 0.18 285);
+}
+
+.ps-card-param-pill-required {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: oklch(0.65 0.16 55 / 0.12);
+  color: oklch(0.50 0.16 55);
+}
+
+.ps-card-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0.5;
+  transition: opacity 0.18s;
+}
+
+.ps-card:hover .ps-card-actions {
+  opacity: 1;
+}
+
+.ps-icon-btn {
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ps-icon-btn:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
+.ps-icon-btn-danger:hover {
+  color: oklch(0.55 0.20 25);
+  border-color: oklch(0.55 0.20 25 / 0.4);
+  background: oklch(0.55 0.20 25 / 0.06);
+}
+
+.lock-btn {
+  opacity: 0.5;
+  &.locked {
+    opacity: 1;
+    color: var(--warning);
+  }
+}
+
+/* ── Editor ──────────────────────────────────────────────────── */
+.ps-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.ps-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+@media (max-width: 1100px) {
+  .ps-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ps-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Form fields ─────────────────────────────────────────────── */
+.ps-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ps-field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+
+.ps-input {
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--field-bg);
+  color: var(--field-fg);
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 14px;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.ps-input:hover {
+  background: var(--field-bg-hover);
+}
+
+.ps-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--field-bg);
+}
+
+.ps-input::placeholder {
+  color: var(--fg-subtle);
+}
+
+.ps-input[data-error="1"] {
+  border-color: var(--danger);
+}
+
+.ps-input[data-error="1"]:focus {
+  box-shadow: 0 0 0 3px oklch(0.58 0.20 25 / 0.15);
+}
+
+/* ── Parameter Builder Section ──────────────────────────────── */
+.ps-param-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.ps-param-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.ps-param-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+
+.ps-param-section-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.45;
+}
+
+/* ── Parameter Card ─────────────────────────────────────────── */
+.ps-param-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  animation: ps-param-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes ps-param-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.ps-param-card:hover {
+  border-color: var(--border-strong);
+}
+
+.ps-param-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ps-param-card-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  letter-spacing: 0.02em;
+}
+
+/* ── 2-column row ───────────────────────────────────────────── */
+.ps-param-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .ps-param-row-2col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ps-param-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ps-param-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-subtle);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ps-param-label-icon {
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.ps-param-label-icon-pos {
+  color: oklch(0.55 0.14 150);
+}
+
+.ps-param-label-icon-neg {
+  color: oklch(0.55 0.20 25);
+}
+
+.ps-param-input,
+.ps-param-select {
+  appearance: none;
+  width: 100%;
+  height: 36px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--field-bg);
+  color: var(--field-fg);
+  font: inherit;
+  font-size: 13px;
+  padding: 0 10px;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.ps-param-input:hover,
+.ps-param-select:hover {
+  background: var(--field-bg-hover);
+}
+
+.ps-param-input:focus,
+.ps-param-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  background: var(--field-bg);
+}
+
+.ps-param-input::placeholder {
+  color: var(--fg-subtle);
+}
+
+.ps-param-input[data-error="1"] {
+  border-color: oklch(0.55 0.20 25);
+}
+
+.ps-param-reserved-warn {
+  font-size: 11px;
+  color: oklch(0.55 0.16 70);
+  margin-top: 4px;
+}
+
+/* ── Type row (select + isList toggle) ─────────────────────── */
+.ps-param-type-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-param-type-row .ps-param-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-param-list-toggle {
+  appearance: none;
+  border: 0.5px solid var(--border-strong);
+  background: var(--field-bg);
+  border-radius: var(--radius);
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ps-param-list-toggle:hover {
+  border-color: oklch(0.62 0.18 285 / 0.5);
+  color: oklch(0.55 0.18 285);
+  background: oklch(0.62 0.18 285 / 0.06);
+}
+
+.ps-param-list-toggle-active {
+  border-color: oklch(0.62 0.18 285 / 0.5);
+  color: oklch(0.55 0.18 285);
+  background: oklch(0.62 0.18 285 / 0.10);
+}
+
+.ps-param-required-toggle {
+  appearance: none;
+  border: 0.5px solid var(--border-strong);
+  background: var(--field-bg);
+  border-radius: var(--radius);
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ps-param-required-toggle:hover {
+  border-color: oklch(0.65 0.16 55 / 0.5);
+  color: oklch(0.50 0.16 55);
+  background: oklch(0.65 0.16 55 / 0.06);
+}
+
+.ps-param-required-toggle-active {
+  border-color: oklch(0.65 0.16 55 / 0.5);
+  color: oklch(0.50 0.16 55);
+  background: oklch(0.65 0.16 55 / 0.10);
+}
+
+/* ── OBJECT children container ─────────────────────────────── */
+.ps-param-children {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-left: 2px solid oklch(0.62 0.18 285 / 0.3);
+  background: oklch(0.62 0.18 285 / 0.03);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ps-param-children-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 2px;
+}
+
+.ps-param-children-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: oklch(0.55 0.18 285);
+}
+
+.ps-param-children-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.4;
+}
+
+.ps-param-children-empty {
+  font-size: 12.5px;
+  color: var(--fg-subtle);
+  padding: 10px 0;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── Child parameter card ──────────────────────────────────── */
+.ps-param-child {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  transition: border-color 0.15s;
+  animation: ps-param-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.ps-param-child:hover {
+  border-color: var(--border-strong);
+}
+
+.ps-param-child-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Add child button ──────────────────────────────────────── */
+.ps-param-child-add {
+  appearance: none;
+  border: 1.5px dashed oklch(0.62 0.18 285 / 0.3);
+  background: transparent;
+  border-radius: var(--radius);
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: oklch(0.55 0.18 285);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.ps-param-child-add:hover {
+  border-color: oklch(0.62 0.18 285 / 0.6);
+  background: oklch(0.62 0.18 285 / 0.06);
+}
+
+/* ── Remove button ──────────────────────────────────────────── */
+.ps-param-remove {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.ps-param-remove:hover {
+  background: oklch(0.55 0.20 25 / 0.08);
+  color: oklch(0.55 0.20 25);
+}
+
+/* ── Add parameter button ───────────────────────────────────── */
+.ps-param-add {
+  appearance: none;
+  border: 1.5px dashed var(--border-strong);
+  background: transparent;
+  border-radius: var(--radius);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.ps-param-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Insight panel ───────────────────────────────────────────── */
+.ps-insight-col {
+  position: sticky;
+  top: 84px;
+}
+
+.ps-insight {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ps-ins-card {
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  animation: enter-up-8 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.ps-ins-card:nth-child(1) { animation-delay: 0.04s; }
+.ps-ins-card:nth-child(2) { animation-delay: 0.10s; }
+.ps-ins-card:nth-child(3) { animation-delay: 0.16s; }
+
+
+.ps-ins-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ps-ins-icon-green {
+  background: oklch(0.55 0.14 150 / 0.16);
+  color: oklch(0.50 0.14 150);
+}
+
+.ps-ins-icon-violet {
+  background: oklch(0.62 0.18 285 / 0.16);
+  color: oklch(0.55 0.18 285);
+}
+
+/* ── Info cards ──────────────────────────────────────────────── */
+.ps-ins-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+
+.ps-ins-info[data-tone="violet"] {
+  background: linear-gradient(180deg, oklch(0.62 0.18 285 / 0.04) 0%, var(--bg) 100%);
+}
+
+.ps-ins-info[data-tone="green"] {
+  background: linear-gradient(180deg, oklch(0.55 0.14 150 / 0.05) 0%, var(--bg) 100%);
+}
+
+.ps-ins-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ps-ins-info-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+  letter-spacing: -0.005em;
+}
+
+.ps-ins-info-text {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  line-height: 1.55;
+}
+
+/* ── Tip card ────────────────────────────────────────────────── */
+.ps-ins-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: oklch(0.72 0.16 70 / 0.10);
+  border-color: oklch(0.72 0.16 70 / 0.28);
+  color: oklch(0.42 0.10 70);
+  font-size: 12.5px;
+  padding: 12px 16px;
+  animation: enter-up-8 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 0.20s both;
+}
+
+.ps-ins-icon-inline {
+  display: grid;
+  place-items: center;
+  color: oklch(0.62 0.16 70);
+  flex-shrink: 0;
+}
+
+:host-context([data-theme="dark"]) .ps-ins-tip {
+  color: oklch(0.85 0.10 70);
+}
+
+/* ── Editor footer ───────────────────────────────────────────── */
+.ps-editor-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 0 0;
+  border-top: 0.5px solid var(--border);
+  margin-top: 8px;
+}
+
+.ps-editor-foot ::ng-deep .btn {
+  width: auto;
+  min-width: 120px;
+}
+
+/* ── Button overrides (list view CTA) ────────────────────────── */
+.ps-btn {
+  appearance: none;
+  border: 0;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.ps-btn-primary {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.ps-btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.ps-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

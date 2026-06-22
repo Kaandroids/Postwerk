@@ -1,0 +1,275 @@
+<app-page-content>
+  <!-- A. Backlog alert (shows only when a report/flag store surfaces pending items) -->
+  @if (pendingTotal() > 0 && !alertDismissed()) {
+    <div class="mk-alert" role="alert" data-testid="admin-mkt-alert">
+      <app-icon name="alertTriangle" />
+      <span class="mk-alert-text">{{ i18n.t('mod_alert', { l: (kpis()?.pendingListings ?? 0) + '', r: (kpis()?.pendingReviews ?? 0) + '' }) }}</span>
+      <button type="button" class="mk-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head mk-head">
+    <div>
+      <div class="dash-eyebrow mk-eyebrow-mono">{{ i18n.t('mod_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('mod_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.totalListings ?? 0 }}</b> {{ i18n.t('mod_listings') }} ·
+        <b>{{ kpis()?.totalReviews ?? 0 }}</b> {{ i18n.t('mod_reviews') }}
+      </div>
+    </div>
+    <div class="mk-head-controls">
+      <button type="button" class="mk-btn mk-refresh" data-testid="admin-mkt-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="mk-refresh-ic" [class.mk-spin]="refreshing()"><app-icon name="refresh" /></span>
+        {{ i18n.t('mod_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="mk-updated">{{ i18n.t('mod_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  <!-- C. Segment toggle -->
+  <div class="mk-seg" role="tablist" data-testid="admin-mkt-seg">
+    <button type="button" role="tab" [attr.data-active]="segment() === 'listings' ? '1' : '0'" data-testid="admin-mkt-seg-listings" (click)="setSegment('listings')">
+      <app-icon name="market" /> {{ i18n.t('mod_seg_listings') }} <span class="mk-seg-count">{{ kpis()?.totalListings ?? 0 }}</span>
+    </button>
+    <button type="button" role="tab" [attr.data-active]="segment() === 'reviews' ? '1' : '0'" data-testid="admin-mkt-seg-reviews" (click)="setSegment('reviews')">
+      <app-icon name="star" /> {{ i18n.t('mod_seg_reviews') }} <span class="mk-seg-count">{{ kpis()?.totalReviews ?? 0 }}</span>
+    </button>
+  </div>
+
+  @if (flash()) { <div class="mk-flash" role="status" data-testid="admin-mkt-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="mk-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- D. KPI strip -->
+  <div class="mk-kpis" data-testid="admin-mkt-kpis">
+    @if (segment() === 'listings') {
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_listings') }}</div><div class="mk-kpi-value">{{ kpis()?.totalListings ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" data-tone="slate">{{ i18n.t('mod_chip_total') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_published') }}</div><div class="mk-kpi-value">{{ kpis()?.publishedListings ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" data-tone="green">{{ i18n.t('mod_chip_live') }}</span><span class="mk-kpi-note">{{ kpis()?.pausedListings ?? 0 }} {{ i18n.t('mod_paused_lc') }} · {{ kpis()?.takenDownListings ?? 0 }} {{ i18n.t('mod_takendown_lc') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_installs') }}</div><div class="mk-kpi-value">{{ fmt.compactNumber(kpis()?.totalInstalls ?? 0) }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" data-tone="slate"><app-icon name="download" /></span><span class="mk-kpi-note">{{ i18n.t('mod_kpi_installs_note') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_rating') }}</div><div class="mk-kpi-value">{{ (kpis()?.avgRating ?? 0).toFixed(1) }}<span class="mk-kpi-star">★</span></div><div class="mk-kpi-foot"><span class="mk-kpi-note">{{ i18n.t('mod_kpi_rating_note') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_flagged') }}</div><div class="mk-kpi-value" [class.mk-val-danger]="(kpis()?.pendingListings ?? 0) > 0">{{ kpis()?.pendingListings ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" [attr.data-tone]="(kpis()?.pendingListings ?? 0) > 0 ? 'danger' : 'green'">{{ (kpis()?.pendingListings ?? 0) > 0 ? i18n.t('mod_chip_action') : i18n.t('mod_chip_ok') }}</span></div></div>
+    } @else {
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_reviews') }}</div><div class="mk-kpi-value">{{ kpis()?.totalReviews ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" data-tone="slate">{{ i18n.t('mod_chip_total') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_visible') }}</div><div class="mk-kpi-value">{{ kpis()?.visibleReviews ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" data-tone="green">{{ i18n.t('mod_chip_live') }}</span><span class="mk-kpi-note">{{ kpis()?.hiddenReviews ?? 0 }} {{ i18n.t('mod_hidden_lc') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_rating') }}</div><div class="mk-kpi-value">{{ (kpis()?.reviewAvgRating ?? 0).toFixed(1) }}<span class="mk-kpi-star">★</span></div><div class="mk-kpi-foot"><span class="mk-kpi-note">{{ i18n.t('mod_kpi_review_rating_note') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_low') }}</div><div class="mk-kpi-value" [class.mk-val-warn]="(kpis()?.lowRatings ?? 0) > 0">{{ kpis()?.lowRatings ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" [attr.data-tone]="(kpis()?.lowRatings ?? 0) > 0 ? 'amber' : 'green'">{{ (kpis()?.lowRatings ?? 0) > 0 ? i18n.t('mod_chip_watch') : i18n.t('mod_chip_ok') }}</span><span class="mk-kpi-note">{{ i18n.t('mod_kpi_low_note') }}</span></div></div>
+      <div class="mk-kpi"><div class="mk-kpi-label">{{ i18n.t('mod_kpi_flagged') }}</div><div class="mk-kpi-value" [class.mk-val-danger]="(kpis()?.pendingReviews ?? 0) > 0">{{ kpis()?.pendingReviews ?? 0 }}</div><div class="mk-kpi-foot"><span class="mk-kpi-chip" [attr.data-tone]="(kpis()?.pendingReviews ?? 0) > 0 ? 'danger' : 'green'">{{ (kpis()?.pendingReviews ?? 0) > 0 ? i18n.t('mod_chip_action') : i18n.t('mod_chip_ok') }}</span></div></div>
+    }
+  </div>
+
+  @if (segment() === 'listings') {
+    <!-- Listings toolbar -->
+    <div class="mk-toolbar">
+      <div class="mk-search"><app-icon name="search" /><input type="text" data-testid="admin-mkt-l-search" [attr.aria-label]="i18n.t('mod_search_listings')" [placeholder]="i18n.t('mod_search_listings')" [value]="lSearch()" (input)="onLSearch($event)" /></div>
+      <div class="mk-filters">
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_status') }}</label><select data-testid="admin-mkt-l-status" (change)="onLStatus($event)"><option value="">{{ i18n.t('admin_filter_all') }}</option><option value="PUBLIC">{{ i18n.t('mod_status_public') }}</option><option value="PRIVATE">{{ i18n.t('mod_status_private') }}</option><option value="PAUSED">{{ i18n.t('mod_status_paused') }}</option><option value="TAKEN_DOWN">{{ i18n.t('mod_status_takendown') }}</option></select></div>
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_kind') }}</label><select data-testid="admin-mkt-l-kind" (change)="onLKind($event)"><option value="">{{ i18n.t('admin_filter_all') }}</option><option value="AUTOMATION">{{ i18n.t('mod_kind_automation') }}</option><option value="INTEGRATION">{{ i18n.t('mod_kind_integration') }}</option></select></div>
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_pricing') }}</label><select data-testid="admin-mkt-l-pricing" (change)="onLPricing($event)"><option value="">{{ i18n.t('admin_filter_all') }}</option><option value="FREE">{{ i18n.t('mod_free') }}</option><option value="PAID">{{ i18n.t('mod_paid') }}</option></select></div>
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_sort') }}</label><select data-testid="admin-mkt-l-sort" (change)="onLSort($event)"><option value="newest">{{ i18n.t('mod_sort_newest') }}</option><option value="installs">{{ i18n.t('mod_sort_installs') }}</option><option value="rating">{{ i18n.t('mod_sort_rating') }}</option></select></div>
+      </div>
+    </div>
+
+    @if (lLoading()) {
+      <div class="mk-card" aria-hidden="true" data-testid="admin-mkt-skeleton"><div class="mk-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="mk-skel-row"></div> }</div>
+    } @else if (lRows().length === 0 && lHasFilters()) {
+      <div class="mk-empty" data-testid="admin-mkt-l-empty-filtered"><app-icon name="search" /><div class="mk-empty-title">{{ i18n.t('mod_empty_filtered') }}</div><button type="button" class="mk-btn" (click)="lClearFilters()">{{ i18n.t('mod_clear_filters') }}</button></div>
+    } @else if (lRows().length === 0) {
+      <div class="mk-empty" data-testid="admin-mkt-l-empty"><app-icon name="market" /><div class="mk-empty-title">{{ i18n.t('mod_empty_listings') }}</div></div>
+    } @else {
+      <div class="mk-card">
+        <div class="mk-scroll">
+          <table class="dtable" data-testid="admin-mkt-listings-table">
+            <thead><tr><th scope="col">{{ i18n.t('mod_col_listing') }}</th><th scope="col">{{ i18n.t('mod_col_author') }}</th><th scope="col">{{ i18n.t('mod_col_kind') }}</th><th scope="col">{{ i18n.t('mod_col_pricing') }}</th><th scope="col" class="mk-num">{{ i18n.t('mod_col_installs') }}</th><th scope="col">{{ i18n.t('mod_col_rating') }}</th><th scope="col">{{ i18n.t('mod_col_status') }}</th><th scope="col" class="mk-col-menu"></th></tr></thead>
+            <tbody>
+              @for (l of lRows(); track l.id) {
+                <tr class="mk-row" data-testid="admin-mkt-listing-row" [attr.data-takendown]="l.takenDown ? '1' : null" tabindex="0" (click)="openListing(l)" (keydown.enter)="openListing(l)" (keydown.space)="openListing(l); $event.preventDefault()">
+                  <td>
+                    <div class="mk-cell-listing">
+                      <span class="mk-l-ic" [attr.data-kind]="l.kind"><app-icon [name]="l.kind === 'INTEGRATION' ? 'integrations' : 'automations'" /></span>
+                      <span class="mk-cell-text">
+                        <span class="mk-cell-name" [class.mk-struck]="l.takenDown">{{ l.name }}@if (l.featured) { <span class="mk-feat" [title]="i18n.t('mod_featured')"><app-icon name="star" /></span> }</span>
+                        <span class="mk-cell-sub mono">{{ l.slug }}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td><div class="mk-cell-owner"><span>{{ l.authorName ?? '—' }}</span>@if (l.authorEmail) { <span class="mk-cell-sub mono">{{ l.authorEmail }}</span> }</div></td>
+                  <td><span class="mk-badge" [attr.data-tone]="kindTone(l.kind)">{{ l.kind === 'INTEGRATION' ? i18n.t('mod_kind_integration') : i18n.t('mod_kind_automation') }}</span></td>
+                  <td><span class="mk-badge" [attr.data-tone]="priceLabel(l) === i18n.t('mod_free') ? 'slate' : 'amber'">{{ priceLabel(l) }}</span></td>
+                  <td class="mk-num mono">{{ fmt.compactNumber(l.installCount) }}</td>
+                  <td><span class="mk-rating"><span class="mk-stars">@for (i of stars; track i) { <span class="mk-star" [class.mk-star--on]="i <= (l.ratingAvg + 0.5)">★</span> }</span><span class="mk-rating-n mono">{{ ratingText(l.ratingAvg, l.ratingCount) }}</span></span></td>
+                  <td><span class="mk-status"><span class="mk-dot" [attr.data-tone]="statusTone(l.status)"></span><span class="mk-badge" [attr.data-tone]="statusTone(l.status)">{{ statusLabel(l.status) }}</span></span></td>
+                  <td class="mk-col-menu" (click)="$event.stopPropagation()">
+                    <div class="mk-menu-wrap">
+                      <button type="button" class="mk-icon-btn" [attr.data-testid]="'admin-mkt-l-menu-' + l.id" [attr.aria-label]="i18n.t('mod_row_menu')" (click)="toggleMenu('l-' + l.id, $event)"><app-icon name="list" /></button>
+                      @if (openMenuId() === 'l-' + l.id) {
+                        <div class="mk-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                          <button type="button" class="mk-menu-item" role="menuitem" (click)="openListing(l); openMenuId.set(null)"><app-icon name="link" /><span>{{ i18n.t('mod_menu_view') }}</span></button>
+                          @if (l.takenDown) {
+                            <button type="button" class="mk-menu-item" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="restore(l, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="unlock" /> }<span>{{ i18n.t('mod_restore') }}</span></button>
+                          } @else {
+                            <button type="button" class="mk-menu-item mk-menu-item--danger" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="takeDown(l, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="lock" /> }<span>{{ i18n.t('mod_takedown') }}</span></button>
+                          }
+                          <button type="button" class="mk-menu-item" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="setFeatured(l, !l.featured, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="star" /> }<span>{{ l.featured ? i18n.t('mod_unfeature') : i18n.t('mod_feature') }}</span></button>
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (lTotalPages() > 1) {
+          <div class="mk-pager"><span class="mk-pager-info">{{ lTotal() }} {{ i18n.t('mod_listings') }}</span><div class="mk-pager-ctrls"><button class="mk-pager-btn" [disabled]="lPage() === 0" (click)="lGoToPage(lPage() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="mk-pager-pages">{{ lPage() + 1 }} / {{ lTotalPages() }}</span><button class="mk-pager-btn" [disabled]="lPage() >= lTotalPages() - 1" (click)="lGoToPage(lPage() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+        }
+      </div>
+    }
+  } @else {
+    <!-- Reviews toolbar -->
+    <div class="mk-toolbar">
+      <div class="mk-search"><app-icon name="search" /><input type="text" data-testid="admin-mkt-r-search" [attr.aria-label]="i18n.t('mod_search_reviews')" [placeholder]="i18n.t('mod_search_reviews')" [value]="rSearch()" (input)="onRSearch($event)" /></div>
+      <div class="mk-filters">
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_rating') }}</label><select data-testid="admin-mkt-r-rating" (change)="onRRating($event)"><option value="">{{ i18n.t('admin_filter_all') }}</option><option value="5">5★</option><option value="4">4★</option><option value="3">3★</option><option value="2">2★</option><option value="1">1★</option></select></div>
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_status') }}</label><select data-testid="admin-mkt-r-status" (change)="onRStatus($event)"><option value="">{{ i18n.t('admin_filter_all') }}</option><option value="VISIBLE">{{ i18n.t('mod_visible') }}</option><option value="HIDDEN">{{ i18n.t('mod_hidden') }}</option></select></div>
+        <div class="mk-filter"><label>{{ i18n.t('mod_filter_sort') }}</label><select data-testid="admin-mkt-r-sort" (change)="onRSort($event)"><option value="newest">{{ i18n.t('mod_sort_newest') }}</option><option value="lowest">{{ i18n.t('mod_sort_lowest') }}</option></select></div>
+      </div>
+    </div>
+
+    @if (rLoading()) {
+      <div class="mk-card" aria-hidden="true"><div class="mk-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="mk-skel-row"></div> }</div>
+    } @else if (rRows().length === 0 && rHasFilters()) {
+      <div class="mk-empty" data-testid="admin-mkt-r-empty-filtered"><app-icon name="search" /><div class="mk-empty-title">{{ i18n.t('mod_empty_filtered') }}</div><button type="button" class="mk-btn" (click)="rClearFilters()">{{ i18n.t('mod_clear_filters') }}</button></div>
+    } @else if (rRows().length === 0) {
+      <div class="mk-empty" data-testid="admin-mkt-r-empty"><app-icon name="star" /><div class="mk-empty-title">{{ i18n.t('mod_empty_reviews') }}</div></div>
+    } @else {
+      <div class="mk-card">
+        <div class="mk-scroll">
+          <table class="dtable" data-testid="admin-mkt-reviews-table">
+            <thead><tr><th scope="col">{{ i18n.t('mod_col_review') }}</th><th scope="col">{{ i18n.t('mod_col_author') }}</th><th scope="col">{{ i18n.t('mod_col_listing') }}</th><th scope="col">{{ i18n.t('mod_col_posted') }}</th><th scope="col">{{ i18n.t('mod_col_status') }}</th><th scope="col" class="mk-col-menu"></th></tr></thead>
+            <tbody>
+              @for (r of rRows(); track r.id) {
+                <tr class="mk-row" data-testid="admin-mkt-review-row" [attr.data-hidden]="r.hidden ? '1' : null" tabindex="0" (click)="openReview(r)" (keydown.enter)="openReview(r)" (keydown.space)="openReview(r); $event.preventDefault()">
+                  <td>
+                    <div class="mk-cell-review">
+                      <span class="mk-stars">@for (i of stars; track i) { <span class="mk-star" [class.mk-star--on]="i <= r.rating">★</span> }</span>
+                      <span class="mk-review-snip" [class.mk-review-snip--hidden]="r.hidden">{{ r.text }}</span>
+                    </div>
+                  </td>
+                  <td><div class="mk-cell-owner"><span>{{ r.authorName ?? '—' }}</span>@if (r.authorEmail) { <span class="mk-cell-sub mono">{{ r.authorEmail }}</span> }</div></td>
+                  <td class="mk-muted">{{ r.listingName ?? '—' }}</td>
+                  <td class="mk-muted">{{ fmt.date(r.createdAt) }}</td>
+                  <td>@if (r.hidden) { <span class="mk-badge" data-tone="slate">{{ i18n.t('mod_hidden') }}</span> } @else { <span class="mk-badge" data-tone="green">{{ i18n.t('mod_visible') }}</span> }</td>
+                  <td class="mk-col-menu" (click)="$event.stopPropagation()">
+                    <div class="mk-menu-wrap">
+                      <button type="button" class="mk-icon-btn" [attr.data-testid]="'admin-mkt-r-menu-' + r.id" [attr.aria-label]="i18n.t('mod_row_menu')" (click)="toggleMenu('r-' + r.id, $event)"><app-icon name="list" /></button>
+                      @if (openMenuId() === 'r-' + r.id) {
+                        <div class="mk-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                          <button type="button" class="mk-menu-item" role="menuitem" (click)="openReview(r); openMenuId.set(null)"><app-icon name="link" /><span>{{ i18n.t('mod_menu_view') }}</span></button>
+                          @if (r.hidden) {
+                            <button type="button" class="mk-menu-item" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="setReviewHidden(r, false, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="unlock" /> }<span>{{ i18n.t('mod_unhide') }}</span></button>
+                          } @else {
+                            <button type="button" class="mk-menu-item mk-menu-item--danger" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="setReviewHidden(r, true, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="lock" /> }<span>{{ i18n.t('mod_hide') }}</span></button>
+                          }
+                          <button type="button" class="mk-menu-item mk-menu-item--danger" role="menuitem" [disabled]="!canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="deleteReview(r, $event); openMenuId.set(null)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }<span>{{ i18n.t('mod_delete') }}</span></button>
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (rTotalPages() > 1) {
+          <div class="mk-pager"><span class="mk-pager-info">{{ rTotal() }} {{ i18n.t('mod_reviews') }}</span><div class="mk-pager-ctrls"><button class="mk-pager-btn" [disabled]="rPage() === 0" (click)="rGoToPage(rPage() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="mk-pager-pages">{{ rPage() + 1 }} / {{ rTotalPages() }}</span><button class="mk-pager-btn" [disabled]="rPage() >= rTotalPages() - 1" (click)="rGoToPage(rPage() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+        }
+      </div>
+    }
+  }
+
+  <!-- I. Listing detail modal -->
+  @if (detailListing(); as d) {
+    <div class="mk-scrim" (click)="closeDetail()"></div>
+    <div class="mk-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-mkt-listing-modal" [attr.aria-label]="d.listing.name" (click)="$event.stopPropagation()">
+      <div class="mk-modal-head">
+        <div class="mk-modal-id">
+          <span class="mk-swatch" [attr.data-kind]="d.listing.kind" aria-hidden="true"><app-icon [name]="d.listing.kind === 'INTEGRATION' ? 'integrations' : 'automations'" /></span>
+          <div class="mk-modal-id-text">
+            <div class="mk-modal-name">{{ d.listing.name }}@if (d.listing.featured) { <span class="mk-feat"><app-icon name="star" /></span> }</div>
+            <div class="mk-modal-sub">{{ d.listing.authorName ?? '—' }}@if (d.listing.authorEmail) { · <span class="mono">{{ d.listing.authorEmail }}</span> }</div>
+            <div class="mk-modal-pills">
+              <span class="mk-badge" [attr.data-tone]="kindTone(d.listing.kind)">{{ d.listing.kind === 'INTEGRATION' ? i18n.t('mod_kind_integration') : i18n.t('mod_kind_automation') }}</span>
+              <span class="mk-badge" [attr.data-tone]="priceLabel(d.listing) === i18n.t('mod_free') ? 'slate' : 'amber'">{{ priceLabel(d.listing) }}</span>
+              <span class="mk-badge" [attr.data-tone]="statusTone(d.listing.status)">{{ statusLabel(d.listing.status) }}</span>
+              <span class="mk-badge mk-badge--meta mono">{{ fmt.compactNumber(d.listing.installCount) }} {{ i18n.t('mod_installs_lc') }}</span>
+              <span class="mk-badge mk-badge--meta mono">{{ (d.listing.ratingAvg).toFixed(1) }}★ ({{ d.listing.ratingCount }})</span>
+            </div>
+          </div>
+        </div>
+        <button class="mk-modal-close" type="button" (click)="closeDetail()" data-testid="admin-mkt-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+      <div class="mk-modal-actions">
+        @if (d.listing.takenDown) {
+          <button class="mk-btn mk-btn--solid" type="button" data-testid="admin-mkt-modal-restore" [disabled]="busy() || !canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="restore(d.listing)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="unlock" /> }{{ i18n.t('mod_restore') }}</button>
+        } @else {
+          <button class="mk-btn mk-btn--danger" type="button" data-testid="admin-mkt-modal-takedown" [disabled]="busy() || !canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="takeDown(d.listing)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="lock" /> }{{ i18n.t('mod_takedown') }}</button>
+        }
+        <button class="mk-btn" type="button" [disabled]="busy() || !canModerate()" [attr.title]="canModerate() ? null : i18n.t('admin_perm_required')" (click)="setFeatured(d.listing, !d.listing.featured)">@if (!canModerate()) { <app-icon name="lock" /> } @else { <app-icon name="star" /> }{{ d.listing.featured ? i18n.t('mod_unfeature') : i18n.t('mod_feature') }}</button>
+      </div>
+      <div class="mk-tabs" role="tablist">
+        <button class="mk-tab" role="tab" [attr.data-active]="listingTab() === 'overview'" (click)="setListingTab('overview')">{{ i18n.t('mod_tab_overview') }}</button>
+        <button class="mk-tab" role="tab" [attr.data-active]="listingTab() === 'reviews'" (click)="setListingTab('reviews')">{{ i18n.t('mod_tab_reviews') }} ({{ d.reviews.length }})</button>
+      </div>
+      <div class="mk-modal-body">
+        @switch (listingTab()) {
+          @case ('overview') {
+            <div class="mk-panel"><div class="mk-panel-head">{{ i18n.t('mod_panel_about') }}</div><div class="mk-fields">
+              <div class="mk-field-desc">{{ d.description ?? '—' }}</div>
+              <div class="mk-field"><span class="mk-field-label">{{ i18n.t('mod_col_kind') }}</span><span class="mk-field-val">{{ d.listing.kind === 'INTEGRATION' ? i18n.t('mod_kind_integration') : i18n.t('mod_kind_automation') }}</span></div>
+              <div class="mk-field"><span class="mk-field-label">{{ i18n.t('mod_col_pricing') }}</span><span class="mk-field-val">{{ priceLabel(d.listing) }}</span></div>
+              <div class="mk-field"><span class="mk-field-label">{{ i18n.t('mod_col_status') }}</span><span class="mk-field-val">{{ statusLabel(d.listing.status) }}</span></div>
+              <div class="mk-field"><span class="mk-field-label">{{ i18n.t('mod_col_installs') }}</span><span class="mk-field-val mono">{{ fmt.compactNumber(d.listing.installCount) }}</span></div>
+              <div class="mk-field"><span class="mk-field-label">{{ i18n.t('admin_col_created') }}</span><span class="mk-field-val">{{ fmt.date(d.listing.createdAt) }}</span></div>
+            </div></div>
+            <div class="mk-meta-note"><app-icon name="info" /> {{ i18n.t('mod_takedown_note') }}</div>
+          }
+          @case ('reviews') {
+            @if (d.reviews.length === 0) {
+              <div class="mk-empty mk-empty--sm"><app-icon name="star" /><div class="mk-empty-title">{{ i18n.t('mod_no_reviews') }}</div></div>
+            } @else {
+              <div class="mk-rev-list">
+                @for (rv of d.reviews; track rv.id) {
+                  <div class="mk-rev" [class.mk-rev--hidden]="rv.hidden">
+                    <div class="mk-rev-top"><span class="mk-stars">@for (i of stars; track i) { <span class="mk-star" [class.mk-star--on]="i <= rv.rating">★</span> }</span><span class="mk-rev-author">{{ rv.authorName ?? '—' }}</span>@if (rv.hidden) { <span class="mk-badge" data-tone="slate">{{ i18n.t('mod_hidden') }}</span> }<button type="button" class="mk-rev-act" [disabled]="!canModerate()" (click)="setReviewHidden(rv, !rv.hidden)">{{ rv.hidden ? i18n.t('mod_unhide') : i18n.t('mod_hide') }}</button></div>
+                    <div class="mk-rev-body">{{ rv.text }}</div>
+                  </div>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Review detail modal -->
+  @if (detailReview(); as r) {
+    <div class="mk-scrim" (click)="closeDetail()"></div>
+    <div class="mk-modal mk-modal--sm" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-mkt-review-modal" (click)="$event.stopPropagation()">
+      <div class="mk-modal-head">
+        <div class="mk-modal-id"><div class="mk-modal-id-text"><div class="mk-modal-name">{{ i18n.t('mod_review_detail') }}</div><div class="mk-modal-sub">{{ r.authorName ?? '—' }}@if (r.authorEmail) { · <span class="mono">{{ r.authorEmail }}</span> } · {{ r.listingName ?? '—' }}</div></div></div>
+        <button class="mk-modal-close" type="button" (click)="closeDetail()" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+      <div class="mk-modal-actions">
+        @if (r.hidden) { <button class="mk-btn mk-btn--solid" type="button" [disabled]="busy() || !canModerate()" (click)="setReviewHidden(r, false)"><app-icon name="unlock" />{{ i18n.t('mod_unhide') }}</button> }
+        @else { <button class="mk-btn mk-btn--danger" type="button" [disabled]="busy() || !canModerate()" (click)="setReviewHidden(r, true)"><app-icon name="lock" />{{ i18n.t('mod_hide') }}</button> }
+        <button class="mk-btn mk-btn--danger" type="button" [disabled]="busy() || !canModerate()" (click)="deleteReview(r)"><app-icon name="trash" />{{ i18n.t('mod_delete') }}</button>
+      </div>
+      <div class="mk-modal-body">
+        <div class="mk-bigstars">@for (i of stars; track i) { <span class="mk-star mk-star--lg" [class.mk-star--on]="i <= r.rating">★</span> }</div>
+        <div class="mk-big-review">{{ r.text }}</div>
+        <div class="mk-rev-meta mono">{{ fmt.dateTime(r.createdAt) }}</div>
+      </div>
+    </div>
+  }
+</app-page-content>

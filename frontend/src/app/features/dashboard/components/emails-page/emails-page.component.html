@@ -1,0 +1,283 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      @if (activeAccount()) {
+        <div class="dash-eyebrow">{{ i18n.t('inbox_pretitle', { email: activeAccount()!.email }) }}</div>
+      }
+      <h1 class="dash-title">{{ folderTitle() }}</h1>
+      @if (activeAccount()) {
+        <div class="dash-subtitle">
+          {{ totalElements() }} {{ i18n.t('inbox_messages') }} · {{ unreadCount() }} {{ i18n.t('inbox_unread') }}
+        </div>
+      }
+    </div>
+    <div class="ib-head-actions">
+      @if (isTrashFolder() && emails().length > 0) {
+        <button type="button" class="ib-empty-trash-btn" data-testid="empty-trash-btn" (click)="onEmptyTrash()">
+          <app-icon name="trash" />
+          {{ i18n.t('inbox_empty_trash') }}
+        </button>
+      }
+      @if (activeAccount()?.writeEnabled) {
+        <button type="button" class="ib-compose-btn" data-testid="compose-btn" (click)="openCompose()">
+          <app-icon name="edit" />
+          {{ i18n.t('compose_verfassen') }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Filter row -->
+  <div class="ib-filters-row">
+    <div class="ib-search-wrap">
+      <span class="ib-search-icon"><app-icon name="search" /></span>
+      <input
+        type="search"
+        class="ib-search-input"
+        [placeholder]="i18n.t('inbox_search_placeholder')"
+        [value]="searchQuery()"
+        (input)="onSearchInput($any($event.target).value)"
+      />
+    </div>
+
+    <div class="ib-dd-group">
+      <!-- Date -->
+      <div class="ib-dd" (clickOutside)="dateOpen.set(false)">
+        <button type="button" class="ib-dd-trigger"
+          [attr.data-open]="dateOpen() ? '1' : '0'"
+          [attr.data-active]="dateFilter() !== 'all' ? '1' : '0'"
+          (click)="dateOpen.set(!dateOpen())">
+          <span class="ib-dd-label">{{ i18n.t('inbox_filter_date') }}</span>
+          <span class="ib-dd-value">{{ getDateLabel() }}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ib-dd-chev"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        @if (dateOpen()) {
+          <div class="ib-dd-menu" role="menu">
+            @for (opt of dateOptions; track opt.value) {
+              <button type="button" class="ib-dd-item"
+                [attr.data-active]="dateFilter() === opt.value ? '1' : '0'"
+                (click)="setDateFilter(opt.value)">
+                <span>{{ opt.label() }}</span>
+                @if (dateFilter() === opt.value) {
+                  <app-icon name="check" />
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (dateFilter() === 'custom') {
+        <div class="ib-date-inline">
+          <input type="date" class="ib-date-input" [value]="customDateFrom()" (change)="customDateFrom.set($any($event.target).value); onFilterChange()" />
+          <span class="ib-date-sep">–</span>
+          <input type="date" class="ib-date-input" [value]="customDateTo()" (change)="customDateTo.set($any($event.target).value); onFilterChange()" />
+        </div>
+      }
+
+      <!-- Category (multi-select) -->
+      <div class="ib-dd" (clickOutside)="categoryOpen.set(false)">
+        <button type="button" class="ib-dd-trigger"
+          [attr.data-open]="categoryOpen() ? '1' : '0'"
+          [attr.data-active]="categoryFilter().length > 0 ? '1' : '0'"
+          (click)="categoryOpen.set(!categoryOpen())">
+          <span class="ib-dd-label">{{ i18n.t('inbox_filter_category') }}</span>
+          <span class="ib-dd-value">{{ getCategoryLabel() }}</span>
+          @if (categoryFilter().length > 0) {
+            <span class="ib-dd-count">{{ categoryFilter().length }}</span>
+          }
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ib-dd-chev"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        @if (categoryOpen()) {
+          <div class="ib-dd-menu ib-dd-menu-multi" role="menu">
+            <button type="button" class="ib-dd-item ib-dd-item-clear" (click)="categoryFilter.set([])">
+              {{ i18n.t('inbox_filter_all') }}
+            </button>
+            <div class="ib-dd-sep"></div>
+            @for (cat of categoryOptions; track cat.value) {
+              <button type="button" class="ib-dd-item"
+                [attr.data-active]="isCategorySelected(cat.value) ? '1' : '0'"
+                (click)="toggleCategory(cat.value)">
+                <span class="ib-dd-checkbox" [class.is-checked]="isCategorySelected(cat.value)">
+                  @if (isCategorySelected(cat.value)) {
+                    <app-icon name="check" />
+                  }
+                </span>
+                @if (cat.color) {
+                  <span class="ib-dd-dot" [style.background]="cat.color"></span>
+                }
+                <span>{{ cat.label() }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Status -->
+      <div class="ib-dd" (clickOutside)="statusOpen.set(false)">
+        <button type="button" class="ib-dd-trigger"
+          [attr.data-open]="statusOpen() ? '1' : '0'"
+          [attr.data-active]="readFilter() !== 'all' ? '1' : '0'"
+          (click)="statusOpen.set(!statusOpen())">
+          <span class="ib-dd-label">{{ i18n.t('inbox_filter_status') }}</span>
+          <span class="ib-dd-value">{{ getStatusLabel() }}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ib-dd-chev"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        @if (statusOpen()) {
+          <div class="ib-dd-menu" role="menu">
+            @for (opt of statusOptions; track opt.value) {
+              <button type="button" class="ib-dd-item"
+                [attr.data-active]="readFilter() === opt.value ? '1' : '0'"
+                (click)="setStatusFilter(opt.value)">
+                <span>{{ opt.label() }}</span>
+                @if (readFilter() === opt.value) {
+                  <app-icon name="check" />
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Automation -->
+      <div class="ib-dd" (clickOutside)="automationOpen.set(false)">
+        <button type="button" class="ib-dd-trigger"
+          [attr.data-open]="automationOpen() ? '1' : '0'"
+          [attr.data-active]="automationFilter() !== 'all' ? '1' : '0'"
+          (click)="automationOpen.set(!automationOpen())">
+          <span class="ib-dd-label">{{ i18n.t('inbox_filter_automation') }}</span>
+          <span class="ib-dd-value">{{ getAutomationLabel() }}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ib-dd-chev"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        @if (automationOpen()) {
+          <div class="ib-dd-menu" role="menu">
+            @for (opt of automationOptions; track opt.value) {
+              <button type="button" class="ib-dd-item"
+                [attr.data-active]="automationFilter() === opt.value ? '1' : '0'"
+                (click)="setAutomationFilter(opt.value)">
+                <span>{{ opt.label() }}</span>
+                @if (automationFilter() === opt.value) {
+                  <app-icon name="check" />
+                }
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Email list -->
+  <div class="ib-list">
+    @if (loading() && emails().length === 0) {
+      <div class="ib-empty">{{ i18n.t('loading') }}</div>
+    } @else if (emails().length === 0) {
+      <div class="ib-empty">{{ i18n.t('inbox_empty') }}</div>
+    } @else {
+      @for (email of emails(); track email.id) {
+        <div class="ib-card" [class.is-expanded]="expandedId() === email.id" [class.is-unread]="!email.isRead" [class.is-draft]="isDraftsFolder()">
+          <button class="ib-card-row" (click)="toggleExpand(email)">
+            @if (!email.isRead) {
+              <span class="ib-unread-dot"></span>
+            }
+            @if (!isDraftsFolder()) {
+              <div class="ib-avatar">{{ getInitials(email) }}</div>
+            }
+            <div class="ib-card-body">
+              <div class="ib-card-line1">
+                @if (isDraftsFolder()) {
+                  <span class="ib-from ib-draft-label">{{ i18n.t('compose_draft') }}</span>
+                  <span class="ib-draft-to">{{ email.toAddresses }}</span>
+                } @else {
+                  <span class="ib-from">{{ email.fromPersonal || email.fromAddress }}</span>
+                }
+                <span class="ib-time">{{ getRelativeTime(email.receivedAt) }}</span>
+              </div>
+              <div class="ib-card-line2">
+                <span class="ib-subj">{{ email.subject || i18n.t('compose_no_subject') }}</span>
+                @if (email.hasAttachments) {
+                  <span class="ib-attach-icon"><app-icon name="paperclip" /></span>
+                }
+              </div>
+              <div class="ib-card-line3">
+                <span class="ib-snippet">{{ email.snippet }}</span>
+              </div>
+              @if (!isDraftsFolder()) {
+                <div class="ib-card-line4">
+                  @if (email.processed) {
+                    <span class="ib-proc-badge is-done">
+                      <app-icon name="check" />
+                      {{ i18n.t('inbox_processed') }}
+                    </span>
+                  } @else {
+                    <span class="ib-proc-badge is-pending">
+                      {{ i18n.t('inbox_not_processed') }}
+                    </span>
+                  }
+                  @for (cat of email.categories; track cat.id) {
+                    <span class="ib-cat-badge" [style.--cat-color]="cat.color">{{ cat.name }}</span>
+                  }
+                  @if (email.automationTraceCount > 0) {
+                    <span class="ib-auto-badge">
+                      <app-icon name="workflow" />
+                      {{ email.automationTraceCount }}
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          </button>
+          @if (isDraftsFolder()) {
+            <button class="ib-draft-delete" data-testid="draft-delete-btn" (click)="onDeleteEmail(email, $event)">
+              <app-icon name="trash" />
+            </button>
+          }
+          @if (isTrashFolder()) {
+            <div class="ib-trash-actions">
+              <button class="ib-card-action" data-testid="restore-btn" (click)="onRestoreEmail(email, $event)" [title]="i18n.t('inbox_restore')">
+                <app-icon name="refresh" />
+              </button>
+              <button class="ib-card-action is-danger" data-testid="delete-perm-btn" (click)="onDeleteEmail(email, $event)" [title]="i18n.t('confirm_delete')">
+                <app-icon name="trash" />
+              </button>
+            </div>
+          }
+
+          @if (expandedId() === email.id) {
+            <div class="ib-expand">
+              @if (expandedEmail()) {
+                <app-email-detail
+                  [email]="expandedEmail()!"
+                  [showReply]="showReply()"
+                  [showReprocess]="showReprocess()"
+                  [reprocessing]="reprocessing()"
+                  (reply)="openReply()"
+                  (forward)="openForward()"
+                  (star)="starExpanded()"
+                  (deleted)="deleteExpanded()"
+                  (reprocess)="reprocessExpanded()" />
+              } @else {
+                <div class="ib-empty" style="padding: 24px;">{{ i18n.t('loading') }}</div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Pagination -->
+  @if (totalPages() > 1) {
+    <div class="ib-pagination">
+      <button class="ib-page-btn" data-testid="prev-page" [disabled]="currentPage() === 0" (click)="onPageChange(currentPage() - 1)">
+        <app-icon name="arrowLeft" />
+      </button>
+      <span class="ib-page-indicator">{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+      <button class="ib-page-btn" data-testid="next-page" [disabled]="currentPage() >= totalPages() - 1" (click)="onPageChange(currentPage() + 1)">
+        <app-icon name="arrowRight" />
+      </button>
+    </div>
+  }
+</app-page-content>
+
+<app-compose-panel #composePanel (sent)="onComposeSent()" />

@@ -1,0 +1,51 @@
+<div class="form-card fade-enter">
+  <div class="eyebrow">{{ i18n.t('brandTagline') }}</div>
+  <h1 class="title">{{ i18n.t('login_title') }}</h1>
+  <p class="subtitle">{{ i18n.t('login_subtitle') }}</p>
+
+  <form class="form" (ngSubmit)="submit()" novalidate>
+    <app-error-banner [message]="error()" />
+
+    <app-input
+      [label]="i18n.t('email')"
+      type="email"
+      [placeholder]="i18n.t('login_emailPlaceholder')"
+      autocomplete="email"
+      inputId="login-email"
+      [error]="!!fieldErr()['email']"
+      [ngModel]="email()"
+      (ngModelChange)="email.set($event)"
+      name="email"
+    />
+
+    <div class="field">
+      <label class="field-label" for="login-password">{{ i18n.t('password') }}</label>
+      <app-password-input
+        [placeholder]="i18n.t('login_passwordPlaceholder')"
+        [ariaLabel]="i18n.t('password')"
+        [error]="!!fieldErr()['password']"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        name="password"
+      />
+    </div>
+
+    <div class="row-between">
+      <app-checkbox
+        [ngModel]="remember()"
+        (ngModelChange)="remember.set($event)"
+        name="remember"
+      >{{ i18n.t('login_remember') }}</app-checkbox>
+      <a routerLink="/auth/reset-password" class="link forgot">{{ i18n.t('login_forgot') }}</a>
+    </div>
+
+    <app-button type="submit" variant="primary" [disabled]="loading()">
+      {{ loading() ? i18n.t('loading') : i18n.t('login_submit') }}
+    </app-button>
+  </form>
+
+  <div class="alt-cta">
+    {{ i18n.t('login_noAccount') }}
+    <a routerLink="/auth/register" class="link-accent">{{ i18n.t('login_signupLink') }}</a>
+  </div>
+</div>

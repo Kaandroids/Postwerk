@@ -1,0 +1,527 @@
+═══════════════════════════════════════════════════════════
+POSTWERK TOOL & RESOURCE REFERENCE
+═══════════════════════════════════════════════════════════
+
+This document describes every tool and resource type available in the Postwerk system.
+Tools are grouped by domain. Each tool lists its purpose, parameters, return values, and usage notes.
+
+LOCKED RESOURCES: Any resource with "locked": true in its response MUST NOT be updated or deleted.
+Inform the user that the resource is locked and they need to unlock it first from the UI.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CATEGORIES — AI-Powered Email Classification
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Categories define labels for AI-based email classification. When a CATEGORIZE node
+processes an email, embeddings are compared to find the best matching category.
+
+Fields: name, color (hex), description (min 30 chars), positiveExample, negativeExample.
+Embeddings are automatically computed when a category is created or updated.
+
+IMPORTANT: A mandatory "Unkategorisiert" category always exists. It cannot be deleted
+and corresponds to the "uncategorized" output handle in CATEGORIZE nodes. Do NOT recreate it.
+
+NOTE: "Unkategorisiert" ≠ "Spam"!
+- "Unkategorisiert" = emails below confidence threshold (no category matched well enough).
+- "Spam" = a user-created category for unwanted/advertising emails.
+If the user wants spam filtering, create a separate "Spam" category. Never repurpose "Unkategorisiert".
+
+### Tools
+
+**list_categories** — List all categories for the current user.
+  Parameters: (none)
+  Returns: Array of category objects.
+  Each: {id, name, color, description, positiveExample, negativeExample, locked, createdAt}
+
+**create_category** — Create a new email category for AI classification.
+  Parameters:
+  - name (STRING, required): Category name (min 3 chars)
+  - color (STRING, required): Hex color code, e.g. #3B82F6
+  - description (STRING, required): Detailed description of what emails belong here (min 30 chars). The AI uses this text to classify emails, so be specific and descriptive.
+  - positiveExample (STRING, optional): Example email that belongs in this category
+  - negativeExample (STRING, optional): Example email that does NOT belong in this category
+  Returns: The created category object with generated id.
+
+**update_category** — Update an existing category by its ID.
+  Parameters:
+  - id (STRING, required): Category UUID to update
+  - name, color, description, positiveExample, negativeExample: same as create
+  Returns: The updated category object.
+
+**delete_category** — Delete a category by its ID.
+  Parameters:
+  - id (STRING, required): Category UUID
+  Returns: {deleted: true}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. VARIABLE SYSTEM — Unified Data Flow
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Every node in an automation can produce variables that downstream nodes can consume.
+Variables are referenced using dot notation (e.g. email.from, extraction_0.amount).
+
+### Variables injected by node type
+
+**TRIGGER** (unified, 3 modes):
+  EMAIL mode injects email envelope variables:
+  - email.from — sender email address
+  - email.fromName — sender display name
+  - email.to — recipient email address
+  - email.cc — CC recipients
+  - email.subject — email subject line
+  - email.body — email body text
+  - email.hasAttachments — whether email has attachments (true/false)
+  - email.isRead — whether email is read (true/false)
+  - email.folder — IMAP folder name
+  - email.receivedAt — received timestamp
+  - email.isReply — whether the email is a reply to an existing thread
+
+  WEBHOOK mode (INBOUND receiver) injects trigger variables from the incoming request body:
+  - trigger.<fieldName> — fields mapped from the linked ParameterSet (or all top-level JSON keys if no ParameterSet)
+  - trigger.body — the raw request body (capped)
+  - trigger.receivedAt — ISO timestamp when the request was received
+
+  CRON mode: passthrough, no variables injected
+
+**EXTRACT** injects extracted field variables (one namespace per extraction):
+  - extraction_0.fieldName — fields from the first extraction
+  - extraction_1.fieldName — fields from the second extraction
+  - Field names match the parameter names defined in the linked ParameterSet
+
+**WEBHOOK** (OUTBOUND action node) injects response variables:
+  - http_<nodeId>.statusCode — HTTP response status code
+  - http_<nodeId>.body — raw response body
+  - http_<nodeId>.fieldName — individual JSON response fields, available ONLY when the WEBHOOK node
+    defines a "responseSchemas" entry mapping the status (e.g. "2xx") to a ParameterSet whose parameters
+    are those fields. WITHOUT a responseSchema, only statusCode/body exist (no parsed fields).
+    So: to use response data downstream, create_parameter_set for the response fields, then set the
+    WEBHOOK node's responseSchemas (see node-config-reference WEBHOOK section).
+
+**CATEGORIZE** injects category variables:
+  - category.id — UUID of the matched category
+  - category.name — name of the matched category
+  - category.color — color of the matched category
+  - category.confidence — confidence score (0-100)
+
+**VECTOR_SEARCH** injects the matched knowledge-base entry + judge outputs:
+  - vectorsearch_<nodeId>.match.<fieldName> — fields of the matched entry (from the KB's parameter set)
+  - vectorsearch_<nodeId>.confidence — match confidence (0-100)
+  - vectorsearch_<nodeId>.reason — short rationale for the match
+
+**NOTIFY** injects the delivery outcome:
+  - notify_<nodeId>.sent — true when the notification was delivered
+  - notify_<nodeId>.recipientCount — number of recipients notified
+
+**Automation constants** (user-defined, always available):
+  - const.<NAME> — a reusable constant the user defines once per automation (e.g. const.API_ENDPOINT)
+  - Plain text values, configured in the editor's Variables panel; not node-specific and available to every node.
+  - Use them anywhere a {{placeholder}} is supported, e.g. a WEBHOOK url {{const.API_ENDPOINT}}/orders.
+
+### Template resolution
+
+Use {{variableKey}} syntax in EMAIL_ACTION, SEND_EMAIL, and WEBHOOK bodies/URLs.
+Examples:
+  - {{email.from}} — sender address from trigger
+  - {{extraction_0.guestName}} — extracted guest name
+  - {{category.name}} — matched category name
+  - {{http_abc123.orderId}} — parsed field from webhook response
+
+Legacy shorthand also works in templates linked to a ParameterSet:
+  - {{fieldName}} resolves to the linked extraction's field
+  - {{fromAddress}}, {{subject}}, {{fromName}}, {{toAddress}}, {{receivedAt}} — email shortcuts
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. PARAMETER SETS — Structured Data Extraction Schemas
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Parameter sets define what structured data the AI should extract from emails.
+Each parameter has a name (used as the variable key), type, and description.
+The AI reads the email content and extracts values for each parameter.
+
+Supported types: TEXT, NUMBER, BOOLEAN, EMAIL, DATE, OBJECT
+- BOOLEAN: Use for yes/no questions about email content (e.g. "isReservation", "hasUrgentRequest", "isForJune")
+- TEXT: Use for free-form extracted values (e.g. "guestName", "hotelName", "reason")
+- NUMBER: Use for numeric values (e.g. "numberOfGuests", "amount", "invoiceTotal")
+- DATE: Use for dates mentioned in the email (e.g. "checkInDate", "checkOutDate", "deadline")
+- EMAIL: Use for email addresses found in content (e.g. "contactEmail")
+- OBJECT: For nested structures, supports children[] and isList=true for arrays
+
+CRITICAL — Parameter Sets Are the Heart of Smart Automations!
+Parameter sets power the EXTRACT node, which uses AI to understand email content semantically.
+Extracted values can then be:
+  1. Used in template replies via {{variable}} placeholders
+  2. Used in webhook request bodies/URLs via {{extraction_N.fieldName}}
+  3. Used for intelligent routing decisions (e.g. extract isReservation=true, then route accordingly)
+
+Example — Hotel Reservation Handling:
+  Parameter set "Reservierungsdaten":
+    - isReservation (BOOLEAN): "Is this email a reservation/booking request?"
+    - guestName (TEXT): "Full name of the guest"
+    - checkInDate (DATE): "Requested check-in date"
+    - checkOutDate (DATE): "Requested check-out date"
+    - numberOfGuests (NUMBER): "Number of guests"
+    - isForSpecificMonth (BOOLEAN): "Is the reservation for a specific month mentioned?"
+    - requestedMonth (TEXT): "Which month the reservation is for, if mentioned"
+
+### Tools
+
+**list_parameter_sets** — List all parameter sets for the current user.
+  Parameters: (none)
+  Returns: Array of parameter set objects.
+  Each: {id, name, parameters: [{name, type, description, positiveExample, negativeExample, isList, required, children}], locked, createdAt}
+
+**create_parameter_set** — Create a parameter set for structured data extraction.
+  Parameters:
+  - name (STRING, required): Parameter set name (min 3 chars)
+  - parameters (ARRAY, required): List of parameters to extract. Each has:
+    - name (STRING, required): Parameter name — this becomes the {{variable}} key in templates
+    - type (STRING, required): TEXT, NUMBER, BOOLEAN, EMAIL, DATE, OBJECT
+    - description (STRING, required): Clear question or description of what to extract.
+      The AI reads this description to understand WHAT to look for in the email.
+      Be specific! "Is this email a reservation request?" is better than "reservation".
+    - positiveExample (STRING, optional): Example value
+    - negativeExample (STRING, optional): Counter-example value
+    - isList (BOOLEAN, optional): Whether this extracts as an array
+    - required (BOOLEAN, optional): Whether this parameter is required
+  Returns: The created parameter set object with generated id.
+
+**update_parameter_set** — Update an existing parameter set by its ID.
+  Parameters:
+  - id (STRING, required): Parameter set UUID to update
+  - name, parameters: same as create
+  Returns: The updated parameter set object.
+
+**delete_parameter_set** — Delete a parameter set by its ID.
+  Parameters:
+  - id (STRING, required): Parameter set UUID
+  Returns: {deleted: true}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. TEMPLATES — Email Reply Templates
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Templates define the content for automated email replies and forwards.
+The body field MUST be rich HTML — never plain text!
+
+HTML requirements:
+- Use proper tags: <h2>, <p>, <strong>, <em>, <ul>/<li>, <table>, <br>, <a href="">
+- Use inline CSS for professional styling (font-family, color, padding, background, border-radius)
+- Wrap content in a <div> with base font styling
+
+Variable placeholders ({{variable}} syntax):
+- Built-in: {{fromAddress}}, {{fromName}}, {{subject}}, {{toAddress}}, {{receivedAt}}
+- Extraction: {{fieldName}} — uses EXACT parameter names from the linked parameter set
+  (e.g. if parameter set has "invoiceNumber", use {{invoiceNumber}} in the template)
+
+CRITICAL LINKING RULE:
+When creating a template that uses extraction variables:
+1. First create the parameter set (create_parameter_set) with the desired field names
+2. Then create the template (create_template) with parameterSetId set to that parameter set's UUID
+3. Use {{exactFieldName}} in the body — names must EXACTLY match the parameter set's parameter names
+Without parameterSetId, extraction variables like {{fieldName}} will NOT resolve!
+
+### Tools
+
+**list_templates** — List all email templates for the current user.
+  Parameters: (none)
+  Returns: Array of template objects.
+  Each: {id, name, subject, body, params (extracted placeholder names), parameterSetId, parameterSetName, locked, createdAt}
+
+**create_template** — Create a new email reply template.
+  Parameters:
+  - name (STRING, required): Template name
+  - subject (STRING, required): Email subject line
+  - body (STRING, required): Email body as rich HTML. Supports {{placeholder}} variables.
+    MUST use proper HTML tags for professional formatting.
+    Example: <div style="font-family:Arial,sans-serif;"><h2>Thank you, {{fromName}}!</h2><p>We received your request regarding <strong>{{subject}}</strong>.</p></div>
+  - parameterSetId (STRING, optional but CRITICAL): Parameter set UUID to link.
+    REQUIRED when the template uses extraction placeholders ({{fieldName}}).
+    First create the parameter set, then pass its UUID here.
+  Returns: The created template object with generated id.
+
+**update_template** — Update an existing email template by its ID.
+  Parameters:
+  - id (STRING, required): Template UUID to update
+  - name, subject, body, parameterSetId: same as create
+  Returns: The updated template object.
+
+**delete_template** — Delete a template by its ID.
+  Parameters:
+  - id (STRING, required): Template UUID
+  Returns: {deleted: true}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. AUTOMATIONS — Graph-Based Email Workflows
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Automations are directed acyclic graphs (DAGs) of nodes and edges.
+Each automation starts with a TRIGGER node and flows through processing/action nodes.
+
+### Tools
+
+**list_automations** — List all automations for the current user.
+  Parameters: (none)
+  Returns: Array of automation summary objects.
+  Each: {id, name, description, type, status, color, nodeCount, edgeCount, lastRunAt, totalExecutions, successCount, failedCount, locked, createdAt}
+
+**create_automation** — Create a new automation (starts as PAUSED).
+  Parameters:
+  - name (STRING, required): Automation name
+  - description (STRING, optional): What this automation does
+  - color (STRING, optional): Hex color code
+  Note: Does NOT take accountIds — those go in the TRIGGER node config via update_automation_flow.
+  Returns: The created automation object with generated id.
+
+**update_automation** — Update an automation's metadata (name, description, color).
+  Parameters:
+  - id (STRING, required): Automation UUID to update
+  - name (STRING, required): Updated name
+  - description, color: optional
+  Returns: The updated automation object.
+
+**update_automation_flow** — Set the nodes and edges of an automation flow (replaces existing flow).
+  CRITICAL: Before calling this, create ALL dependencies (templates, parameter sets, categories)
+  using their respective create tools, and use the returned UUIDs in node configs.
+  Parameters:
+  - automationId (STRING, required): Automation UUID
+  - nodes (ARRAY, required): Flow nodes — see Node Types section below
+  - edges (ARRAY, required): Flow edges — see Edge Structure section below
+  Returns: Full automation detail with resolved nodes and edges.
+  {id, name, description, status, color, nodes: [{id, nodeType, label, positionX, positionY, config}], edges: [{id, sourceNodeId, sourceHandle, targetNodeId, targetHandle}], locked, createdAt}
+  IMPORTANT: The returned node IDs are server-generated UUIDs — use these for test assertions!
+  VALIDATION: The tool result also includes a "validationIssues" array — each entry is
+  {code, severity, nodeId, message}. severity is "error" or "warning". You MUST resolve every
+  "error" issue (e.g. MISSING_TRIGGER, EXTRACT_NO_PARAMSET, CATEGORIZE_NO_CATEGORIES,
+  LABEL_NO_CATEGORY, SEND_NO_RECIPIENT, EMAILACTION_NO_TARGET, WEBHOOK_NO_URL, INTEGRATION_NO_REF,
+  VECTOR_SEARCH_NO_KB, VECTOR_SEARCH_NO_QUERY, NOTIFY_NO_RECIPIENT, NOTIFY_NO_MESSAGE)
+  by fixing the offending node's config and calling update_automation_flow again, before telling the
+  user the automation is done. The user CANNOT activate or publish a flow that has any error issue.
+  "warning" issues (ORPHAN_NODE, DANGLING_VARIABLE) are advisory — fix them when you can.
+
+**delete_automation** — Delete an automation by its ID.
+  Parameters:
+  - id (STRING, required): Automation UUID
+  Returns: {deleted: true}
+
+### Automation Creation Order (CRITICAL — follow this sequence!)
+1. Create all dependencies and REMEMBER the returned IDs:
+   - create_category → categoryId (for CATEGORIZE, LABEL, REMOVE_LABEL)
+   - create_parameter_set → parameterSetId (for EXTRACT nodes AND template linking)
+   - create_template → templateId (for EMAIL_ACTION REPLY/FORWARD modes)
+2. Create the automation (create_automation) — only name, description, color
+3. Update the flow (update_automation_flow) — all nodes and edges in one call
+   - FILTER nodes define their conditions inline (no external dependency needed)
+4. Use the returned node IDs from step 3 when creating test assertions
+
+NOTE: Per-node configuration, edge structure, and layout (sections 5a–5c) are documented in the
+NODE CONFIG REFERENCE that follows this reference — consult it for every node's config JSON,
+the FILTER DNF rule (groups = OR, conditions within a group = AND), sourceVariables, edge handles,
+and positioning.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. AUTOMATION TESTS — Dry-Run Testing
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Test cases verify automation logic without sending real emails.
+- Max 20 test cases per automation
+- Runs in dry-run mode: action nodes (EMAIL_ACTION, WEBHOOK) are SIMULATED
+- AI token usage (embedding + classification) IS tracked during tests (billing accuracy)
+
+A test case consists of:
+1. Synthetic email input: from, to, subject, body (simulates an incoming email)
+2. Assertions: per-node expected status checks
+
+### Node Type → Expected Test Status Mapping
+
+| Node Type | Success Status | Failure Status | Notes |
+|-----------|---------------|----------------|-------|
+| TRIGGER | PASSED | — | Always passes (EMAIL/CRON), SIMULATED (WEBHOOK dry-run) |
+| FILTER | MATCHED | NOT_MATCHED | Based on check evaluation (first match wins) |
+| CATEGORIZE | CATEGORIZED | NOT_MATCHED | NOT_MATCHED = below threshold |
+| EXTRACT | EXTRACTED | — | Extracts data from email |
+| DELAY | SIMULATED | — | Simulated in dry-run |
+| LABEL | SIMULATED | — | Simulated in dry-run |
+| REMOVE_LABEL | SIMULATED | — | Simulated in dry-run |
+| EMAIL_ACTION | SIMULATED | — | Simulated in dry-run (all modes: REPLY, FORWARD, MOVE_FOLDER) |
+| WEBHOOK | SIMULATED | — | Simulated in dry-run |
+| VECTOR_SEARCH | MATCHED | NOT_MATCHED | NOT_MATCHED = no match / below threshold; ERROR on failure |
+| NOTIFY | SIMULATED | — | Simulated in dry-run; ERROR if no valid recipient / no message |
+
+Nodes that are unreachable (no edge leads to them) will be SKIPPED.
+Nodes with config errors will have status ERROR.
+
+### Tools
+
+**create_automation_test** — Create a test case for an automation.
+  Parameters:
+  - automationId (STRING, required): Automation UUID
+  - name (STRING, required): Test case name (e.g. "Invoice email should be forwarded")
+  - description (STRING, optional): What this test verifies
+  - from (STRING, required): Sender email address for synthetic email
+  - to (STRING, required): Recipient email address
+  - subject (STRING, required): Subject of synthetic email
+  - body (STRING, required): Body content of synthetic email
+  - inReplyTo (STRING, optional): Set to a Message-ID string to simulate a reply email.
+    When set, TRIGGER routes through "reply" output instead of "new-email".
+  - categoryIds (ARRAY of STRING, optional): Pre-assigned category UUIDs on the test email.
+    Simulates an already-categorized email. Tests FILTER (with category variables) and REMOVE_LABEL flows.
+  - assertions (ARRAY, optional but ALWAYS ADD THESE): Per-node expected status checks.
+    Each assertion: {nodeId, expectedStatus, field (optional), expectedValue (optional)}
+  Returns: The created test case object with generated id.
+  {id, name, description, emailInput: {from, to, subject, body, inReplyTo, categoryIds}, assertions: [{nodeId, expectedStatus, field, expectedValue}], sortOrder, lastResult, createdAt}
+
+**update_automation_test** — Update an existing test case.
+  Parameters:
+  - automationId (STRING, required): Automation UUID
+  - testCaseId (STRING, required): Test case UUID to update
+  - name, from, to, subject, body: same as create (required)
+  - description, inReplyTo, categoryIds, assertions: same as create (optional)
+  Returns: The updated test case object.
+
+**list_automation_tests** — List all test cases for an automation with latest results.
+  Parameters:
+  - automationId (STRING, required): Automation UUID
+  Returns: Array of test case objects (same structure as create response, includes lastResult).
+
+**run_automation_tests** — Run ALL test cases for an automation in dry-run mode.
+  Parameters:
+  - automationId (STRING, required): Automation UUID
+  Returns: Test run summary with per-test results.
+  {totalTests, passed, failed, errors, results: [{id, testCaseId, testCaseName, status, nodeResults: [{nodeId, nodeType, nodeLabel, resultStatus, resultDetail}], assertionResults: [{assertionIndex, passed, expected, actual}], durationMs, errorMessage}]}
+  IMPORTANT: Check assertionResults to find which assertions failed and why (expected vs actual).
+
+### Test Coverage Checklist
+1. New email flow: no inReplyTo → TRIGGER routes to "new-email"
+2. Reply email flow: inReplyTo set → TRIGGER routes to "reply"
+3. Filter check match: variable conditions met → FILTER routes to matching check output
+4. Filter fallback: no check matches → FILTER routes to "fallback"
+5. Remove label: categoryIds includes the label to remove → REMOVE_LABEL executes
+
+### Assertion Examples
+- Happy path: trigger=PASSED, filter=MATCHED, categorize=CATEGORIZED, email_action=SIMULATED
+- Negative path: trigger=PASSED, filter=NOT_MATCHED (email stops here)
+- Field assertion: nodeId=extract-node, expectedStatus=EXTRACTED, field="amount", expectedValue="€150"
+
+### Test Creation Order
+1. Create automation + update flow → get node IDs from update_automation_flow response
+2. Call create_automation_test with those node IDs in assertions — NEVER skip assertions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. EMAIL ACCOUNTS & FOLDERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+### Tools
+
+**list_email_accounts** — List all email accounts for the current user.
+  Parameters: (none)
+  Returns: Array of email account objects.
+  Each: {id, email, displayName, color, readEnabled, writeEnabled, imapHost, imapPort, smtpHost, smtpPort, isDefault, isActive, createdAt}
+
+**list_folders** — List all IMAP folders for a given email account.
+  Parameters:
+  - accountId (STRING, required): Email account UUID
+  Returns: Array of folder objects.
+  Each: {id, name, role (IMAP role e.g. "all", "drafts", "sent", "trash"), messageCount, unreadCount, lastSyncedAt}
+
+**create_folder** — Create a new IMAP folder on the mail server.
+  Parameters:
+  - accountId (STRING, required): Email account UUID
+  - folderName (STRING, required): Name of the folder to create
+  Returns: The created folder object.
+
+**delete_folder** — Delete a custom IMAP folder. System folders (Inbox, Sent, Trash) cannot be deleted.
+  Parameters:
+  - accountId (STRING, required): Email account UUID
+  - folderId (STRING, required): Folder UUID to delete (from list_folders)
+  Returns: {deleted: true}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SECRET VAULT — Encrypted Credential Storage
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Centralized encrypted storage for API tokens and credentials.
+- Secrets are encrypted at rest with AES-256-GCM. Values are NEVER returned in API responses.
+- Users manage secrets in the Secret Vault page (create, rotate, delete).
+- In WEBHOOK nodes, set authSecretId to a secret's UUID instead of entering tokens inline.
+  This is more secure and allows centralized rotation.
+- When a user asks to use a token/API key in a webhook, suggest using the Secret Vault
+  if they have secrets available (check with list_secrets first).
+
+### Tools
+
+**list_secrets** — List all secrets (name and description only, values never exposed).
+  Parameters: (none)
+  Returns: Array of secret objects (values are NEVER included).
+  Each: {id, name, description, version, lastRotatedAt, createdAt}
+  Secrets can be referenced by their UUID in webhook nodes for authentication.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. PLANNING TOOL — Automation Plan Proposal
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**propose_automation_plan** — Activates planning mode before building an automation.
+  This tool signals the system to enter PLANNING phase. After calling it, you MUST present
+  your full detailed plan in your text response. Automation write tools become available
+  only after the user confirms.
+  Parameters:
+  - planSummary (STRING, required): Detailed summary of the automation plan — what nodes
+    will be created, what dependencies are needed, filter conditions, template content,
+    and the overall flow. Be specific, not generic.
+  Returns: {proposed: true, planSummary: "...", message: "..."}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. DECISION GUIDE — Choosing the Right Node
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use this guide to decide which processing node to use for the user's requirement:
+
+### FILTER vs EXTRACT vs CATEGORIZE
+
+| Requirement | Correct Node | Why |
+|-------------|-------------|-----|
+| "Emails from @example.com" | FILTER | Check email.from variable |
+| "Emails with subject starting with 'RE:'" | FILTER | Check email.subject variable |
+| "Emails about reservations" | CATEGORIZE | Semantic classification into categories |
+| "Is this a reservation for June?" | EXTRACT (BOOLEAN) | AI needs to understand content meaning |
+| "Extract the invoice amount" | EXTRACT (NUMBER) | AI reads and extracts structured data |
+| "Reservation emails for a specific month" | EXTRACT (BOOLEAN+TEXT) | AI extracts isReservation + month |
+| "If extracted amount > 100, forward" | EXTRACT → FILTER | FILTER checks extraction_0.amount > 100 |
+| "Branch on whether isForJune is true" | EXTRACT → FILTER | FILTER checks extraction_0.isForJune IS_TRUE |
+| "Route by category name" | CATEGORIZE → FILTER | FILTER checks category.name variable |
+| "Urgent requests" | CATEGORIZE or EXTRACT | Semantic understanding needed |
+| "Map an extracted value to a known list (e.g. SKR account)" | EXTRACT → VECTOR_SEARCH | Semantic match against a knowledge base, routed by confidence |
+| "Notify/alert a colleague when X happens" | NOTIFY | Sends an in-app/email notification to an org member; supports {{variables}} in title/message |
+
+FILTER is now a universal routing node. It can check ANY upstream variable:
+  - Email envelope: email.from, email.subject, email.hasAttachments, etc.
+  - Extracted data: extraction_0.amount, extraction_0.isReservation, etc.
+  - Category results: category.name, category.confidence, etc.
+  - Webhook responses: http_<nodeId>.statusCode, http_<nodeId>.fieldName, etc.
+
+### Common Anti-Patterns (NEVER DO THESE)
+
+WRONG: Using FILTER on email.subject or email.body to detect topics/meanings
+  → FILTER does exact string matching — it cannot understand semantics
+  → Misses: synonyms, different phrasings, different languages
+  → RIGHT: Use EXTRACT with a BOOLEAN parameter for semantic understanding,
+    then FILTER on the extracted boolean (extraction_0.isForJune IS_TRUE)
+
+WRONG: Using EXTRACT alone when you only need to check sender/recipient
+  → EXTRACT uses AI tokens unnecessarily for simple envelope checks
+  → RIGHT: Use FILTER on email.from, email.to directly (no AI needed)
+
+WRONG: Putting semantic conditions directly in FILTER without EXTRACT
+  → FILTER with email.subject CONTAINS "Reservierung" misses "Buchung", "booking", etc.
+  → RIGHT: EXTRACT with isReservation BOOLEAN → FILTER on extraction_0.isReservation IS_TRUE
+
+### When to Combine EXTRACT + EMAIL_ACTION (REPLY)
+
+If the user wants to auto-reply with information FROM the email:
+1. Create a ParameterSet with the fields to extract
+2. Create a Template with {{fieldName}} placeholders, linked to the ParameterSet via parameterSetId
+3. Wire: TRIGGER → EXTRACT → EMAIL_ACTION (actionMode=REPLY)
+
+Example: "Auto-reply to reservation requests confirming the dates"
+  ParameterSet: guestName(TEXT), checkInDate(DATE), checkOutDate(DATE), numberOfGuests(NUMBER)
+  Template (parameterSetId=above): "Dear {{guestName}}, we confirm your reservation from {{checkInDate}} to {{checkOutDate}} for {{numberOfGuests}} guests."
+  Flow: TRIGGER → CATEGORIZE → [Reservierung] → EXTRACT → EMAIL_ACTION(REPLY)

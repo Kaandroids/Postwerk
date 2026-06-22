@@ -1,0 +1,157 @@
+:host {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: block;
+}
+
+.doc-head {
+  height: 64px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  background: var(--bg);
+  border-bottom: 0.5px solid var(--border);
+}
+
+.doc-head-menu {
+  display: none;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.doc-head-brand {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* Dashboard-style search trigger → opens the command palette */
+.doc-search {
+  flex: 0 1 440px;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px 0 36px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+  color: var(--fg-subtle);
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+    background: var(--bg);
+  }
+}
+
+.doc-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  color: var(--fg-subtle);
+}
+
+.doc-search-ph {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-search-kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  padding: 2px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.doc-head-right {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-head-signin {
+  font-size: 13px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  padding: 6px 8px;
+
+  &:hover {
+    color: var(--fg);
+  }
+}
+
+.doc-head-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 860px) {
+  .doc-head {
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .doc-head-menu {
+    display: grid;
+  }
+
+  .doc-search {
+    flex: 0 0 auto;
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .doc-search-ph,
+  .doc-search-kbd {
+    display: none;
+  }
+
+  .doc-search-icon {
+    position: static;
+    transform: none;
+  }
+
+  .doc-head-signin {
+    display: none;
+  }
+}

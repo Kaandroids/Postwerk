@@ -1,0 +1,60 @@
+export const mockComposeResponse = {
+  id: null,
+  messageId: '<sent-1@example.com>',
+  folder: 'SENT',
+  toAddresses: 'recipient@example.com',
+  ccAddresses: '',
+  bccAddresses: '',
+  subject: 'Test Subject',
+  bodyHtml: '<p>Hello</p>',
+  sentAt: new Date().toISOString(),
+  isDraft: false,
+  attachments: [],
+};
+
+export const mockDraftResponse = {
+  id: 'draft-1',
+  messageId: null,
+  folder: 'DRAFTS',
+  toAddresses: 'recipient@example.com',
+  ccAddresses: '',
+  bccAddresses: '',
+  subject: 'Draft Subject',
+  bodyHtml: '<p>Draft body</p>',
+  sentAt: new Date().toISOString(),
+  isDraft: true,
+  attachments: [],
+};
+
+export const mockDraftAttachment = {
+  id: 'att-1',
+  fileName: 'document.pdf',
+  contentType: 'application/pdf',
+  sizeBytes: 102400,
+};
+
+export const mockDraftEmail = {
+  id: 'draft-1',
+  messageId: null,
+  folder: 'DRAFTS',
+  fromAddress: 'me@example.com',
+  fromPersonal: 'Me',
+  toAddresses: 'recipient@example.com',
+  ccAddresses: '',
+  bccAddresses: '',
+  subject: 'Draft Subject',
+  snippet: 'Draft body content...',
+  receivedAt: new Date().toISOString(),
+  isRead: true,
+  isStarred: false,
+  hasAttachments: false,
+  attachments: null,
+  sizeBytes: 512,
+  categories: [],
+  automationTraceCount: 0,
+  approvalStatus: null,
+  processed: false,
+  bodyText: 'Draft body content',
+  bodyHtml: '<p>Draft body content</p>',
+  automationTraces: [],
+};

@@ -1,0 +1,123 @@
+@if (isOpen()) {
+  <div class="cp-backdrop" data-testid="compose-backdrop" (click)="close()"></div>
+  <div class="cp-modal" data-testid="compose-panel" role="dialog" aria-modal="true" [attr.aria-label]="modeTitle()">
+    <!-- Header -->
+    <div class="cp-header">
+      <span class="cp-title">{{ modeTitle() }}</span>
+      <div class="cp-header-actions">
+        <button type="button" class="cp-header-btn" data-testid="compose-close" aria-label="Close" (click)="close()">
+          <app-icon name="close" />
+        </button>
+      </div>
+    </div>
+
+    <div class="cp-body">
+      <!-- To -->
+      <div class="cp-field">
+        <label class="cp-label">{{ i18n.t('compose_to') }}</label>
+        <input
+          type="text"
+          class="cp-input"
+          data-testid="compose-to"
+          [value]="to()"
+          (input)="to.set($any($event.target).value)"
+          placeholder="recipient@example.com"
+        />
+        @if (!showCcBcc()) {
+          <button type="button" class="cp-cc-toggle" data-testid="compose-cc-toggle" (click)="showCcBcc.set(true)">
+            {{ i18n.t('compose_show_cc_bcc') }}
+          </button>
+        }
+      </div>
+
+      <!-- CC / BCC -->
+      @if (showCcBcc()) {
+        <div class="cp-field">
+          <label class="cp-label">{{ i18n.t('compose_cc') }}</label>
+          <input
+            type="text"
+            class="cp-input"
+            data-testid="compose-cc"
+            [value]="cc()"
+            (input)="cc.set($any($event.target).value)"
+          />
+        </div>
+        <div class="cp-field">
+          <label class="cp-label">{{ i18n.t('compose_bcc') }}</label>
+          <input
+            type="text"
+            class="cp-input"
+            data-testid="compose-bcc"
+            [value]="bcc()"
+            (input)="bcc.set($any($event.target).value)"
+          />
+        </div>
+      }
+
+      <!-- Subject -->
+      <div class="cp-field">
+        <label class="cp-label">{{ i18n.t('compose_subject') }}</label>
+        <input
+          type="text"
+          class="cp-input"
+          data-testid="compose-subject"
+          [value]="subject()"
+          (input)="subject.set($any($event.target).value)"
+        />
+      </div>
+
+      <!-- Body -->
+      <div class="cp-editor-wrap">
+        <app-tiptap-editor
+          [content]="body()"
+          [placeholder]="i18n.t('compose_body_placeholder')"
+          (contentChange)="onBodyChange($event)"
+        />
+      </div>
+
+      <!-- Attachments -->
+      @if (attachments().length > 0) {
+        <div class="cp-attachments">
+          @for (att of attachments(); track att.id) {
+            <div class="cp-att-chip" data-testid="compose-attachment">
+              <app-icon name="paperclip" />
+              <span class="cp-att-name">{{ att.fileName }}</span>
+              <span class="cp-att-size">{{ formatSize(att.sizeBytes) }}</span>
+              <button type="button" class="cp-att-remove" (click)="removeAttachment(att)">
+                <app-icon name="close" />
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Footer -->
+    <div class="cp-footer">
+      <div class="cp-footer-left">
+        <button
+          type="button"
+          class="cp-send-btn"
+          data-testid="compose-send"
+          [disabled]="!canSend()"
+          (click)="onSend()"
+        >
+          <app-icon name="send" />
+          {{ sending() ? i18n.t('compose_sending') : i18n.t('compose_send') }}
+        </button>
+        <button type="button" class="cp-draft-btn" data-testid="compose-save-draft" (click)="onSaveDraft()">
+          {{ i18n.t('compose_save_draft') }}
+        </button>
+      </div>
+      <div class="cp-footer-right">
+        <button type="button" class="cp-icon-btn" data-testid="compose-attach" (click)="fileInput.click()">
+          <app-icon name="paperclip" />
+        </button>
+        <input #fileInput type="file" style="display:none" (change)="onFileSelect($event)" />
+        <button type="button" class="cp-icon-btn cp-discard-btn" data-testid="compose-discard" (click)="onDiscard()">
+          <app-icon name="trash" />
+        </button>
+      </div>
+    </div>
+  </div>
+}

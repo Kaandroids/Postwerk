@@ -1,0 +1,250 @@
+<app-page-content>
+  <!-- A. Alert strip -->
+  @if (killedRecently() > 0 && !alertDismissed()) {
+    <div class="ff-alert" data-tone="danger" role="alert" data-testid="admin-ff-alert">
+      <app-icon name="alertTriangle" />
+      <span class="ff-alert-text"><b>{{ i18n.t('ff_alert_killed', { n: killedRecently() + '' }) }}</b></span>
+      <button type="button" class="ff-alert-cta" data-testid="admin-ff-alert-inspect" (click)="inspectKilled()">{{ i18n.t('ff_alert_inspect') }}</button>
+      <button type="button" class="ff-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  } @else if (staleCount() > 0 && !alertDismissed()) {
+    <div class="ff-alert" data-tone="warn" role="alert" data-testid="admin-ff-alert">
+      <app-icon name="alertTriangle" />
+      <span class="ff-alert-text"><b>{{ i18n.t('ff_alert_stale', { n: staleCount() + '' }) }}</b></span>
+      <button type="button" class="ff-alert-cta" data-testid="admin-ff-alert-inspect" (click)="inspectStale()">{{ i18n.t('ff_alert_inspect') }}</button>
+      <button type="button" class="ff-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head ff-head">
+    <div>
+      <div class="dash-eyebrow ff-eyebrow-mono">{{ i18n.t('ff_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('ff_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.on ?? 0 }}</b> {{ i18n.t('ff_on_lc') }} ·
+        <b>{{ kpis()?.partial ?? 0 }}</b> {{ i18n.t('ff_rolling_lc') }} ·
+        <b>{{ kpis()?.off ?? 0 }}</b> {{ i18n.t('ff_off_lc') }}
+      </div>
+    </div>
+    <div class="ff-head-controls">
+      <button type="button" class="ff-btn ff-btn--solid" data-testid="admin-ff-new" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openNew()">
+        @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }{{ i18n.t('ff_new') }}
+      </button>
+      <button type="button" class="ff-btn" data-testid="admin-ff-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="ff-refresh-ic" [class.ff-spin]="refreshing()"><app-icon name="refresh" /></span>{{ i18n.t('ff_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="ff-updated">{{ i18n.t('ff_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="ff-flash" role="status" data-testid="admin-ff-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="ff-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- C. KPI strip -->
+  <div class="ff-kpis" data-testid="admin-ff-kpis">
+    <div class="ff-kpi"><div class="ff-kpi-label">{{ i18n.t('ff_kpi_total') }}</div><div class="ff-kpi-value">{{ kpis()?.total ?? 0 }}</div><div class="ff-kpi-foot"><span class="ff-chip" data-tone="slate">{{ i18n.t('ff_chip_defined') }}</span></div></div>
+    <div class="ff-kpi"><div class="ff-kpi-label">{{ i18n.t('ff_kpi_on') }}</div><div class="ff-kpi-value" [attr.data-tone]="(kpis()?.on ?? 0) > 0 ? 'success' : 'default'">{{ kpis()?.on ?? 0 }}</div><div class="ff-kpi-foot"><span class="ff-chip" data-tone="green">100%</span></div></div>
+    <div class="ff-kpi"><div class="ff-kpi-label">{{ i18n.t('ff_kpi_rolling') }}</div><div class="ff-kpi-value" [attr.data-tone]="(kpis()?.partial ?? 0) > 0 ? 'warning' : 'default'">{{ kpis()?.partial ?? 0 }}</div><div class="ff-kpi-foot"><span class="ff-chip" data-tone="amber">{{ i18n.t('ff_chip_gradual') }}</span><span class="ff-kpi-note">{{ i18n.t('ff_inflight', { n: (kpis()?.inFlight ?? 0) + '' }) }}</span></div></div>
+    <div class="ff-kpi"><div class="ff-kpi-label">{{ i18n.t('ff_kpi_off') }}</div><div class="ff-kpi-value" [attr.data-tone]="(kpis()?.killed ?? 0) > 0 ? 'danger' : 'default'">{{ (kpis()?.off ?? 0) + (kpis()?.killed ?? 0) }}</div><div class="ff-kpi-foot"><span class="ff-chip" [attr.data-tone]="(kpis()?.killed ?? 0) > 0 ? 'danger' : 'slate'">{{ i18n.t('ff_chip_off') }}</span>@if ((kpis()?.killed ?? 0) > 0) { <span class="ff-kpi-note">{{ i18n.t('ff_killed_note', { n: (kpis()?.killed ?? 0) + '' }) }}</span> }</div></div>
+    <div class="ff-kpi"><div class="ff-kpi-label">{{ i18n.t('ff_kpi_stale') }}</div><div class="ff-kpi-value">{{ kpis()?.stale ?? 0 }}</div><div class="ff-kpi-foot"><span class="ff-chip" data-tone="slate">{{ i18n.t('ff_chip_cleanup') }}</span></div></div>
+  </div>
+
+  <!-- D. Toolbar -->
+  <div class="ff-toolbar">
+    <div class="ff-search"><app-icon name="search" /><input type="text" data-testid="admin-ff-search" [attr.aria-label]="i18n.t('ff_search')" [placeholder]="i18n.t('ff_search')" [value]="search()" (input)="onSearch($event)" /></div>
+    <div class="ff-filters">
+      <div class="ff-filter"><label>{{ i18n.t('ff_filter_kind') }}</label><select data-testid="admin-ff-f-kind" (change)="onKind($event)"><option value="">{{ i18n.t('ff_filter_all') }}</option>@for (k of kinds; track k) { <option [value]="k">{{ kindLabel(k) }}</option> }</select></div>
+      <div class="ff-filter"><label>{{ i18n.t('ff_filter_status') }}</label><select data-testid="admin-ff-f-status" (change)="onStatus($event)"><option value="">{{ i18n.t('ff_filter_all') }}</option><option value="ON">{{ i18n.t('ff_status_on') }}</option><option value="ROLLING">{{ i18n.t('ff_status_rolling') }}</option><option value="OFF">{{ i18n.t('ff_status_off') }}</option><option value="KILLED">{{ i18n.t('ff_status_killed') }}</option><option value="ARCHIVED">{{ i18n.t('ff_status_archived') }}</option></select></div>
+      <div class="ff-filter"><label>{{ i18n.t('ff_filter_targeting') }}</label><select data-testid="admin-ff-f-targeting" (change)="onTargeting($event)"><option value="">{{ i18n.t('ff_filter_all') }}</option>@for (a of audiences; track a) { <option [value]="a">{{ audienceLabel(a) }}</option> }</select></div>
+      <div class="ff-filter"><label>{{ i18n.t('ff_filter_health') }}</label><select data-testid="admin-ff-f-health" (change)="onHealth($event)"><option value="">{{ i18n.t('ff_health_any') }}</option><option value="stale">{{ i18n.t('ff_health_stale') }}</option></select></div>
+    </div>
+  </div>
+
+  <!-- E. Table + states -->
+  @if (loading()) {
+    <div class="ff-card" aria-hidden="true" data-testid="admin-ff-skeleton"><div class="ff-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="ff-skel-row"></div> }</div>
+  } @else if (rows().length === 0 && hasFilters()) {
+    <div class="ff-empty" data-testid="admin-ff-empty-filtered"><app-icon name="search" /><div class="ff-empty-title">{{ i18n.t('ff_empty_filtered') }}</div><button type="button" class="ff-btn" (click)="clearFilters()">{{ i18n.t('ff_clear_filters') }}</button></div>
+  } @else if (rows().length === 0) {
+    <div class="ff-empty" data-testid="admin-ff-empty"><app-icon name="toggleRight" /><div class="ff-empty-title">{{ i18n.t('ff_empty') }}</div>@if (canManage()) { <button type="button" class="ff-btn ff-btn--solid" (click)="openNew()"><app-icon name="plus" />{{ i18n.t('ff_new') }}</button> }</div>
+  } @else {
+    <div class="ff-card">
+      <div class="ff-scroll">
+        <table class="dtable" data-testid="admin-ff-table">
+          <thead><tr>
+            <th scope="col">{{ i18n.t('ff_col_flag') }}</th>
+            <th scope="col">{{ i18n.t('ff_col_kind') }}</th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'rollout' ? '1' : '0'" (click)="toggleSort('rollout')"><span>{{ i18n.t('ff_col_rollout') }}</span></button></th>
+            <th scope="col">{{ i18n.t('ff_col_targeting') }}</th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'status' ? '1' : '0'" (click)="toggleSort('status')"><span>{{ i18n.t('ff_col_status') }}</span></button></th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'updated' ? '1' : '0'" (click)="toggleSort('updated')"><span>{{ i18n.t('ff_col_updated') }}</span></button></th>
+            <th scope="col" class="ff-col-menu"></th>
+          </tr></thead>
+          <tbody>
+            @for (f of rows(); track f.id) {
+              <tr class="ff-row" data-testid="admin-ff-row" [attr.data-kind]="f.kind" [attr.data-killed]="f.killed ? '1' : null" tabindex="0" (click)="openEdit(f)" (keydown.enter)="openEdit(f)" (keydown.space)="openEdit(f); $event.preventDefault()">
+                <td>
+                  <div class="ff-cell-flag">
+                    <span class="ff-kind-ic"><app-icon [name]="kindIcon(f.kind)" /></span>
+                    <span class="ff-cell-text">
+                      <span class="ff-cell-name">{{ f.name }}@if (f.stale) { <span class="ff-stale-tag">{{ i18n.t('ff_cleanup_tag') }}</span> }</span>
+                      <span class="ff-cell-key">{{ f.key }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="ff-badge" [attr.data-tone]="kindTone(f.kind)">{{ kindLabel(f.kind) }}</span></td>
+                <td>
+                  @if (f.audience !== 'EVERYONE' && f.status !== 'OFF' && f.status !== 'KILLED' && f.status !== 'ARCHIVED') {
+                    <span class="ff-targeted">{{ i18n.t('ff_targeted') }}</span>
+                  } @else {
+                    <div class="ff-rollout"><span class="ff-bar"><span class="ff-bar-fill" [style.width.%]="(f.status === 'OFF' || f.status === 'KILLED' || f.status === 'ARCHIVED') ? 0 : f.rollout" [attr.data-full]="f.rollout === 100 ? '1' : '0'"></span></span><span class="ff-rollout-label">{{ rolloutLabel(f) }}</span></div>
+                  }
+                </td>
+                <td class="ff-muted">{{ targetingSummary(f) }}</td>
+                <td><span class="ff-status"><span class="ff-dot" [attr.data-s]="statusDot(f.status)"></span><span class="ff-badge" [attr.data-tone]="statusTone(f.status)">{{ statusLabel(f.status) }}</span></span></td>
+                <td class="ff-muted">{{ fmt.date(f.updatedAt) }}@if (f.updatedByName) { · {{ f.updatedByName }} }</td>
+                <td class="ff-col-menu" (click)="$event.stopPropagation()">
+                  <div class="ff-menu-wrap">
+                    <button type="button" class="ff-icon-btn" [attr.data-testid]="'admin-ff-menu-' + f.id" [attr.aria-label]="i18n.t('ff_row_menu')" (click)="toggleMenu(f.id, $event)"><app-icon name="list" /></button>
+                    @if (openMenuId() === f.id) {
+                      <div class="ff-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="ff-menu-item" role="menuitem" (click)="openEdit(f); openMenuId.set(null)"><app-icon name="edit" /><span>{{ i18n.t('ff_menu_edit') }}</span></button>
+                        @if (!f.killed && !f.archived) {
+                          <button type="button" class="ff-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowToggle(f, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="toggleRight" /> }<span>{{ f.enabled ? i18n.t('ff_disable') : i18n.t('ff_enable') }}</span></button>
+                          <button type="button" class="ff-menu-item ff-menu-item--danger" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowKill(f, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="alertTriangle" /> }<span>{{ i18n.t('ff_kill') }}</span></button>
+                        }
+                        @if (f.killed || f.archived) {
+                          <button type="button" class="ff-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowRestore(f, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="refresh" /> }<span>{{ i18n.t('ff_restore') }}</span></button>
+                        }
+                        <button type="button" class="ff-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowDuplicate(f, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="copy" /> }<span>{{ i18n.t('ff_duplicate') }}</span></button>
+                        @if (!f.archived) {
+                          <button type="button" class="ff-menu-item ff-menu-item--danger" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowArchive(f, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="archive" /> }<span>{{ i18n.t('ff_archive') }}</span></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (totalPages() > 1) {
+        <div class="ff-pager"><span class="ff-pager-info">{{ total() }} {{ i18n.t('ff_flags_lc') }}</span><div class="ff-pager-ctrls"><button class="ff-pager-btn" [disabled]="page() === 0" (click)="goToPage(page() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="ff-pager-pages">{{ page() + 1 }} / {{ totalPages() }}</span><button class="ff-pager-btn" [disabled]="page() >= totalPages() - 1" (click)="goToPage(page() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+      }
+    </div>
+  }
+
+  <!-- F. Editor modal -->
+  @if (editorOpen()) {
+    <div class="ff-scrim" (click)="closeEditor()"></div>
+    <div class="ff-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-ff-modal" [attr.data-kind]="draft().kind" (click)="$event.stopPropagation()">
+      <div class="ff-modal-head">
+        <div class="ff-modal-id">
+          <span class="ff-kind-ic" aria-hidden="true"><app-icon [name]="kindIcon(draft().kind)" /></span>
+          <div class="ff-modal-id-text">
+            <div class="ff-modal-name">{{ creating() ? i18n.t('ff_new_title') : draft().name }}</div>
+            <div class="ff-modal-sub">{{ creating() ? i18n.t('ff_new_key_hint') : draft().key }}</div>
+            <div class="ff-modal-pills">
+              <span class="ff-badge" [attr.data-tone]="kindTone(draft().kind)">{{ kindLabel(draft().kind) }}</span>
+              <span class="ff-status"><span class="ff-dot" [attr.data-s]="statusDot(draftStatus())"></span><span class="ff-badge" [attr.data-tone]="statusTone(draftStatus())">{{ statusLabel(draftStatus()) }}</span></span>
+              @if (editing()?.stale) { <span class="ff-badge" data-tone="slate">{{ i18n.t('ff_cleanup_tag') }}</span> }
+            </div>
+          </div>
+        </div>
+        <button class="ff-modal-close" type="button" (click)="closeEditor()" data-testid="admin-ff-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <div class="ff-modal-actions">
+        @if (editingLocked()) {
+          <span class="ff-killed-note"><app-icon name="lock" />{{ editing()?.killed ? i18n.t('ff_killed_locked') : i18n.t('ff_archived_note') }}</span>
+          <button class="ff-btn ff-btn--solid ff-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="restore()"><app-icon name="refresh" />{{ i18n.t('ff_restore') }}</button>
+          <button class="ff-btn ff-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="duplicate()"><app-icon name="copy" />{{ i18n.t('ff_duplicate') }}</button>
+        } @else {
+          <button class="ff-btn ff-btn--solid ff-btn--sm" type="button" data-testid="admin-ff-save" [disabled]="busy() || !canManage() || (creating() && !draft().key.trim())" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="save()">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="check" /> }{{ creating() ? i18n.t('ff_create') : i18n.t('ff_save') }}</button>
+          @if (editing()) {
+            <button class="ff-btn ff-btn--sm" type="button" data-testid="admin-ff-toggle" [disabled]="busy() || !canManage()" (click)="editing()!.enabled ? disable() : enable()"><app-icon name="toggleRight" />{{ editing()!.enabled ? i18n.t('ff_disable') : i18n.t('ff_enable') }}</button>
+            <button class="ff-btn ff-btn--danger ff-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="kill()"><app-icon name="alertTriangle" />{{ i18n.t('ff_kill') }}</button>
+            <button class="ff-btn ff-btn--danger ff-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="archive()"><app-icon name="archive" />{{ i18n.t('ff_archive') }}</button>
+          }
+        }
+      </div>
+
+      <div class="ff-tabs" role="tablist">
+        <button class="ff-tab" role="tab" [attr.data-active]="editorTab() === 'rollout'" (click)="setEditorTab('rollout')">{{ i18n.t('ff_tab_rollout') }}</button>
+        <button class="ff-tab" role="tab" [attr.data-active]="editorTab() === 'targeting'" (click)="setEditorTab('targeting')">{{ i18n.t('ff_tab_targeting') }}</button>
+        @if (editing()) { <button class="ff-tab" role="tab" [attr.data-active]="editorTab() === 'history'" (click)="setEditorTab('history')">{{ i18n.t('ff_tab_history') }}</button> }
+      </div>
+
+      <div class="ff-modal-body">
+        @if (detailFlash()) { <div class="ff-detail-flash" data-testid="admin-ff-detail-flash"><app-icon name="check" /><span>{{ detailFlash() }}</span></div> }
+
+        @switch (editorTab()) {
+          @case ('rollout') {
+            @if (creating()) {
+              <div class="ff-panel"><div class="ff-panel-head">{{ i18n.t('ff_definition') }}</div><div class="ff-panel-body">
+                <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_key') }}</label><input class="ff-input ff-input--key" type="text" data-testid="admin-ff-key" [value]="draft().key" (input)="patchInput('key', $event)" placeholder="feature.my_flag" /><div class="ff-hint">{{ i18n.t('ff_key_hint') }}</div></div>
+                <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_name') }}</label><input class="ff-input" type="text" data-testid="admin-ff-name" [value]="draft().name" (input)="patchInput('name', $event)" /></div>
+                <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_kind') }}</label><div class="ff-seg">@for (k of kinds; track k) { <button type="button" [attr.data-active]="draft().kind === k ? '1' : '0'" (click)="setKind(k)">{{ kindLabel(k) }}</button> }</div></div>
+              </div></div>
+            }
+            <div class="ff-panel"><div class="ff-panel-head">{{ i18n.t('ff_rollout_panel') }}</div><div class="ff-panel-body">
+              <div class="ff-toggle-row"><span class="ff-toggle-label">{{ i18n.t('ff_f_enabled') }}</span><button type="button" class="ff-toggle" data-testid="admin-ff-enabled" [attr.data-on]="draft().enabled ? '1' : '0'" (click)="toggleEnabled()" [attr.aria-pressed]="draft().enabled"></button></div>
+              <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_rollout') }}</label>
+                <div class="ff-slider-row"><input class="ff-slider" type="range" min="0" max="100" step="5" [value]="draft().rollout" [disabled]="!draft().enabled" (input)="onRollout($event)" data-testid="admin-ff-rollout" /><span class="ff-slider-val">{{ draft().rollout }}%</span></div>
+                <div class="ff-hint">{{ draft().audience !== 'EVERYONE' ? i18n.t('ff_rollout_segment_hint') : i18n.t('ff_rollout_hint') }}</div>
+              </div>
+            </div></div>
+            @if (!creating()) {
+              <div class="ff-panel"><div class="ff-panel-head">{{ i18n.t('ff_definition') }}</div><div class="ff-panel-body">
+                <div class="ff-fields">
+                  <div class="ff-defrow"><span class="ff-defrow-l">{{ i18n.t('ff_f_key') }}</span><span class="ff-defrow-v mono">{{ draft().key }}</span></div>
+                  <div class="ff-defrow"><span class="ff-defrow-l">{{ i18n.t('ff_f_kind') }}</span><span class="ff-defrow-v">{{ kindLabel(draft().kind) }}</span></div>
+                  <div class="ff-defrow"><span class="ff-defrow-l">{{ i18n.t('ff_last_changed') }}</span><span class="ff-defrow-v">{{ editing()?.updatedByName ?? '—' }} · {{ fmt.date(editing()!.updatedAt) }}</span></div>
+                </div>
+                @if (editing()?.stale) { <div class="ff-stale-note"><app-icon name="info" /><span>{{ i18n.t('ff_stale_note') }}</span></div> }
+              </div></div>
+            }
+          }
+          @case ('targeting') {
+            <div class="ff-panel"><div class="ff-panel-head">{{ i18n.t('ff_targeting_panel') }}</div><div class="ff-panel-body">
+              <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_audience') }}</label><div class="ff-seg">@for (a of audiences; track a) { <button type="button" [attr.data-active]="draft().audience === a ? '1' : '0'" (click)="setAudience(a)">{{ audienceLabel(a) }}</button> }</div></div>
+              @if (draft().audience === 'PLAN') {
+                <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_plans') }}</label><div class="ff-plans">@for (p of planOptions; track p) { <button type="button" class="ff-plan" [attr.data-on]="hasPlan(p) ? '1' : '0'" (click)="togglePlan(p)">{{ p }}</button> }</div></div>
+              }
+              @if (draft().audience === 'ORG') {
+                <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_org') }}</label>
+                  <div class="ff-search" style="max-width:none"><app-icon name="building" /><input type="text" [placeholder]="selectedOrgName() || i18n.t('ff_org_search')" [value]="orgQuery()" (input)="onOrgSearch($event)" /></div>
+                  @if (orgPickerOpen() && orgResults().length) { <div class="ff-menu" style="position:static;box-shadow:none;border-color:var(--border)">@for (o of orgResults(); track o.id) { <button type="button" class="ff-menu-item" (click)="selectOrg(o)"><app-icon name="building" /><span>{{ o.name }}</span></button> }</div> }
+                </div>
+              }
+              <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_overrides') }}</label>
+                <div class="ff-ovr-list">
+                  @for (o of draft().overrides; track $index) {
+                    <div class="ff-ovr">
+                      <input class="ff-input" type="text" [value]="o.scope" (input)="setOverrideScope($index, $event)" [placeholder]="i18n.t('ff_ovr_scope_ph')" />
+                      <div class="ff-ovr-seg"><button type="button" [attr.data-active]="o.value === 'on' ? 'on' : ''" (click)="setOverrideValue($index, 'on')">{{ i18n.t('ff_ovr_on') }}</button><button type="button" [attr.data-active]="o.value === 'off' ? 'off' : ''" (click)="setOverrideValue($index, 'off')">{{ i18n.t('ff_ovr_off') }}</button></div>
+                      <button type="button" class="ff-ovr-del" (click)="removeOverride($index)" [attr.aria-label]="i18n.t('ff_ovr_remove')"><app-icon name="trash" /></button>
+                    </div>
+                  }
+                  <button type="button" class="ff-ovr-add" (click)="addOverride()"><app-icon name="plus" />{{ i18n.t('ff_ovr_add') }}</button>
+                </div>
+              </div>
+              <div class="ff-field"><label class="ff-field-label">{{ i18n.t('ff_f_description') }}</label><textarea class="ff-textarea" rows="3" [value]="draft().description" (input)="patchInput('description', $event)"></textarea></div>
+            </div></div>
+          }
+          @case ('history') {
+            <div class="ff-panel"><div class="ff-panel-head">{{ i18n.t('ff_tab_history') }}</div>
+              @if (history().length === 0) {
+                <div class="ff-empty" style="border:0;padding:28px"><app-icon name="clock" /><div class="ff-empty-title">{{ i18n.t('ff_no_history') }}</div></div>
+              } @else {
+                <div class="ff-timeline">@for (h of history(); track $index) { <div class="ff-tl"><span class="ff-tl-dot" [attr.data-first]="$index === 0 ? '1' : '0'"></span><div><div class="ff-tl-label">{{ h.label }}</div><div class="ff-tl-meta">{{ h.actor === 'system' ? i18n.t('ff_automated') : h.actor }} · {{ relative(h.at) }}</div></div></div> }</div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+</app-page-content>

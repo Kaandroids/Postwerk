@@ -1,0 +1,33 @@
+# Caddy reverse proxy with automatic Let's Encrypt HTTPS for postwerk.io.
+# Replaces the old nginx front door. Single domain + path routing -> no CORS.
+
+{
+	# ACME contact for cert expiry notices.
+	email kaan403@icloud.com
+}
+
+postwerk.io, www.postwerk.io {
+	encode gzip zstd
+
+	# Security headers (HSTS is safe now that Caddy terminates TLS).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# API -> Spring Boot. flush_interval -1 keeps SSE (AI chat stream) flowing.
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			flush_interval -1
+		}
+	}
+
+	# Everything else -> Angular static (served by the frontend container).
+	handle {
+		reverse_proxy frontend:80
+	}
+}

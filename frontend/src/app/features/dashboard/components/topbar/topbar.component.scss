@@ -1,0 +1,205 @@
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  // Fixed (not min-) height so the topbar is exactly 64px in BOTH user and admin mode — its
+  // bottom border then lines up with the sidebar brand separator (also 64px) regardless of which
+  // controls are shown (admin mode hides the search/workspace group, user mode shows them).
+  height: 64px;
+  box-sizing: border-box;
+  padding: 14px 28px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--bg);
+  gap: 16px;
+}
+
+.dash-icon-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover { background: var(--bg-2); color: var(--fg); }
+  &[data-active='1'] { background: var(--accent); color: #fff; border-color: var(--accent); }
+}
+
+.dash-search {
+  flex: 1;
+  max-width: 360px;
+  position: relative;
+
+  input {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 36px;
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-2);
+    color: var(--fg);
+    font: inherit;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+
+    &::placeholder { color: var(--fg-subtle); }
+    &:focus { border-color: var(--accent); background: var(--bg); }
+  }
+}
+
+.dash-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+
+.dash-kbd {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  padding: 2px 6px;
+  border: 0.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.dash-workspace-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dash-topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 6px;
+  height: 6px;
+  background: var(--danger);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg);
+}
+
+.dash-ai-locked {
+  opacity: 0.6;
+}
+
+.dash-lock-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  font-size: 8px;
+}
+
+// AI Limit bar
+.ai-limiter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+  padding: 6px 12px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover { background: var(--bg); border-color: var(--border-strong); }
+}
+
+.ai-limiter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-limiter-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  letter-spacing: 0.02em;
+}
+
+.ai-limiter-value {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.ai-limiter-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-limiter-refresh {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+
+  app-icon { display: inline-flex; }
+  svg { width: 12px; height: 12px; }
+
+  &:hover { color: var(--fg); background: var(--bg-2); }
+  &:disabled { cursor: default; }
+  &[data-spin="1"] svg { animation: ai-limiter-spin 0.6s linear infinite; }
+}
+
+@keyframes ai-limiter-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-limiter-refresh[data-spin="1"] svg { animation: none; }
+}
+
+.ai-limiter-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.ai-limiter-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease, background 0.3s;
+  min-width: 2px;
+}

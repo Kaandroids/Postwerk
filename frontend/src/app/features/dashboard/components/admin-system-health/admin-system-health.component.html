@@ -1,0 +1,241 @@
+<app-page-content>
+  <!-- A. Alert strip (worst subsystem) -->
+  @if (alertSubsystem(); as a) {
+    @if (!alertDismissed()) {
+      <div class="sh-alert" [attr.data-tone]="a.status === 'down' ? 'danger' : 'warn'" role="alert" data-testid="admin-sh-alert">
+        <app-icon name="alertTriangle" />
+        <span class="sh-alert-text">
+          <b>{{ a.name }}</b> {{ a.status === 'down' ? i18n.t('sh_status_down') : i18n.t('sh_status_degraded') }}
+          @if (a.lastError) { — {{ a.lastError }} }
+        </span>
+        <button type="button" class="sh-alert-cta" (click)="openDetail(a)">{{ i18n.t('sh_alert_inspect') }}</button>
+        <button type="button" class="sh-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+    }
+  }
+
+  <!-- B. Page header -->
+  <div class="dash-page-head sh-head">
+    <div>
+      <div class="dash-eyebrow sh-eyebrow-mono">{{ i18n.t('sh_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('sh_title') }}</h1>
+      <div class="dash-subtitle">
+        @if (allOperational()) {
+          <b>{{ i18n.t('sh_all_operational') }}</b> · {{ i18n.t('sh_uptime') }} {{ uptime(kpis()?.uptimeMs) }}
+        } @else {
+          <b class="sh-sub-bad">{{ kpis()?.down ?? 0 }}</b> {{ i18n.t('sh_status_down') }} ·
+          <b class="sh-sub-warn">{{ kpis()?.degraded ?? 0 }}</b> {{ i18n.t('sh_status_degraded') }} ·
+          {{ kpis()?.ok ?? 0 }}/{{ kpis()?.total ?? 0 }} {{ i18n.t('sh_operational') }}
+        }
+      </div>
+    </div>
+    <div class="sh-head-controls">
+      <button type="button" class="sh-btn"
+        [class.sh-btn--solid]="maintenance()?.enabled"
+        data-testid="admin-sh-maintenance"
+        [disabled]="busy() || !canManage()"
+        [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+        (click)="toggleMaintenance()">
+        @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="alertTriangle" /> }
+        {{ maintenance()?.enabled ? i18n.t('sh_maint_active') : i18n.t('sh_maint_mode') }}
+      </button>
+      <button type="button" class="sh-btn sh-refresh" data-testid="admin-sh-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="sh-refresh-ic" [class.sh-spin]="refreshing()"><app-icon name="refresh" /></span>
+        {{ i18n.t('sh_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="sh-updated">{{ i18n.t('sh_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (maintenance()?.enabled) {
+    <div class="sh-maint-banner" data-testid="admin-sh-maint-banner">
+      <app-icon name="alertTriangle" />
+      <span>{{ i18n.t('sh_maint_banner') }}@if (maintenance()?.message) { — {{ maintenance()?.message }} }</span>
+    </div>
+  }
+
+  @if (flash()) {
+    <div class="sh-flash" role="status" data-testid="admin-sh-flash"><app-icon name="check" /><span>{{ flash() }}</span></div>
+  }
+  @if (error()) {
+    <div class="sh-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div>
+  }
+
+  <!-- D. KPI strip -->
+  <div class="sh-kpis" data-testid="admin-sh-kpis">
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_latency') }}</div>
+      <div class="sh-kpi-value" [class.sh-val-warn]="(kpis()?.apiLatencyMs ?? 0) > 300">{{ kpis()?.apiLatencyMs ?? 0 }}<span class="sh-kpi-unit">ms</span></div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" [attr.data-tone]="(kpis()?.apiLatencyMs ?? 0) > 300 ? 'amber' : 'green'">{{ (kpis()?.apiLatencyMs ?? 0) > 300 ? i18n.t('sh_chip_slow') : i18n.t('sh_chip_fast') }}</span><span class="sh-kpi-note">{{ i18n.t('sh_kpi_latency_note') }}</span></div>
+    </div>
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_errors') }}</div>
+      <div class="sh-kpi-value" [class.sh-val-danger]="(kpis()?.errorRatePct ?? 0) > 1">{{ kpis()?.errorRatePct ?? 0 }}<span class="sh-kpi-unit">%</span></div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" [attr.data-tone]="(kpis()?.errorRatePct ?? 0) > 1 ? 'danger' : 'green'">{{ (kpis()?.errorRatePct ?? 0) > 1 ? i18n.t('sh_chip_errors') : i18n.t('sh_chip_ok') }}</span><span class="sh-kpi-note">{{ i18n.t('sh_kpi_errors_note') }}</span></div>
+    </div>
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_rpm') }}</div>
+      <div class="sh-kpi-value">{{ kpis()?.requestsPerMin ?? 0 }}</div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" data-tone="green">{{ i18n.t('sh_chip_live') }}</span><span class="sh-kpi-note">{{ i18n.t('sh_kpi_rpm_note') }}</span></div>
+    </div>
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_dbpool') }}</div>
+      <div class="sh-kpi-value">{{ kpis()?.dbPoolUsed ?? 0 }}<span class="sh-kpi-unit">/{{ kpis()?.dbPoolMax ?? '—' }}</span></div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" data-tone="green"><app-icon name="server" /></span><span class="sh-kpi-note">{{ i18n.t('sh_kpi_dbpool_note') }}</span></div>
+    </div>
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_redis') }}</div>
+      <div class="sh-kpi-value">{{ kpis()?.redisMemUsedMb ?? 0 }}<span class="sh-kpi-unit">MB</span></div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" data-tone="slate"><app-icon name="clock" /></span><span class="sh-kpi-note">{{ kpis()?.redisMemMaxMb ? (kpis()?.redisMemUsedMb + ' / ' + kpis()?.redisMemMaxMb + ' MB') : i18n.t('sh_kpi_redis_note') }}</span></div>
+    </div>
+    <div class="sh-kpi">
+      <div class="sh-kpi-label">{{ i18n.t('sh_kpi_queue') }}</div>
+      <div class="sh-kpi-value">{{ kpis()?.jobQueueDepth ?? 0 }}</div>
+      <div class="sh-kpi-foot"><span class="sh-kpi-chip" [attr.data-tone]="(kpis()?.jobQueueDepth ?? 0) > 100 ? 'amber' : 'green'">{{ (kpis()?.jobQueueDepth ?? 0) > 100 ? i18n.t('sh_chip_backlog') : i18n.t('sh_chip_idle') }}</span><span class="sh-kpi-note">{{ i18n.t('sh_kpi_queue_note') }}</span></div>
+    </div>
+  </div>
+
+  <!-- E. Subsystem grid -->
+  @if (loading()) {
+    <div class="sh-grid" aria-hidden="true" data-testid="admin-sh-skeleton">
+      @for (s of [1,2,3,4,5,6]; track s) { <div class="sh-skel-card"></div> }
+    </div>
+  } @else {
+    <div class="sh-grid" data-testid="admin-sh-grid">
+      @for (s of subsystems(); track s.id) {
+        <button type="button" class="sh-sys" [attr.data-status]="s.status" data-testid="admin-sh-card" (click)="openDetail(s)">
+          <div class="sh-sys-top">
+            <span class="sh-sys-ic"><app-icon [name]="kindIcon(s.kind)" /></span>
+            <div class="sh-sys-id">
+              <div class="sh-sys-name">{{ s.name }}</div>
+              <div class="sh-sys-kind mono">{{ s.kind }}@if (s.version) { · {{ s.version }} }</div>
+            </div>
+            <span class="sh-badge" [attr.data-tone]="statusTone(s.status)">{{ statusLabel(s.status) }}</span>
+          </div>
+          <div class="sh-sys-metric">
+            <span class="sh-dot" [attr.data-status]="s.status"></span>
+            <span class="mono">{{ s.primary }}</span>
+          </div>
+          <div class="sh-sys-checked mono">{{ i18n.t('sh_last_checked') }} {{ ago(s.lastCheckedMinutes) }}</div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- G. Recent events -->
+  <div class="sh-card sh-events-card">
+    <div class="sh-card-head"><app-icon name="clock" /> {{ i18n.t('sh_events_title') }}</div>
+    @if (events().length === 0) {
+      <div class="sh-empty sh-empty--sm"><app-icon name="clock" /><div class="sh-empty-title">{{ i18n.t('sh_events_empty') }}</div></div>
+    } @else {
+      <div class="sh-timeline">
+        @for (e of events(); track $index) {
+          <div class="sh-ev">
+            <span class="sh-ev-dot" [attr.data-tone]="e.tone"></span>
+            <div class="sh-ev-body">
+              <div class="sh-ev-title">{{ e.title }}@if (e.detail) { <span class="sh-ev-detail mono">{{ e.detail }}</span> }</div>
+            </div>
+            <div class="sh-ev-time">{{ fmt.dateTime(e.at) }}</div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- H. Subsystem detail modal -->
+  @if (detailOpen() && detail(); as d) {
+    <div class="sh-scrim" (click)="closeDetail()"></div>
+    <div class="sh-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-sh-modal" [attr.aria-label]="d.name" (click)="$event.stopPropagation()">
+      <div class="sh-modal-head">
+        <div class="sh-modal-id">
+          <span class="sh-swatch" [attr.data-status]="d.status" aria-hidden="true"><app-icon [name]="kindIcon(d.kind)" /></span>
+          <div class="sh-modal-id-text">
+            <div class="sh-modal-name">{{ d.name }}</div>
+            <div class="sh-modal-kind mono">{{ d.kind }}@if (d.version) { · {{ d.version }} }</div>
+            <div class="sh-modal-pills">
+              <span class="sh-badge" [attr.data-tone]="statusTone(d.status)"><span class="sh-dot" [attr.data-status]="d.status"></span>{{ statusLabel(d.status) }}</span>
+              <span class="sh-badge sh-badge--chk mono">{{ i18n.t('sh_checked') }} {{ ago(d.lastCheckedMinutes) }}</span>
+            </div>
+          </div>
+        </div>
+        <button class="sh-modal-close" type="button" (click)="closeDetail()" data-testid="admin-sh-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <!-- Actions -->
+      <div class="sh-modal-actions">
+        <button class="sh-btn sh-btn--solid" type="button" data-testid="admin-sh-probe"
+          [disabled]="busy() || !canManage()"
+          [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+          (click)="probe(d)">
+          @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="refresh" /> }
+          {{ i18n.t('sh_run_check') }}
+        </button>
+        @if (d.id === 'redis') {
+          <button class="sh-btn sh-btn--danger" type="button" data-testid="admin-sh-flush"
+            [disabled]="busy() || !canManage()"
+            [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+            (click)="flushCache(d)">
+            @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }
+            {{ i18n.t('sh_flush') }}
+          </button>
+        }
+      </div>
+
+      <!-- Tabs -->
+      <div class="sh-tabs" role="tablist">
+        <button class="sh-tab" role="tab" [attr.data-active]="modalTab() === 'overview'" (click)="setTab('overview')">{{ i18n.t('sh_tab_overview') }}</button>
+        <button class="sh-tab" role="tab" [attr.data-active]="modalTab() === 'checks'" (click)="setTab('checks')">{{ i18n.t('sh_tab_checks') }}</button>
+      </div>
+
+      <div class="sh-modal-body">
+        @switch (modalTab()) {
+          @case ('overview') {
+            <div class="sh-grid2">
+              <div class="sh-panel">
+                <div class="sh-panel-head">{{ i18n.t('sh_panel_metrics') }}</div>
+                <div class="sh-fields">
+                  @for (row of metricRows(d.metrics); track row.key) {
+                    <div class="sh-field"><span class="sh-field-label">{{ row.key }}</span><span class="sh-field-val mono">{{ row.value }}</span></div>
+                  }
+                  @if (metricRows(d.metrics).length === 0) {
+                    <div class="sh-field"><span class="sh-field-label">{{ i18n.t('sh_no_metrics') }}</span></div>
+                  }
+                </div>
+              </div>
+              <div class="sh-panel">
+                <div class="sh-panel-head">{{ i18n.t('sh_panel_status') }}</div>
+                <div class="sh-fields">
+                  <div class="sh-field"><span class="sh-field-label">{{ i18n.t('sh_field_status') }}</span><span class="sh-field-val"><span class="sh-badge" [attr.data-tone]="statusTone(d.status)">{{ statusLabel(d.status) }}</span></span></div>
+                  <div class="sh-field"><span class="sh-field-label">{{ i18n.t('sh_field_kind') }}</span><span class="sh-field-val">{{ d.kind }}</span></div>
+                  <div class="sh-field"><span class="sh-field-label">{{ i18n.t('sh_field_version') }}</span><span class="sh-field-val mono">{{ d.version ?? '—' }}</span></div>
+                  <div class="sh-field"><span class="sh-field-label">{{ i18n.t('sh_field_checked') }}</span><span class="sh-field-val">{{ ago(d.lastCheckedMinutes) }}</span></div>
+                </div>
+              </div>
+            </div>
+            @if (d.lastError) {
+              <div class="sh-lasterr">
+                <app-icon name="alertTriangle" />
+                <div class="sh-lasterr-msg mono">{{ d.lastError }}</div>
+              </div>
+            }
+          }
+          @case ('checks') {
+            @if (d.recentChecks.length === 0) {
+              <div class="sh-empty sh-empty--sm"><app-icon name="clock" /><div class="sh-empty-title">{{ i18n.t('sh_checks_empty') }}</div></div>
+            } @else {
+              <div class="sh-timeline">
+                @for (c of d.recentChecks; track $index) {
+                  <div class="sh-ev">
+                    <span class="sh-ev-dot" [attr.data-tone]="c.ok ? 'ok' : 'danger'"></span>
+                    <div class="sh-ev-body"><div class="sh-ev-title">{{ c.ok ? i18n.t('sh_probe_ok') : i18n.t('sh_probe_fail') }} <span class="sh-ev-detail mono">{{ c.message }}</span></div></div>
+                    <div class="sh-ev-time">{{ c.at ? fmt.dateTime(c.at) : '—' }}</div>
+                  </div>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+</app-page-content>

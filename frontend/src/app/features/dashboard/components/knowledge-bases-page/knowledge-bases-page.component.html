@@ -1,0 +1,161 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('kb_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('kb_title') }}</h1>
+      <p class="dash-subtitle">{{ i18n.t('kb_subtitle') }}</p>
+    </div>
+    @if (screen() === 'list') {
+      <div class="kb-head-actions">
+        <app-button (click)="newKb()" data-testid="kb-new"><app-icon name="plus" /> {{ i18n.t('kb_new') }}</app-button>
+      </div>
+    }
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  <!-- ── LIST ─────────────────────────────────────────────── -->
+  @if (screen() === 'list') {
+    @if (kbs().length === 0) {
+      <app-empty-state
+        [title]="i18n.t('kb_empty_title')"
+        [sub]="i18n.t('kb_empty_sub')"
+        [ctaLabel]="i18n.t('kb_new')"
+        (cta)="newKb()" />
+    } @else {
+      <div class="kb-grid">
+        @for (kb of kbs(); track kb.id) {
+          <div class="kb-card" data-testid="kb-card">
+            <div class="kb-card-head">
+              <h3>{{ kb.name }}</h3>
+              <span class="kb-count">{{ kb.entryCount }} {{ i18n.t('kb_entries') }}</span>
+            </div>
+            @if (kb.description) { <p class="kb-desc">{{ kb.description }}</p> }
+            <div class="kb-meta">
+              <span class="kb-tag">{{ i18n.t('kb_schema') }}: {{ paramSetName(kb.parameterSetId) }}</span>
+              @if (roleSummary(kb)) {
+                <span class="kb-tag kb-tag-embed">{{ i18n.t('kb_embedded') }}: {{ roleSummary(kb) }}</span>
+              }
+              @if (kb.uniqueField) {
+                <span class="kb-tag">{{ i18n.t('kb_unique_key') }}: {{ kb.uniqueField }}</span>
+              }
+            </div>
+            <div class="kb-card-actions">
+              <button class="kb-link" (click)="openEntries(kb)" data-testid="kb-entries-btn"><app-icon name="inbox" /> {{ i18n.t('kb_manage_entries') }}</button>
+              <button class="kb-link" (click)="editKb(kb)"><app-icon name="edit" /> {{ i18n.t('kb_edit') }}</button>
+              <button class="kb-link kb-link-danger" (click)="deleteKb(kb)"><app-icon name="trash" /> {{ i18n.t('kb_delete') }}</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── CONFIG ───────────────────────────────────────────── -->
+  @if (screen() === 'config') {
+    <button class="dash-back" (click)="backToList()"><app-icon name="arrowLeft" /> {{ i18n.t('kb_back') }}</button>
+
+    <div class="kb-form">
+      <label class="kb-label">{{ i18n.t('kb_name') }}</label>
+      <input class="kb-input" data-testid="kb-name-input" [ngModel]="name()" (ngModelChange)="name.set($event)" [placeholder]="i18n.t('kb_name_ph')" />
+
+      <label class="kb-label">{{ i18n.t('kb_description') }}</label>
+      <input class="kb-input" [ngModel]="description()" (ngModelChange)="description.set($event)" [placeholder]="i18n.t('kb_description_ph')" />
+
+      <label class="kb-label">{{ i18n.t('kb_paramset') }}</label>
+      <select class="kb-input" data-testid="kb-paramset-select" [ngModel]="parameterSetId()" (ngModelChange)="parameterSetId.set($event); onParamSetChange()">
+        <option value="">{{ i18n.t('kb_choose_paramset') }}</option>
+        @for (ps of paramSets(); track ps.id) {
+          <option [value]="ps.id">{{ ps.name }}</option>
+        }
+      </select>
+
+      @if (selectedParamSet()) {
+        @if (fieldNames().length === 0) {
+          <p class="kb-hint">{{ i18n.t('kb_paramset_empty') }}</p>
+        } @else {
+          <label class="kb-label">{{ i18n.t('kb_roles') }}</label>
+          <p class="kb-hint">{{ i18n.t('kb_roles_hint') }}</p>
+          <div class="kb-roles">
+            <div class="kb-roles-row kb-roles-head">
+              <span>{{ i18n.t('kb_field') }}</span>
+              <span>{{ i18n.t('kb_role_embed') }}</span>
+              <span>{{ i18n.t('kb_role_keyword') }}</span>
+              <span>{{ i18n.t('kb_role_unique') }}</span>
+            </div>
+            @for (f of fieldNames(); track f) {
+              <div class="kb-roles-row">
+                <span class="kb-field-name">{{ f }}</span>
+                <input type="checkbox" data-testid="kb-embed" [checked]="roleOf(f).embed" (change)="toggleRole(f, 'embed')" />
+                <input type="checkbox" [checked]="roleOf(f).keyword" (change)="toggleRole(f, 'keyword')" />
+                <input type="radio" name="kbUnique" [checked]="uniqueField() === f" (change)="uniqueField.set(f)" />
+              </div>
+            }
+          </div>
+          @if (uniqueField()) {
+            <button type="button" class="kb-link" (click)="uniqueField.set('')">{{ i18n.t('kb_unique_clear') }}</button>
+          }
+        }
+      }
+
+      <div class="kb-form-actions">
+        <app-button [disabled]="!canSaveConfig() || loading()" (click)="saveConfig()" data-testid="kb-save">{{ i18n.t('kb_save') }}</app-button>
+        <button class="kb-link" (click)="backToList()">{{ i18n.t('kb_cancel') }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── ENTRIES ──────────────────────────────────────────── -->
+  @if (screen() === 'entries') {
+    <button class="dash-back" (click)="backToList()"><app-icon name="arrowLeft" /> {{ i18n.t('kb_back') }}</button>
+    <h2 class="kb-entries-title">{{ activeKb()?.name }}</h2>
+    <app-error-banner [message]="importError()" />
+
+    <div class="kb-entry-form">
+      @for (f of activeFields(); track f) {
+        <div class="kb-entry-field">
+          <label>{{ f }}</label>
+          <input class="kb-input" data-testid="kb-entry-input" [ngModel]="draftValue(f)" (ngModelChange)="setDraft(f, $event)" />
+        </div>
+      }
+      <div class="kb-entry-form-actions">
+        <app-button (click)="saveEntry()" data-testid="kb-entry-add">{{ entryEditId() ? i18n.t('kb_entry_save') : i18n.t('kb_entry_add') }}</app-button>
+        @if (entryEditId()) {
+          <button class="kb-link" (click)="cancelEntry()">{{ i18n.t('kb_cancel') }}</button>
+        }
+      </div>
+    </div>
+
+    <label class="kb-import">
+      <app-icon name="plus" /> {{ i18n.t('kb_import_csv') }}
+      <input type="file" data-testid="kb-import-input" accept=".csv,text/csv" (change)="importCsv($event)" hidden />
+    </label>
+    <span class="kb-import-hint">{{ i18n.t('kb_import_hint') }}</span>
+
+    @if (entries().length === 0) {
+      <app-empty-state [title]="i18n.t('kb_entries_empty')" [sub]="i18n.t('kb_entries_empty_sub')" />
+    } @else {
+      <div class="kb-table-wrap">
+        <table class="kb-table">
+          <thead>
+            <tr>
+              @for (f of activeFields(); track f) { <th>{{ f }}</th> }
+              <th class="kb-th-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of entries(); track entry.id) {
+              <tr>
+                @for (f of activeFields(); track f) { <td>{{ cellValue(entry, f) }}</td> }
+                <td class="kb-row-actions">
+                  <button class="kb-icon-btn" (click)="editEntry(entry)"><app-icon name="edit" /></button>
+                  <button class="kb-icon-btn kb-link-danger" (click)="deleteEntry(entry)"><app-icon name="trash" /></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</app-page-content>

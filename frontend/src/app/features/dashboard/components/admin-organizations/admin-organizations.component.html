@@ -1,0 +1,506 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_org_title') }}</h1>
+      <div class="dash-subtitle">{{ totalElements() }} {{ i18n.t('admin_org_subtitle') }}</div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="ao-error" role="alert">
+      <app-icon name="alertTriangle" />
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <!-- Toolbar -->
+  <div class="ao-toolbar">
+    <div class="ao-search">
+      <app-icon name="search" />
+      <input
+        type="text"
+        data-testid="admin-org-search"
+        [attr.aria-label]="i18n.t('admin_org_search')"
+        [placeholder]="i18n.t('admin_org_search')"
+        [value]="search()"
+        (input)="onSearch($event)" />
+    </div>
+    <div class="ao-filter">
+      <label for="ao-type">{{ i18n.t('admin_org_filter_type') }}</label>
+      <select id="ao-type" data-testid="admin-org-type-filter" [attr.aria-label]="i18n.t('admin_org_filter_type')" (change)="onTypeFilter($event)">
+        <option value="">{{ i18n.t('admin_filter_all') }}</option>
+        <option value="team">{{ i18n.t('admin_org_type_team') }}</option>
+        <option value="personal">{{ i18n.t('admin_org_type_personal') }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  @if (loading()) {
+    <div class="ao-table-wrap" data-testid="admin-org-skeleton" aria-hidden="true">
+      <div class="ao-skel-head"></div>
+      @for (row of [1,2,3,4,5,6,7,8]; track row) {
+        <div class="ao-skel-row"></div>
+      }
+    </div>
+  } @else if (orgs().length === 0) {
+    <div class="ao-empty" data-testid="admin-org-empty">
+      <app-icon name="building" />
+      <div class="ao-empty-title">{{ i18n.t('admin_org_empty_title') }}</div>
+      <div class="ao-empty-sub">{{ i18n.t('admin_org_empty_sub') }}</div>
+    </div>
+  } @else {
+    <div class="ao-table-wrap">
+      <table class="dtable ao-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ i18n.t('admin_org_col_organization') }}</th>
+            <th scope="col">{{ i18n.t('admin_org_col_owner') }}</th>
+            <th scope="col" class="ao-num">{{ i18n.t('admin_org_col_members') }}</th>
+            <th scope="col">{{ i18n.t('admin_org_col_plan') }}</th>
+            <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+            <th scope="col">{{ i18n.t('admin_org_col_status') }}</th>
+            <th scope="col">{{ i18n.t('admin_org_col_type') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (org of orgs(); track org.id) {
+            <tr class="ao-row" data-testid="admin-org-row" [attr.data-selected]="detail()?.id === org.id" tabindex="0" (click)="openDetail(org)" (keydown.enter)="openDetail(org)" (keydown.space)="openDetail(org); $event.preventDefault()">
+              <td>
+                <div class="ao-cell-org">
+                  <span class="ao-avatar" aria-hidden="true" [style.--av-hue]="avatarHue(org.name)">{{ initial(org.name) }}</span>
+                  <span class="ao-cell-org-text">
+                    <span class="ao-cell-name">{{ org.name }}</span>
+                    <span class="ao-cell-sub mono">{{ org.slug || org.id }}</span>
+                  </span>
+                </div>
+              </td>
+              <td>
+                @if (org.ownerName || org.ownerEmail) {
+                  <div class="ao-cell-owner">
+                    <span class="ao-cell-owner-n">{{ org.ownerName ?? org.ownerEmail }}</span>
+                    @if (org.ownerEmail) {
+                      <span class="ao-cell-sub mono">{{ org.ownerEmail }}</span>
+                    }
+                  </div>
+                } @else {
+                  <span class="ao-dash">—</span>
+                }
+              </td>
+              <td class="num">{{ org.memberCount }}</td>
+              <td>
+                @if (org.planName) {
+                  <span class="ao-badge ao-badge--plan">{{ org.planName }}</span>
+                } @else {
+                  <span class="ao-dash">—</span>
+                }
+              </td>
+              <td class="ao-muted">{{ fmt.date(org.createdAt) }}</td>
+              <td>
+                @if (org.suspendedAt) {
+                  <span class="ao-badge ao-badge--suspended"><span class="ao-dot"></span>{{ i18n.t('admin_org_status_suspended') }}</span>
+                } @else {
+                  <span class="ao-badge ao-badge--active"><span class="ao-dot"></span>{{ i18n.t('admin_org_status_active') }}</span>
+                }
+              </td>
+              <td>
+                @if (org.personal) {
+                  <span class="ao-badge ao-badge--type">{{ i18n.t('admin_org_type_personal') }}</span>
+                } @else {
+                  <span class="ao-badge ao-badge--type-team">{{ i18n.t('admin_org_type_team') }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="ao-pagination">
+        <button [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)" [attr.aria-label]="i18n.t('admin_org_prev_page')">
+          <app-icon name="chevronLeft" />
+        </button>
+        <span>{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+        <button [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)" [attr.aria-label]="i18n.t('admin_org_next_page')">
+          <app-icon name="chevronRight" />
+        </button>
+      </div>
+    }
+  }
+
+  <!-- Detail modal -->
+  @if (detailOpen()) {
+    <div class="ao-scrim" (click)="closeDetail()"></div>
+    <div class="ao-modal" data-testid="admin-org-modal" appFocusTrap role="dialog" aria-modal="true" [attr.aria-label]="detail()?.name ?? i18n.t('admin_org_title')">
+      @if (detailLoading()) {
+        <div class="ao-modal-loading">{{ i18n.t('loading') }}</div>
+      } @else if (detail(); as d) {
+        <!-- Header -->
+        <div class="ao-modal-head">
+          <div class="ao-modal-head-top">
+            <div class="ao-modal-id">
+              <span class="ao-avatar ao-avatar--lg" aria-hidden="true">{{ initial(d.name) }}</span>
+              <div class="ao-modal-id-text">
+                <div class="ao-modal-name">{{ d.name }}</div>
+                <div class="ao-modal-owner">
+                  {{ i18n.t('admin_org_owner_label') }} ·
+                  {{ d.ownerName ?? d.ownerEmail ?? '—' }}
+                  @if (d.ownerEmail && d.ownerName) {
+                    <span class="mono">({{ d.ownerEmail }})</span>
+                  }
+                </div>
+                <div class="ao-modal-pills">
+                  @if (d.suspendedAt) {
+                    <span class="ao-badge ao-badge--suspended"><span class="ao-dot"></span>{{ i18n.t('admin_org_status_suspended') }}</span>
+                  } @else {
+                    <span class="ao-badge ao-badge--active"><span class="ao-dot"></span>{{ i18n.t('admin_org_status_active') }}</span>
+                  }
+                  @if (d.personal) {
+                    <span class="ao-badge ao-badge--type">{{ i18n.t('admin_org_type_personal') }}</span>
+                  } @else {
+                    <span class="ao-badge ao-badge--type-team">{{ i18n.t('admin_org_type_team') }}</span>
+                  }
+                  <button class="ao-copy-id" type="button" data-testid="admin-org-copy-id" (click)="copyId()" [title]="i18n.t('admin_org_copy_id')">
+                    <span class="ao-copy-id-label">{{ i18n.t('admin_org_id_label') }}</span>
+                    <span class="ao-copy-id-val mono">{{ d.id }}</span>
+                    <app-icon [name]="copied() ? 'check' : 'copy'" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button class="ao-modal-close" type="button" (click)="closeDetail()" data-testid="admin-org-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')">
+              <app-icon name="close" />
+            </button>
+          </div>
+
+          <!-- Actions -->
+          <div class="ao-modal-actions">
+            @if (d.suspendedAt) {
+              <button class="ao-btn ao-btn--solid" type="button" data-testid="admin-org-activate-btn" [disabled]="busy() || !identity.has('ORG_MANAGE')" [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')" (click)="toggleSuspend()">
+                @if (!identity.has('ORG_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }
+                {{ i18n.t('admin_org_activate') }}
+              </button>
+            } @else {
+              <button class="ao-btn ao-btn--danger" type="button" data-testid="admin-org-suspend-btn" [disabled]="busy() || !identity.has('ORG_MANAGE')" [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')" (click)="toggleSuspend()">
+                @if (!identity.has('ORG_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }
+                {{ i18n.t('admin_org_suspend') }}
+              </button>
+            }
+
+            <div class="ao-transfer">
+              <select
+                class="ao-transfer-select"
+                data-testid="admin-org-transfer-select"
+                [attr.aria-label]="i18n.t('admin_org_transfer')"
+                [disabled]="d.personal || busy() || transferCandidates().length === 0 || !identity.has('ORG_MANAGE')"
+                [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')"
+                [value]="transferTarget()"
+                (change)="transferTarget.set($any($event.target).value)">
+                <option value="">{{ i18n.t('admin_org_transfer_placeholder') }}</option>
+                @for (m of transferCandidates(); track m.userId) {
+                  <option [value]="m.userId">{{ m.fullName || m.email }}</option>
+                }
+              </select>
+              <button
+                class="ao-btn"
+                type="button"
+                data-testid="admin-org-transfer-btn"
+                [disabled]="d.personal || busy() || !transferTarget() || !identity.has('ORG_MANAGE')"
+                [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')"
+                (click)="transferOwnership()">
+                @if (!identity.has('ORG_MANAGE')) { <app-icon name="lock" /> }
+                {{ i18n.t('admin_org_transfer') }}
+              </button>
+            </div>
+
+            <button class="ao-btn ao-btn--danger" type="button" data-testid="admin-org-delete-btn" [disabled]="d.personal || busy() || !identity.has('ORG_MANAGE')" [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')" (click)="deleteOrg()">
+              @if (!identity.has('ORG_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }
+              {{ i18n.t('admin_org_delete') }}
+            </button>
+
+            @if (flash()) {
+              <span class="ao-flash" data-testid="admin-org-flash"><app-icon name="check" /> {{ flash() }}</span>
+            }
+          </div>
+
+          <!-- Tabs -->
+          <div class="ao-tabs" role="tablist">
+            @for (t of tabs; track t.key) {
+              <button
+                class="ao-tab"
+                role="tab"
+                type="button"
+                [attr.data-active]="activeTab() === t.key ? '1' : '0'"
+                [attr.aria-selected]="activeTab() === t.key"
+                [attr.data-testid]="'admin-org-tab-' + t.key"
+                [disabled]="tabLocked(t.key)"
+                [attr.title]="tabLocked(t.key) ? i18n.t('admin_perm_required') : null"
+                (click)="setTab(t.key)">
+                {{ i18n.t(t.labelKey) }}
+                @if (tabLocked(t.key)) { <app-icon name="lock" /> }
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="ao-modal-body">
+          @switch (activeTab()) {
+            @case ('overview') {
+              <div class="ao-stack" data-testid="admin-org-tab-panel-overview">
+                <div class="ao-grid">
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_owner_label') }}</div>
+                    <div class="ao-field-value">{{ d.ownerName ?? d.ownerEmail ?? '—' }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_col_plan') }}</div>
+                    <div class="ao-field-value">{{ d.planName ?? '—' }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_col_members') }}</div>
+                    <div class="ao-field-value num">{{ d.memberCount }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_mailboxes') }}</div>
+                    <div class="ao-field-value num">{{ d.mailboxCount }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_automations') }}</div>
+                    <div class="ao-field-value num">{{ d.automationCount }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_org_ai_cost') }}</div>
+                    <div class="ao-field-value num">{{ aiCostEur() }}</div>
+                  </div>
+                  <div class="ao-field">
+                    <div class="ao-field-label">{{ i18n.t('admin_col_created') }}</div>
+                    <div class="ao-field-value">{{ fmt.date(d.createdAt) }}</div>
+                  </div>
+                  @if (d.suspendedAt) {
+                    <div class="ao-field">
+                      <div class="ao-field-label">{{ i18n.t('admin_org_suspended_at') }}</div>
+                      <div class="ao-field-value">{{ fmt.dateTime(d.suspendedAt) }}</div>
+                    </div>
+                  }
+                </div>
+                @if (d.suspendedAt && d.suspensionReason) {
+                  <div class="ao-note">
+                    <app-icon name="info" />
+                    <span>{{ i18n.t('admin_org_suspension_reason') }}: {{ d.suspensionReason }}</span>
+                  </div>
+                }
+              </div>
+            }
+            @case ('members') {
+              <div data-testid="admin-org-tab-panel-members">
+                @if (d.members.length === 0) {
+                  <div class="ao-tab-empty">{{ i18n.t('admin_org_members_empty') }}</div>
+                } @else {
+                  <div class="ao-mini-table">
+                    <div class="ao-mini-head">
+                      <span>{{ i18n.t('admin_org_member_name') }}</span>
+                      <span>{{ i18n.t('admin_org_member_email') }}</span>
+                      <span>{{ i18n.t('admin_org_member_role') }}</span>
+                      <span>{{ i18n.t('admin_org_col_status') }}</span>
+                    </div>
+                    @for (m of d.members; track m.userId) {
+                      <div class="ao-mini-row">
+                        <span class="ao-mini-name">{{ m.fullName || '—' }}</span>
+                        <span class="mono ao-muted">{{ m.email }}</span>
+                        <span><span class="ao-badge ao-badge--type">{{ m.role }}</span></span>
+                        <span class="ao-muted">{{ m.status }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+            @case ('automations') {
+              <div data-testid="admin-org-tab-panel-automations">
+                @if (automationsLoading()) {
+                  <div class="ao-tab-loading">{{ i18n.t('loading') }}</div>
+                } @else if (automationsError()) {
+                  <div class="ao-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+                } @else if ((automationsData()?.length ?? 0) === 0) {
+                  <div class="ao-tab-empty">{{ i18n.t('admin_org_automations_empty') }}</div>
+                } @else {
+                  <table class="dtable ao-subtable" data-testid="admin-org-automations-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ i18n.t('admin_org_automation_name') }}</th>
+                        <th scope="col">{{ i18n.t('admin_org_col_status') }}</th>
+                        <th scope="col">{{ i18n.t('admin_org_automation_kind') }}</th>
+                        <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+                        <th scope="col">{{ i18n.t('admin_org_automation_last_run') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (a of automationsData(); track a.id) {
+                        <tr>
+                          <td class="ao-sub-name">{{ a.name }}</td>
+                          <td><span class="ao-badge" [attr.data-tone]="automationStatusTone(a.status)">{{ a.status }}</span></td>
+                          <td><span class="ao-badge" [attr.data-tone]="kindTone(a.kind)">{{ a.kind }}</span></td>
+                          <td class="ao-muted">{{ fmt.date(a.createdAt) }}</td>
+                          <td class="ao-muted">{{ a.lastRunAt ? fmt.dateTime(a.lastRunAt) : '—' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+            @case ('mailboxes') {
+              <div data-testid="admin-org-tab-panel-mailboxes">
+                @if (mailboxesLoading()) {
+                  <div class="ao-tab-loading">{{ i18n.t('loading') }}</div>
+                } @else if (mailboxesError()) {
+                  <div class="ao-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+                } @else if ((mailboxesData()?.length ?? 0) === 0) {
+                  <div class="ao-tab-empty">{{ i18n.t('admin_org_mailboxes_empty') }}</div>
+                } @else {
+                  <table class="dtable ao-subtable" data-testid="admin-org-mailboxes-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ i18n.t('admin_col_email') }}</th>
+                        <th scope="col">{{ i18n.t('admin_mailbox_display_name') }}</th>
+                        <th scope="col">{{ i18n.t('admin_org_col_status') }}</th>
+                        <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (m of mailboxesData(); track m.id) {
+                        <tr>
+                          <td>
+                            <div class="ao-sub-mb">
+                              <span class="ao-swatch" [style.background]="m.color"></span>
+                              <span class="mono">{{ m.email }}</span>
+                            </div>
+                          </td>
+                          <td>{{ m.displayName || '—' }}</td>
+                          <td>
+                            @if (m.active) {
+                              <span class="ao-badge ao-badge--active"><span class="ao-dot"></span>{{ i18n.t('admin_org_status_active') }}</span>
+                            } @else {
+                              <span class="ao-badge" data-tone="slate">{{ i18n.t('admin_mailbox_inactive') }}</span>
+                            }
+                          </td>
+                          <td class="ao-muted">{{ fmt.date(m.createdAt) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+            @case ('usage') {
+              <div class="ao-stack" data-testid="admin-org-tab-panel-usage">
+                <div class="ao-usage-grid">
+                  <div class="ao-tile">
+                    <div class="ao-tile-label">{{ i18n.t('admin_org_ai_cost') }}</div>
+                    <div class="ao-tile-val">{{ aiCostEur() }}</div>
+                  </div>
+                  <div class="ao-tile">
+                    <div class="ao-tile-label">{{ i18n.t('admin_org_col_members') }}</div>
+                    <div class="ao-tile-val num">{{ d.memberCount }}</div>
+                  </div>
+                  <div class="ao-tile">
+                    <div class="ao-tile-label">{{ i18n.t('admin_org_mailboxes') }}</div>
+                    <div class="ao-tile-val num">{{ d.mailboxCount }}</div>
+                  </div>
+                  <div class="ao-tile">
+                    <div class="ao-tile-label">{{ i18n.t('admin_org_automations') }}</div>
+                    <div class="ao-tile-val num">{{ d.automationCount }}</div>
+                  </div>
+                  <div class="ao-tile">
+                    <div class="ao-tile-label">{{ i18n.t('admin_org_col_plan') }}</div>
+                    <div class="ao-tile-val ao-tile-val--text">{{ d.planName ?? '—' }}</div>
+                  </div>
+                </div>
+
+                <!-- AI quota: grant-credit shortcut -->
+                <div class="ao-quota-cta">
+                  <div class="ao-quota-cta-text">
+                    <div class="ao-quota-cta-title">{{ i18n.t('gcd_panel_title') }}</div>
+                    <div class="ao-quota-cta-sub">{{ i18n.t('gcd_panel_intro_org') }}</div>
+                  </div>
+                  <button
+                    class="ao-btn ao-btn--solid"
+                    type="button"
+                    data-testid="admin-org-grant-credit-btn"
+                    (click)="openGrantCredit()"
+                    [disabled]="!identity.has('QUOTA_OVERRIDE')"
+                    [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')">
+                    @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="creditCard" /> }
+                    {{ i18n.t('gcd_button') }}
+                  </button>
+                </div>
+              </div>
+            }
+            @case ('audit') {
+              <div data-testid="admin-org-tab-panel-audit">
+                @if (auditLoading()) {
+                  <div class="ao-tab-loading">{{ i18n.t('loading') }}</div>
+                } @else if (auditError()) {
+                  <div class="ao-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+                } @else if ((auditData()?.length ?? 0) === 0) {
+                  <div class="ao-tab-empty">{{ i18n.t('admin_org_audit_empty') }}</div>
+                } @else {
+                  <table class="dtable ao-subtable" data-testid="admin-org-audit-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ i18n.t('admin_org_audit_actor') }}</th>
+                        <th scope="col">{{ i18n.t('admin_activity_action') }}</th>
+                        <th scope="col">{{ i18n.t('admin_activity_detail') }}</th>
+                        <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (a of auditData(); track a.id) {
+                        <tr>
+                          <td>
+                            <div class="ao-sub-actor">
+                              <span class="ao-sub-name">{{ a.userName || a.userEmail || '—' }}</span>
+                              @if (a.userName && a.userEmail) {
+                                <span class="mono ao-cell-sub">{{ a.userEmail }}</span>
+                              }
+                            </div>
+                          </td>
+                          <td><span class="ao-badge" data-tone="slate">{{ a.action }}</span></td>
+                          <td class="ao-audit-detail">{{ a.detail ?? '—' }}</td>
+                          <td class="ao-muted">{{ fmt.dateTime(a.createdAt) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                }
+              </div>
+            }
+            @default {
+              <div class="ao-tab-empty ao-tab-empty--lg" [attr.data-testid]="'admin-org-tab-panel-' + activeTab()">
+                <app-icon name="info" />
+                <span>{{ i18n.t('admin_coming_soon') }}</span>
+              </div>
+            }
+          }
+        </div>
+      } @else {
+        <div class="ao-modal-loading">{{ i18n.t('admin_org_load_failed') }}</div>
+      }
+    </div>
+
+    <!-- Grant AI credit shortcut (overlay above the detail modal) -->
+    @if (grantCreditOpen() && detail(); as d) {
+      <app-grant-credit-dialog
+        targetType="ORG"
+        [targetId]="d.id"
+        [targetName]="d.name"
+        [targetSub]="d.slug || d.id"
+        [plan]="d.planName"
+        (close)="grantCreditOpen.set(false)"
+        (granted)="onCreditGranted($event)" />
+    }
+  }
+</app-page-content>

@@ -1,0 +1,71 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_audit_title') }}</h1>
+      <div class="dash-subtitle">{{ totalElements() }} {{ i18n.t('admin_audit_subtitle') }}</div>
+    </div>
+    <button class="export-btn" data-testid="audit-export-btn" (click)="exportCsv()">
+      <app-icon name="download" />
+      {{ i18n.t('admin_audit_export') }}
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="audit-filters">
+    <div class="filter-item">
+      <label>{{ i18n.t('admin_filter_action') }}</label>
+      <select data-testid="audit-action-filter" (change)="onActionFilter($event)">
+        <option value="">{{ i18n.t('admin_filter_all') }}</option>
+        @for (a of auditActions; track a) {
+          <option [value]="a">{{ i18n.t('audit_action_' + a) }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-loading">{{ i18n.t('loading') }}</div>
+  } @else {
+    <div class="adm-table-wrap">
+      <table class="adm-table" data-testid="audit-log-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ i18n.t('audit_col_date') }}</th>
+            <th scope="col">{{ i18n.t('admin_col_name') }}</th>
+            <th scope="col">{{ i18n.t('admin_col_email') }}</th>
+            <th scope="col">{{ i18n.t('audit_col_action') }}</th>
+            <th scope="col">{{ i18n.t('audit_col_detail') }}</th>
+            <th scope="col">{{ i18n.t('audit_col_ip') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (log of logs(); track log.id) {
+            <tr>
+              <td class="date-cell">{{ fmt.dateTime(log.createdAt) }}</td>
+              <td>{{ log.userName ?? '—' }}</td>
+              <td>{{ log.userEmail ?? '—' }}</td>
+              <td><span class="adm-badge">{{ actionLabel(log.action) }}</span></td>
+              <td class="detail-cell">{{ log.detail ?? '—' }}</td>
+              <td class="ip-cell">{{ log.ipAddress ?? '—' }}</td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="empty-row">{{ i18n.t('admin_audit_empty') }}</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="admin-pagination">
+        <button data-testid="audit-page-prev" [attr.aria-label]="i18n.t('admin_pager_prev')" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">
+          <app-icon name="chevronLeft" />
+        </button>
+        <span>{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+        <button data-testid="audit-page-next" [attr.aria-label]="i18n.t('admin_pager_next')" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)">
+          <app-icon name="arrowRight" />
+        </button>
+      </div>
+    }
+  }
+</app-page-content>

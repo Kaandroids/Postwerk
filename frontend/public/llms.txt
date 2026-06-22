@@ -1,0 +1,43 @@
+# Postwerk
+
+> Postwerk is an email-automation SaaS (German "E-Mail-Automatisierung"). Connect a
+> mailbox, build a visual, node-based automation on a canvas, and let every incoming
+> email be classified, have data extracted, be filtered, replied to, labeled, or pushed
+> to an external HTTP API — automatically. An AI assistant can build automations from a
+> plain-language description, a marketplace lets users share them, and AI features are
+> powered by Google Gemini.
+
+## Getting started
+
+- [Welcome](/docs-content/en/getting-started/welcome.md): what Postwerk is and what you can build
+- [Quickstart](/docs-content/en/getting-started/quickstart.md): build your first automation end to end
+- [Connect a mailbox](/docs-content/en/getting-started/connect-mailbox.md): link an IMAP/OAuth inbox
+
+## Core concepts
+
+- [How automations work](/docs-content/en/core-concepts/how-automations-work.md): runs, nodes, handles, variables
+- [Branches & handles](/docs-content/en/core-concepts/branches.md): how decision nodes split a run
+- [Variables & expressions](/docs-content/en/developer/expressions.md): the {{namespace.field}} syntax
+
+## Building & operating
+
+- [Building with the AI assistant](/docs-content/en/ai-assistant/building-with-ai.md)
+- [Test cases & assertions](/docs-content/en/testing/test-cases.md): dry-run tests, mocks, simulations
+- [Knowledge bases](/docs-content/en/resources/knowledge-base.md): org reference data for the Knowledge match node
+- [Marketplace](/docs-content/en/marketplace/publishing.md): install or publish automations
+- [Members & permissions](/docs-content/en/teams/roles-permissions.md): organizations, per-mailbox grants, AI quota
+- [Triggering via webhook](/docs-content/en/developer/api.md): start runs from your own code
+
+## Automation nodes (the building blocks)
+
+- Trigger: starts a run from incoming email, an inbound webhook, or a schedule.
+- Filter: continues only when condition checks match (OR between groups, AND within).
+- Categorize: AI routing — assigns one of your categories with a confidence score (Gemini).
+- Extract: AI extraction — pulls structured fields from free-text email into variables (Gemini).
+- Knowledge match (vector search): matches a value against a knowledge base via hybrid search + an AI judge.
+- Add label / Remove label: assign or remove a category on the email.
+- Email action: reply, forward, or move the triggering email.
+- Send email: send a brand-new message to any recipient.
+- Webhook: call an external HTTP API and expose the response as variables.
+- Delay: pause a run for a set duration.
+- Integration call / Input / Output: invoke and define reusable trigger-less "integration" sub-flows.

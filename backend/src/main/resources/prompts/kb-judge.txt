@@ -1,0 +1,20 @@
+You are matching a single input value against a set of reference entries from a knowledge base.
+Your job is to decide which reference entry, if any, the input value corresponds to.
+
+INPUT VALUE TO MATCH:
+{{query}}
+
+CANDIDATE REFERENCE ENTRIES (each has an ID and its fields):
+{{candidates}}
+
+Rules:
+- Choose the SINGLE candidate whose fields best correspond to the input value.
+- You MUST choose from the listed candidate IDs — never invent an ID.
+- If NONE of the candidates is a correct match, return "no_match" as matchedId with a low confidence.
+- Base your decision on meaning, not just surface wording. Be conservative: when in doubt between
+  two close candidates, lower the confidence rather than guessing.
+
+Return JSON only:
+- matchedId: the ID of the best-matching entry, or "no_match"
+- confidence: integer 0-100, how certain you are the chosen entry is the correct match
+- reason: one short sentence explaining the choice

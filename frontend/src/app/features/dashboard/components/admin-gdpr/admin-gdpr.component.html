@@ -1,0 +1,291 @@
+<app-page-content>
+  <!-- A. Alert strip -->
+  @if (banner(); as b) {
+    @if (!alertDismissed()) {
+      <div class="gd-alert" [attr.data-tone]="b.kind" role="alert" data-testid="admin-gdpr-alert">
+        <app-icon name="alertTriangle" />
+        <span class="gd-alert-text">
+          @if (b.kind === 'danger') { <b>{{ i18n.t('gdpr_alert_overdue', { n: b.n + '' }) }}</b> }
+          @else { <b>{{ i18n.t('gdpr_alert_due', { n: b.n + '' }) }}</b> }
+        </span>
+        <button type="button" class="gd-alert-cta" data-testid="admin-gdpr-alert-inspect" (click)="inspectBanner()">{{ i18n.t('gdpr_alert_inspect') }}</button>
+        <button type="button" class="gd-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+    }
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head gd-head">
+    <div>
+      <div class="dash-eyebrow gd-eyebrow-mono">{{ i18n.t('gdpr_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('gdpr_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.open ?? 0 }}</b> {{ i18n.t('gdpr_open_lc') }} ·
+        <b class="gd-sub-bad">{{ kpis()?.overdue ?? 0 }}</b> {{ i18n.t('gdpr_overdue_lc') }} ·
+        <b>{{ kpis()?.avgCloseDays == null ? '—' : kpis()!.avgCloseDays + 'd' }}</b> {{ i18n.t('gdpr_avg_close') }}
+      </div>
+    </div>
+    <div class="gd-head-controls">
+      <button type="button" class="gd-btn gd-btn--solid" data-testid="admin-gdpr-new" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openCreate()">
+        @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }{{ i18n.t('gdpr_new_request') }}
+      </button>
+      <button type="button" class="gd-btn" data-testid="admin-gdpr-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="gd-refresh-ic" [class.gd-spin]="refreshing()"><app-icon name="refresh" /></span>{{ i18n.t('gdpr_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="gd-updated">{{ i18n.t('gdpr_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="gd-flash" role="status" data-testid="admin-gdpr-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="gd-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- D. KPI strip -->
+  <div class="gd-kpis" data-testid="admin-gdpr-kpis">
+    <div class="gd-kpi"><div class="gd-kpi-label">{{ i18n.t('gdpr_kpi_open') }}</div><div class="gd-kpi-value">{{ kpis()?.open ?? 0 }}</div><div class="gd-kpi-foot"><span class="gd-chip" data-tone="amber">{{ i18n.t('gdpr_chip_active') }}</span><span class="gd-kpi-note">{{ i18n.t('gdpr_kpi_open_note', { p: (kpis()?.pending ?? 0) + '', i: (kpis()?.inProgress ?? 0) + '' }) }}</span></div></div>
+    <div class="gd-kpi"><div class="gd-kpi-label">{{ i18n.t('gdpr_kpi_overdue') }}</div><div class="gd-kpi-value" [attr.data-tone]="(kpis()?.overdue ?? 0) > 0 ? 'danger' : 'default'">{{ kpis()?.overdue ?? 0 }}</div><div class="gd-kpi-foot"><span class="gd-chip" [attr.data-tone]="(kpis()?.overdue ?? 0) > 0 ? 'danger' : 'green'">{{ (kpis()?.overdue ?? 0) > 0 ? i18n.t('gdpr_chip_breach') : i18n.t('gdpr_chip_ok') }}</span><span class="gd-kpi-note">{{ i18n.t('gdpr_kpi_overdue_note') }}</span></div></div>
+    <div class="gd-kpi"><div class="gd-kpi-label">{{ i18n.t('gdpr_kpi_due') }}</div><div class="gd-kpi-value" [attr.data-tone]="(kpis()?.dueSoon ?? 0) > 0 ? 'warning' : 'default'">{{ kpis()?.dueSoon ?? 0 }}</div><div class="gd-kpi-foot"><span class="gd-chip" [attr.data-tone]="(kpis()?.dueSoon ?? 0) > 0 ? 'amber' : 'green'">{{ (kpis()?.dueSoon ?? 0) > 0 ? i18n.t('gdpr_chip_soon') : i18n.t('gdpr_chip_clear') }}</span><span class="gd-kpi-note">{{ i18n.t('gdpr_kpi_due_note') }}</span></div></div>
+    <div class="gd-kpi"><div class="gd-kpi-label">{{ i18n.t('gdpr_kpi_closed') }}</div><div class="gd-kpi-value">{{ kpis()?.closed30d ?? 0 }}</div><div class="gd-kpi-foot"><span class="gd-chip" data-tone="slate">{{ i18n.t('gdpr_chip_30d') }}</span><span class="gd-kpi-note">{{ i18n.t('gdpr_kpi_closed_note') }}</span></div></div>
+    <div class="gd-kpi"><div class="gd-kpi-label">{{ i18n.t('gdpr_kpi_avg') }}</div><div class="gd-kpi-value">{{ kpis()?.avgCloseDays == null ? '—' : kpis()!.avgCloseDays + 'd' }}</div><div class="gd-kpi-foot"><span class="gd-chip" data-tone="slate"><app-icon name="clock" /></span><span class="gd-kpi-note">{{ i18n.t('gdpr_kpi_avg_note') }}</span></div></div>
+  </div>
+
+  <!-- E. Retention posture row -->
+  @if (retention(); as ret) {
+    <div class="gd-retention" data-testid="admin-gdpr-retention">
+      <div class="gd-ret-head">
+        <span class="gd-ret-ic"><app-icon name="shield" /></span>
+        <div class="gd-ret-titles"><div class="gd-ret-title">{{ i18n.t('gdpr_ret_title') }}</div><div class="gd-ret-sub">{{ i18n.t('gdpr_ret_sub') }}</div></div>
+        <button type="button" class="gd-ret-link" data-testid="admin-gdpr-ret-link" (click)="openRetentionJob()"><app-icon name="refresh" /><span>{{ i18n.t('gdpr_ret_lastsweep', { ago: retLastSweep() }) }}</span><app-icon name="chevronRight" /></button>
+      </div>
+      <div class="gd-ret-grid">
+        <div class="gd-ret-card"><span class="gd-ret-card-ic"><app-icon name="mail" /></span><div class="gd-ret-card-val">{{ ret.emailDays }}<span class="gd-ret-card-u">{{ i18n.t('gdpr_ret_days') }}</span></div><div class="gd-ret-card-label">{{ i18n.t('gdpr_ret_email') }}</div><div class="gd-ret-card-note">{{ i18n.t('gdpr_ret_email_note') }}</div></div>
+        <div class="gd-ret-card"><span class="gd-ret-card-ic"><app-icon name="sparkle" /></span><div class="gd-ret-card-val">{{ ret.conversationDays }}<span class="gd-ret-card-u">{{ i18n.t('gdpr_ret_days') }}</span></div><div class="gd-ret-card-label">{{ i18n.t('gdpr_ret_convo') }}</div><div class="gd-ret-card-note">{{ i18n.t('gdpr_ret_convo_note') }}</div></div>
+        <div class="gd-ret-card"><span class="gd-ret-card-ic"><app-icon name="globe" /></span><div class="gd-ret-card-val">{{ ret.ipDays }}<span class="gd-ret-card-u">{{ i18n.t('gdpr_ret_days') }}</span></div><div class="gd-ret-card-label">{{ i18n.t('gdpr_ret_ip') }}</div><div class="gd-ret-card-note">{{ i18n.t('gdpr_ret_ip_note') }}</div></div>
+        <div class="gd-ret-card"><span class="gd-ret-card-ic"><app-icon name="list" /></span><div class="gd-ret-card-val">{{ ret.auditDays }}<span class="gd-ret-card-u">{{ i18n.t('gdpr_ret_days') }}</span></div><div class="gd-ret-card-label">{{ i18n.t('gdpr_ret_audit') }}</div><div class="gd-ret-card-note">{{ i18n.t('gdpr_ret_audit_note') }}</div></div>
+      </div>
+    </div>
+  }
+
+  <!-- F. Toolbar -->
+  <div class="gd-toolbar">
+    <div class="gd-search"><app-icon name="search" /><input type="text" data-testid="admin-gdpr-search" [attr.aria-label]="i18n.t('gdpr_search')" [placeholder]="i18n.t('gdpr_search')" [value]="search()" (input)="onSearch($event)" /></div>
+    <div class="gd-filters">
+      <div class="gd-filter"><label>{{ i18n.t('gdpr_filter_type') }}</label><select data-testid="admin-gdpr-f-type" (change)="onType($event)"><option value="">{{ i18n.t('gdpr_filter_all') }}</option>@for (t of types; track t) { <option [value]="t">{{ typeLabel(t) }}</option> }</select></div>
+      <div class="gd-filter"><label>{{ i18n.t('gdpr_filter_status') }}</label><select data-testid="admin-gdpr-f-status" (change)="onStatus($event)"><option value="">{{ i18n.t('gdpr_filter_all') }}</option><option value="PENDING">{{ i18n.t('gdpr_status_pending') }}</option><option value="IN_PROGRESS">{{ i18n.t('gdpr_status_inprogress') }}</option><option value="COMPLETED">{{ i18n.t('gdpr_status_completed') }}</option><option value="REJECTED">{{ i18n.t('gdpr_status_rejected') }}</option></select></div>
+      <div class="gd-filter"><label>{{ i18n.t('gdpr_filter_deadline') }}</label><select data-testid="admin-gdpr-f-deadline" (change)="onDeadline($event)"><option value="">{{ i18n.t('gdpr_deadline_any') }}</option><option value="overdue">{{ i18n.t('gdpr_deadline_overdue') }}</option><option value="due-soon">{{ i18n.t('gdpr_deadline_due') }}</option></select></div>
+    </div>
+  </div>
+
+  <!-- G/H. Table + states -->
+  @if (loading()) {
+    <div class="gd-card" aria-hidden="true" data-testid="admin-gdpr-skeleton"><div class="gd-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="gd-skel-row"></div> }</div>
+  } @else if (rows().length === 0 && deadlineF() === 'overdue') {
+    <div class="gd-empty" data-testid="admin-gdpr-empty-overdue"><app-icon name="checkCircle" /><div class="gd-empty-title">{{ i18n.t('gdpr_empty_overdue') }}</div><div class="gd-empty-sub">{{ i18n.t('gdpr_empty_overdue_sub') }}</div></div>
+  } @else if (rows().length === 0 && hasFilters()) {
+    <div class="gd-empty" data-testid="admin-gdpr-empty-filtered"><app-icon name="search" /><div class="gd-empty-title">{{ i18n.t('gdpr_empty_filtered') }}</div><div class="gd-empty-sub">{{ i18n.t('gdpr_empty_filtered_sub') }}</div><button type="button" class="gd-btn" (click)="clearFilters()">{{ i18n.t('gdpr_clear_filters') }}</button></div>
+  } @else if (rows().length === 0) {
+    <div class="gd-empty" data-testid="admin-gdpr-empty"><app-icon name="shield" /><div class="gd-empty-title">{{ i18n.t('gdpr_empty') }}</div><div class="gd-empty-sub">{{ i18n.t('gdpr_empty_sub') }}</div></div>
+  } @else {
+    <div class="gd-card">
+      <div class="gd-scroll">
+        <table class="dtable" data-testid="admin-gdpr-table">
+          <thead><tr>
+            <th scope="col">{{ i18n.t('gdpr_col_subject') }}</th>
+            <th scope="col">{{ i18n.t('gdpr_col_type') }}</th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'requested' ? '1' : '0'" (click)="toggleSort('requested')"><span>{{ i18n.t('gdpr_col_requested') }}</span>@if (sortKey() === 'requested') { <span class="th-sort-ic"><app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /></span> }</button></th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'deadline' ? '1' : '0'" (click)="toggleSort('deadline')"><span>{{ i18n.t('gdpr_col_deadline') }}</span>@if (sortKey() === 'deadline') { <span class="th-sort-ic"><app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /></span> }</button></th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'status' ? '1' : '0'" (click)="toggleSort('status')"><span>{{ i18n.t('gdpr_col_status') }}</span>@if (sortKey() === 'status') { <span class="th-sort-ic"><app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /></span> }</button></th>
+            <th scope="col">{{ i18n.t('gdpr_col_handler') }}</th>
+            <th scope="col" class="gd-col-menu"></th>
+          </tr></thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr class="gd-row" data-testid="admin-gdpr-row" [attr.data-overdue]="isOpen(r) && deadlineState(r) === 'overdue' ? '1' : null" tabindex="0" (click)="openRequest(r)" (keydown.enter)="openRequest(r)" (keydown.space)="openRequest(r); $event.preventDefault()">
+                <td>
+                  <div class="gd-cell-user">
+                    <span class="gd-avatar" [style.background]="'hsl(' + avatarHue(r.subjectEmail) + ' 55% 48%)'">{{ initial(r.subjectName) }}</span>
+                    <span class="gd-cell-text"><span class="gd-cell-name">{{ r.subjectName }}</span><span class="gd-cell-mail mono">{{ r.subjectEmail }}</span></span>
+                  </div>
+                </td>
+                <td><span class="gd-badge" [attr.data-tone]="typeTone(r.type)"><app-icon [name]="typeIcon(r.type)" />{{ typeLabel(r.type) }}</span></td>
+                <td class="gd-muted mono">{{ fmt.date(r.requestedAt) }}</td>
+                <td>
+                  <div class="gd-deadline-cell">
+                    <span class="gd-deadline-date mono">{{ fmt.date(r.deadlineAt) }}</span>
+                    @if (isOpen(r)) { <span class="gd-deadline-tag" [attr.data-state]="deadlineState(r)"><span class="gd-dot" [attr.data-s]="deadlineDotState(r)" [class.gd-dot--pulse]="deadlineState(r) === 'overdue'"></span>{{ deadlineLabel(r) }}</span> }
+                  </div>
+                </td>
+                <td><span class="gd-status"><span class="gd-dot" [attr.data-s]="statusDot(r.status)"></span><span class="gd-badge" [attr.data-tone]="statusTone(r.status)">{{ statusLabel(r.status) }}</span></span></td>
+                <td class="gd-muted">{{ r.handlerName ?? '—' }}</td>
+                <td class="gd-col-menu" (click)="$event.stopPropagation()">
+                  <div class="gd-menu-wrap">
+                    <button type="button" class="gd-icon-btn" [attr.data-testid]="'admin-gdpr-menu-' + r.id" [attr.aria-label]="i18n.t('gdpr_row_menu')" (click)="toggleMenu(r.id, $event)"><app-icon name="list" /></button>
+                    @if (openMenuId() === r.id) {
+                      <div class="gd-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="gd-menu-item" role="menuitem" (click)="openRequest(r); openMenuId.set(null)"><app-icon name="eye" /><span>{{ i18n.t('gdpr_menu_view') }}</span></button>
+                        @if (isOpen(r)) {
+                          <button type="button" class="gd-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="runExport(r, $event); openMenuId.set(null)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="download" /> }<span>{{ i18n.t('gdpr_run_export') }}</span></button>
+                          <button type="button" class="gd-menu-item gd-menu-item--danger" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="executeErasure(r, $event); openMenuId.set(null)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }<span>{{ i18n.t('gdpr_execute_erasure') }}</span></button>
+                          <button type="button" class="gd-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openReject(r, $event); openMenuId.set(null)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="close" /> }<span>{{ i18n.t('gdpr_reject') }}</span></button>
+                          <button type="button" class="gd-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="markComplete(r, $event); openMenuId.set(null)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="checkCircle" /> }<span>{{ i18n.t('gdpr_mark_complete') }}</span></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (totalPages() > 1) {
+        <div class="gd-pager"><span class="gd-pager-info">{{ total() }} {{ i18n.t('gdpr_requests_lc') }}</span><div class="gd-pager-ctrls"><button class="gd-pager-btn" [disabled]="page() === 0" (click)="goToPage(page() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="gd-pager-pages">{{ page() + 1 }} / {{ totalPages() }}</span><button class="gd-pager-btn" [disabled]="page() >= totalPages() - 1" (click)="goToPage(page() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+      }
+    </div>
+  }
+
+  <!-- I. Detail modal -->
+  @if (detail(); as d) {
+    <div class="gd-scrim" (click)="closeDetail()"></div>
+    <div class="gd-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-gdpr-modal" (click)="$event.stopPropagation()">
+      <div class="gd-modal-head">
+        <div class="gd-modal-id">
+          <span class="gd-avatar gd-avatar--lg" [style.background]="'hsl(' + avatarHue(d.request.subjectEmail) + ' 55% 48%)'" aria-hidden="true">{{ initial(d.request.subjectName) }}</span>
+          <div class="gd-modal-id-text">
+            <div class="gd-modal-name">{{ d.request.subjectName }}</div>
+            <div class="gd-modal-mail mono">{{ d.request.subjectEmail }}</div>
+            <div class="gd-modal-pills">
+              <span class="gd-badge" [attr.data-tone]="typeTone(d.request.type)"><app-icon [name]="typeIcon(d.request.type)" />{{ typeLabel(d.request.type) }}</span>
+              <span class="gd-status"><span class="gd-dot" [attr.data-s]="statusDot(d.request.status)"></span><span class="gd-badge" [attr.data-tone]="statusTone(d.request.status)">{{ statusLabel(d.request.status) }}</span></span>
+              <span class="gd-deadline-chip" [attr.data-tone]="deadlineChipTone(d.request)"><span class="gd-deadline-chip-l">{{ i18n.t('gdpr_col_deadline') }}</span><span class="mono">{{ fmt.date(d.request.deadlineAt) }}</span></span>
+            </div>
+          </div>
+        </div>
+        <button class="gd-modal-close" type="button" (click)="closeDetail()" data-testid="admin-gdpr-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <div class="gd-modal-actions">
+        @if (detailClosed()) {
+          <span class="gd-closed-note"><app-icon name="checkCircle" />{{ i18n.t('gdpr_closed_note', { s: statusLabel(d.request.status) }) }}</span>
+        } @else {
+          <button class="gd-btn gd-btn--solid gd-btn--sm" type="button" data-testid="admin-gdpr-modal-export" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="runExport(d.request)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="download" /> }{{ i18n.t('gdpr_run_export') }}</button>
+          <button class="gd-btn gd-btn--danger gd-btn--sm" type="button" data-testid="admin-gdpr-modal-erase" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="executeErasure(d.request)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }{{ i18n.t('gdpr_execute_erasure') }}</button>
+          <button class="gd-btn gd-btn--sm" type="button" data-testid="admin-gdpr-modal-reject" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openReject(d.request)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="close" /> }{{ i18n.t('gdpr_reject') }}</button>
+          <button class="gd-btn gd-btn--sm" type="button" data-testid="admin-gdpr-modal-complete" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="markComplete(d.request)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="checkCircle" /> }{{ i18n.t('gdpr_mark_complete') }}</button>
+        }
+      </div>
+
+      <div class="gd-tabs" role="tablist">
+        <button class="gd-tab" role="tab" [attr.data-active]="detailTab() === 'overview'" (click)="setDetailTab('overview')">{{ i18n.t('gdpr_tab_overview') }}</button>
+        <button class="gd-tab" role="tab" [attr.data-active]="detailTab() === 'footprint'" (click)="setDetailTab('footprint')">{{ i18n.t('gdpr_tab_footprint') }}</button>
+        <button class="gd-tab" role="tab" [attr.data-active]="detailTab() === 'timeline'" (click)="setDetailTab('timeline')">{{ i18n.t('gdpr_tab_timeline') }}</button>
+      </div>
+
+      <div class="gd-modal-body">
+        @if (detailFlash()) { <div class="gd-detail-flash" data-testid="admin-gdpr-detail-flash"><app-icon name="check" /><span>{{ detailFlash() }}</span></div> }
+
+        @switch (detailTab()) {
+          @case ('overview') {
+            <div class="gd-tab-stack">
+              <div class="gd-tab-grid">
+                <div class="gd-panel">
+                  <div class="gd-panel-head">{{ i18n.t('gdpr_panel_request') }}</div>
+                  <div class="gd-fields">
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_type') }}</span><span class="gd-field-val">{{ typeLabel(d.request.type) }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_status') }}</span><span class="gd-field-val">{{ statusLabel(d.request.status) }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_id') }}</span><span class="gd-field-val mono">{{ d.request.id }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_channel') }}</span><span class="gd-field-val">{{ channelLabel($any(d.request.channel)) }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_handler') }}</span><span class="gd-field-val">{{ d.request.handlerName ?? i18n.t('gdpr_unassigned') }}</span></div>
+                  </div>
+                </div>
+                <div class="gd-panel">
+                  <div class="gd-panel-head">{{ i18n.t('gdpr_panel_deadline') }}</div>
+                  <div class="gd-fields">
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_requested') }}</span><span class="gd-field-val mono">{{ fmt.date(d.request.requestedAt) }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_deadline') }}</span><span class="gd-field-val mono">{{ fmt.date(d.request.deadlineAt) }}</span></div>
+                    <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_remaining') }}</span><span class="gd-deadline-tag" [attr.data-state]="isOpen(d.request) ? deadlineState(d.request) : 'ok'"><span class="gd-dot" [attr.data-s]="isOpen(d.request) ? deadlineDotState(d.request) : 'slate'"></span>{{ deadlineLabel(d.request) }}</span></div>
+                    @if (d.request.closedAt) { <div class="gd-field"><span class="gd-field-label">{{ i18n.t('gdpr_f_closed') }}</span><span class="gd-field-val mono">{{ fmt.date(d.request.closedAt) }}</span></div> }
+                  </div>
+                  @if (isOpen(d.request) && deadlineState(d.request) === 'overdue') {
+                    <div class="gd-breach"><app-icon name="alertTriangle" /><div><div class="gd-breach-msg">{{ i18n.t('gdpr_breach_msg') }}</div><div class="gd-breach-time">{{ i18n.t('gdpr_breach_time') }}</div></div></div>
+                  }
+                </div>
+              </div>
+              @if (d.request.note || d.request.rejectReason) {
+                <div class="gd-panel"><div class="gd-panel-head">{{ i18n.t('gdpr_panel_note') }}</div><p class="gd-panel-p">{{ d.request.rejectReason ? d.request.rejectReason : d.request.note }}</p></div>
+              }
+            </div>
+          }
+          @case ('footprint') {
+            <div class="gd-tab-stack">
+              <div class="gd-panel">
+                <div class="gd-panel-head">{{ i18n.t('gdpr_panel_footprint') }}<span class="gd-panel-hint">{{ i18n.t('gdpr_foot_hint') }}</span></div>
+                <div class="gd-foot-grid">
+                  @for (f of footprintKeys; track f.key) {
+                    <div class="gd-foot-tile"><span class="gd-foot-ic"><app-icon [name]="f.icon" /></span><div class="gd-foot-num mono">{{ fmt.compactNumber(d.footprint[f.key]) }}</div><div class="gd-foot-label">{{ i18n.t(f.labelKey) }}</div></div>
+                  }
+                </div>
+                <div class="gd-foot-note"><app-icon name="shield" /><span [innerHTML]="i18n.t('gdpr_foot_note')"></span></div>
+              </div>
+            </div>
+          }
+          @case ('timeline') {
+            <div class="gd-panel">
+              <div class="gd-panel-head">{{ i18n.t('gdpr_panel_timeline') }}</div>
+              @if (d.timeline.length === 0) {
+                <div class="gd-empty gd-empty--sm"><app-icon name="clock" /><div class="gd-empty-title">{{ i18n.t('gdpr_no_timeline') }}</div></div>
+              } @else {
+                <div class="gd-timeline">
+                  @for (t of d.timeline; track $index) {
+                    <div class="gd-tl"><span class="gd-tl-dot" [attr.data-first]="$index === 0 ? '1' : '0'"></span><div class="gd-tl-body"><div class="gd-tl-label">{{ t.label }}</div><div class="gd-tl-meta">{{ t.actor === 'system' ? i18n.t('gdpr_automated') : t.actor }} · {{ relative(t.at) }}</div></div></div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- J. Reject modal -->
+  @if (rejecting(); as r) {
+    <div class="gd-scrim" (click)="closeReject()"></div>
+    <div class="gd-modal gd-modal--sm" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-gdpr-reject-modal" (click)="$event.stopPropagation()">
+      <div class="gd-modal-title">{{ i18n.t('gdpr_reject_title', { id: r.id }) }}</div>
+      <div class="gd-modal-text">{{ i18n.t('gdpr_reject_body') }}</div>
+      <div class="gd-form">
+        <textarea class="gd-textarea" rows="3" data-testid="admin-gdpr-reject-reason" [placeholder]="i18n.t('gdpr_reject_placeholder')" [value]="rejectReason()" (input)="onRejectReason($event)"></textarea>
+      </div>
+      <div class="gd-modal-note"><app-icon name="alertTriangle" /><span>{{ i18n.t('gdpr_reject_note') }}</span></div>
+      <div class="gd-modal-foot">
+        <button type="button" class="gd-btn" (click)="closeReject()">{{ i18n.t('confirm_cancel') }}</button>
+        <button type="button" class="gd-btn gd-btn--danger-solid" data-testid="admin-gdpr-reject-confirm" [disabled]="busy() || !rejectReason().trim()" (click)="confirmReject()">{{ i18n.t('gdpr_reject_confirm') }}</button>
+      </div>
+    </div>
+  }
+
+  <!-- K. Create modal -->
+  @if (creating()) {
+    <div class="gd-scrim" (click)="closeCreate()"></div>
+    <div class="gd-modal gd-modal--sm" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-gdpr-create-modal" (click)="$event.stopPropagation()">
+      <div class="gd-modal-title">{{ i18n.t('gdpr_create_title') }}</div>
+      <div class="gd-modal-text">{{ i18n.t('gdpr_create_sub') }}</div>
+      <div class="gd-form">
+        <div class="gd-form-grid">
+          <div class="gd-form-row"><label class="gd-form-label">{{ i18n.t('gdpr_create_email') }}</label><input class="gd-input" type="email" data-testid="admin-gdpr-create-email" [value]="cForm().subjectEmail" (input)="patchForm('subjectEmail', $event)" /></div>
+          <div class="gd-form-row"><label class="gd-form-label">{{ i18n.t('gdpr_create_name') }}</label><input class="gd-input" type="text" data-testid="admin-gdpr-create-name" [value]="cForm().subjectName" (input)="patchForm('subjectName', $event)" /></div>
+        </div>
+        <div class="gd-form-grid">
+          <div class="gd-form-row"><label class="gd-form-label">{{ i18n.t('gdpr_create_type') }}</label><select class="gd-select" data-testid="admin-gdpr-create-type" [value]="cForm().type" (change)="patchForm('type', $event)">@for (t of types; track t) { <option [value]="t">{{ typeLabel(t) }}</option> }</select></div>
+          <div class="gd-form-row"><label class="gd-form-label">{{ i18n.t('gdpr_create_channel') }}</label><select class="gd-select" data-testid="admin-gdpr-create-channel" [value]="cForm().channel" (change)="patchForm('channel', $event)">@for (c of channels; track c) { <option [value]="c">{{ channelLabel(c) }}</option> }</select></div>
+        </div>
+        <div class="gd-form-row"><label class="gd-form-label">{{ i18n.t('gdpr_create_note') }}</label><textarea class="gd-textarea" rows="3" data-testid="admin-gdpr-create-note" [placeholder]="i18n.t('gdpr_create_note_ph')" [value]="cForm().note" (input)="patchForm('note', $event)"></textarea></div>
+      </div>
+      <div class="gd-modal-note"><app-icon name="info" /><span>{{ i18n.t('gdpr_create_note_hint') }}</span></div>
+      <div class="gd-modal-foot">
+        <button type="button" class="gd-btn" (click)="closeCreate()">{{ i18n.t('confirm_cancel') }}</button>
+        <button type="button" class="gd-btn gd-btn--solid" data-testid="admin-gdpr-create-submit" [disabled]="busy() || !cFormValid()" (click)="submitCreate()">{{ i18n.t('gdpr_create_submit') }}</button>
+      </div>
+    </div>
+  }
+</app-page-content>

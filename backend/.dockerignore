@@ -1,0 +1,18 @@
+# Build output
+target/
+*.jar
+
+# Version control & IDE
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+
+# Maven wrapper jar is fetched during build
+.mvn/wrapper/maven-wrapper.jar
+
+# Local env & docs
+.env
+.env.*
+*.md

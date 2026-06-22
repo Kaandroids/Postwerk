@@ -1,0 +1,210 @@
+<aside class="dash-side" [attr.data-admin-mode]="isAdminMode() ? '1' : '0'">
+  <div class="dash-side-brand"><app-brand /></div>
+
+  <div class="dash-side-scroll">
+  @if (!isAdminMode()) {
+    <nav aria-label="Main navigation">
+    <div class="dash-nav-section">{{ i18n.t('dash_workspace') }}</div>
+    @for (item of visibleMainNav(); track item.key) {
+      @if (item.children) {
+        <div class="dash-nav-group" [attr.data-open]="isGroupExpanded(item) ? '1' : '0'">
+          <button class="dash-nav-group-label" (click)="toggleGroup(item)">
+            <app-icon [name]="item.icon" />
+            <span>{{ i18n.t(item.labelKey) }}</span>
+            <app-icon class="dash-nav-chevron" name="chevronDown" />
+          </button>
+          @if (isGroupExpanded(item)) {
+            <div class="dash-nav-children">
+              @for (child of item.children; track child.key) {
+                @if (child.key === 'folders') {
+                  <button
+                    type="button"
+                    class="dash-nav-child"
+                    [attr.data-active]="active() === 'folders' ? '1' : '0'"
+                    (click)="toggleFolders()"
+                  >
+                    <span>{{ i18n.t(child.labelKey) }}</span>
+                    <div class="dash-nav-folder-actions">
+                      <button class="folder-add-btn" data-testid="folder-add-btn" (click)="startCreateFolder($event)" [title]="i18n.t('folder_create')">
+                        <app-icon name="plus" />
+                      </button>
+                      <app-icon class="dash-nav-chevron-sm" [name]="foldersExpanded() ? 'chevronDown' : 'chevronRight'" />
+                    </div>
+                  </button>
+                  @if (foldersExpanded()) {
+                    @if (creatingFolder()) {
+                      <div class="dash-nav-child dash-nav-subfolder dash-nav-folder-input">
+                        <input #folderInput type="text" data-testid="folder-name-input"
+                               [placeholder]="i18n.t('folders_create_placeholder')"
+                               [class.has-error]="folderError()"
+                               (keydown.enter)="confirmCreateFolder(folderInput)"
+                               (keydown.escape)="cancelCreateFolder()" />
+                        @if (folderError()) {
+                          <span class="folder-error">{{ folderError() }}</span>
+                        }
+                      </div>
+                    }
+                    @for (folder of customFolders(); track folder.id) {
+                      <button
+                        type="button"
+                        class="dash-nav-child dash-nav-subfolder"
+                        [attr.data-active]="activeFolder() === folder.name ? '1' : '0'"
+                        (click)="navigateToFolder(folder.name)"
+                      >
+                        <span>{{ folder.name }}</span>
+                        @if (folder.unreadCount > 0) {
+                          <span class="badge">{{ folder.unreadCount }}</span>
+                        }
+                        <button class="folder-del-btn" data-testid="folder-del-btn" (click)="deleteFolder($event, folder)" [title]="i18n.t('folders_delete_confirm', { name: folder.name })">
+                          <app-icon name="close" />
+                        </button>
+                      </button>
+                    }
+                    @if (customFolders().length === 0 && !creatingFolder()) {
+                      <div class="dash-nav-child dash-nav-subfolder dash-nav-empty">
+                        <span>{{ i18n.t('folders_empty') }}</span>
+                      </div>
+                    }
+                  }
+                } @else {
+                  <button
+                    type="button"
+                    class="dash-nav-child"
+                    [attr.data-active]="active() === child.key ? '1' : '0'"
+                    [attr.data-nav]="child.key"
+                    (click)="navigate(child.key)"
+                  >
+                    <span>{{ i18n.t(child.labelKey) }}</span>
+                    @if (child.key === 'emails' && workspace.inboxUnread() > 0) {
+                      <span class="badge">{{ workspace.inboxUnread() }}</span>
+                    } @else if (getUnreadForKey(child.key) > 0) {
+                      <span class="badge">{{ getUnreadForKey(child.key) }}</span>
+                    } @else if (child.badge) {
+                      <span class="badge">{{ child.badge }}</span>
+                    }
+                  </button>
+                }
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+          @if (item.badge) {
+            <span class="badge">{{ item.badge }}</span>
+          }
+        </button>
+      }
+    }
+
+    @if (visibleAutomationNav().length) {
+      <div class="dash-nav-section">{{ i18n.t('dash_automation') }}</div>
+      @for (item of visibleAutomationNav(); track item.key) {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+        </button>
+      }
+    }
+
+    @if (visibleResourcesNav().length) {
+      <div class="dash-nav-section">{{ i18n.t('dash_resources') }}</div>
+      @for (item of visibleResourcesNav(); track item.key) {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+        </button>
+      }
+    }
+
+    @if (visibleMarketplaceNav().length) {
+      <div class="dash-nav-section">{{ i18n.t('dash_marketplace') }}</div>
+      @for (item of visibleMarketplaceNav(); track item.key) {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+        </button>
+      }
+    }
+
+    @if (visibleManageNav().length) {
+      <div class="dash-nav-section">{{ i18n.t('dash_manage') }}</div>
+      @for (item of visibleManageNav(); track item.key) {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+        </button>
+      }
+    }
+    </nav>
+  }
+
+  @if (isAdminMode()) {
+    <nav aria-label="Admin navigation">
+    @for (group of visibleAdminGroups(); track group.sectionKey) {
+      <div class="dash-nav-section">{{ i18n.t(group.sectionKey) }}</div>
+      @for (item of group.items; track item.key) {
+        <button
+          type="button"
+          class="dash-nav-item"
+          [attr.data-active]="active() === item.key ? '1' : '0'"
+          [attr.data-nav]="item.key"
+          (click)="navigate(item.key)"
+        >
+          <app-icon [name]="item.icon" />
+          <span>{{ i18n.t(item.labelKey) }}</span>
+          @if (item.meta) {
+            <span class="dash-nav-meta">{{ item.meta }}</span>
+          }
+        </button>
+      }
+    }
+    </nav>
+  }
+  </div>
+
+  <div class="dash-side-footer">
+    <div class="dash-avatar">{{ userInitials() }}</div>
+    <div class="dash-user">
+      <span class="dash-user-name">{{ userName() }}</span>
+      @if (roleLabel()) {
+        <span class="dash-role-pill">{{ roleLabel() }}</span>
+      }
+    </div>
+    <button class="logout-btn" data-testid="logout-btn" (click)="logout()" [attr.aria-label]="i18n.t('dash_signout')">
+      <app-icon name="logout" />
+    </button>
+  </div>
+</aside>

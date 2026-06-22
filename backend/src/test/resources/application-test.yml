@@ -1,0 +1,54 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:17:///postwerk?TC_TMPFS=/testtmpfs:rw
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+
+# Swagger/OpenAPI is OFF in the base profile (dev-only opt-in). Enable it for tests so
+# SecurityConfigTest can verify the docs endpoints are publicly reachable (permitAll).
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+gemini:
+  api-key: test-key
+  model: gemini-2.5-flash
+  chat-model: gemini-2.5-flash
+  chat-temperature: 0.4
+  chat-max-tokens: 8192
+  embedding-model: gemini-embedding-001
+
+app:
+  encryption:
+    key: dGhpcy1pcy1hLTMyLWJ5dGUtZGV2LWtleSEhISEhISE=
+  cors:
+    allowed-origins: http://localhost:4200
+  jwt:
+    secret: test-jwt-secret-must-be-at-least-64-characters-long-for-hmac-sha512-algorithm!!
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
+  sync:
+    interval-ms: 300000
+    initial-delay-ms: 60000
+  gdpr:
+    email-retention-days: 365
+    audit-log-retention-days: 730
+    account-deletion-grace-days: 30

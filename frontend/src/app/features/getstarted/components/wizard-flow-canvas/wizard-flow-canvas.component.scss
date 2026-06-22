@@ -1,0 +1,759 @@
+/* ──────────────────────────────────────────────────────────────
+ * Wizard Foblex canvas — interactive flow surface for the public
+ * onboarding wizard. Mirrors the dashboard automation editor's canvas
+ * shell (canvas wrap, zoom pill, legend, Foblex connection overrides).
+ *
+ * Node card / port / body styling comes from the shared editor-nodes.scss
+ * (added via styleUrls). The .ae-mini-status floating card is defined in
+ * the global automation-editor-config.scss (imported through styles.scss).
+ * ────────────────────────────────────────────────────────────── */
+
+:host {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Canvas ───────────────────────────────────────────────── */
+.ae-canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  background: var(--bg-2);
+}
+
+.ae-canvas-wrap.ae-panning {
+  cursor: grabbing;
+}
+
+.ae-canvas-wrap f-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Zoom control pill (bottom-left) ─────────────────────── */
+.ae-zoom {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 4px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.05);
+
+  button {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.12s, color 0.12s;
+
+    > * { pointer-events: none; }
+
+    &:hover { background: var(--bg-2); color: var(--fg); }
+  }
+
+  .lvl {
+    padding: 0 8px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    min-width: 42px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
+
+  .sep {
+    width: 0.5px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+}
+
+/* ── Legend (bottom-left, above the zoom pill — editor default) ── */
+.ae-legend {
+  position: absolute;
+  bottom: 56px;
+  left: 14px;
+  z-index: 20;
+  pointer-events: auto;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.05);
+}
+
+.ae-legend-collapsed {
+  padding: 0;
+}
+
+.ae-legend-toggle {
+  appearance: none;
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--fg-subtle);
+
+  > * { pointer-events: none; }
+
+  .ae-legend-collapsed & {
+    padding: 8px 12px;
+  }
+
+  app-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--fg-subtle);
+    transition: transform 0.2s;
+  }
+}
+
+.ae-legend-toggle:hover {
+  color: var(--fg-muted);
+
+  app-icon {
+    color: var(--fg-muted);
+  }
+}
+
+.ae-legend-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ae-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ae-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.ae-legend-shape {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.ae-legend-circle {
+  border-radius: 50%;
+}
+
+.ae-legend-hollow {
+  background: transparent;
+  border: 2px solid var(--fg-muted);
+}
+
+.ae-legend-filled {
+  background: var(--fg-muted);
+  border: 2px solid var(--fg-muted);
+}
+
+/* ── Toolbar chrome (lang / theme + AI thinking pill) ── */
+.wiz-chrome-sep {
+  width: 0.5px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.wiz-chrome-ctl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Tips overlay ("?" help button, top-left — editor default) ── */
+.ae-tips-wrap {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.ae-canvas-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  > * { pointer-events: none; }
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.ae-tips-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+.ae-tips-panel {
+  margin-top: 6px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 14px 16px;
+  min-width: 300px;
+  box-shadow: 0 8px 28px rgba(34, 28, 18, 0.12), 0 1px 2px rgba(34, 28, 18, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: wizSnackIn 0.12s ease-out;
+}
+
+.ae-tips-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-subtle);
+}
+
+.ae-tips-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 9px 14px;
+  align-items: center;
+}
+
+.ae-tips-item {
+  display: contents;
+
+  > span:last-child {
+    font-size: 12px;
+    color: var(--fg-muted);
+    line-height: 1.4;
+  }
+}
+
+.ae-tips-key {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-bottom-width: 1.5px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* AI build / thinking indicator (toolbar-left) */
+.wiz-think {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 10px;
+  padding: 4px 11px 4px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+  border: 0.5px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+
+  &.ready {
+    background: color-mix(in srgb, var(--success) 14%, var(--bg-2));
+    border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+    color: var(--success);
+  }
+}
+
+.wiz-think-text { letter-spacing: -0.005em; }
+
+.wiz-think-check {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+
+  app-icon { width: 10px; height: 10px; }
+}
+
+.wiz-think-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+
+  i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: wizThinkBlink 1.1s ease-in-out infinite;
+
+    &:nth-child(2) { animation-delay: 0.18s; }
+    &:nth-child(3) { animation-delay: 0.36s; }
+  }
+}
+
+@keyframes wizThinkBlink {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Foblex overrides ─────────────────────────────────────── */
+/* Connections are always rendered (so Foblex computes their geometry) but
+   stay hidden until their nodes are revealed — `.wiz-conn-on` fades them in,
+   giving the "nodes first, then their connections" build sequence. */
+:host ::ng-deep .f-connection {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+:host ::ng-deep .f-connection.wiz-conn-on {
+  opacity: 1;
+}
+
+:host ::ng-deep .f-connection path {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  fill: none;
+}
+
+:host ::ng-deep .f-connection.f-selected path {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:host ::ng-deep .f-connection-for-create path {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  fill: none;
+}
+
+/* Connection endpoint marker — clean dot matching the line, lifted by a thin bg ring */
+:host ::ng-deep .f-marker {
+  color: var(--border-strong);
+}
+
+:host ::ng-deep .f-marker circle,
+:host ::ng-deep .f-marker path,
+:host ::ng-deep .f-marker polygon {
+  fill: currentColor;
+  stroke: var(--bg);
+  stroke-width: 1.5px;
+  transition: color 0.15s;
+}
+
+:host ::ng-deep .f-connection.f-selected .f-marker,
+:host ::ng-deep .f-connection:hover .f-marker {
+  color: var(--accent);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ *  Wizard animation layer (build reveal · packet flight · stamps)
+ *  Layered on top of the interactive Foblex canvas. Node positioning
+ *  transforms are owned by Foblex, so node effects below use ONLY
+ *  opacity / box-shadow / background — never `transform` on .wiz-fnode.
+ * ══════════════════════════════════════════════════════════════ */
+
+/* Node-kind colour tokens (mirrors the original wizard canvas) */
+:host {
+  --c-trigger:  #3e8e62;
+  --c-filter:   #3f6fa3;
+  --c-extract:  #735aac;
+  --c-classify: #b04374;
+  --c-action:   #c07a26;
+}
+
+:host-context([data-theme="dark"]) {
+  --c-trigger:  #56b07e;
+  --c-filter:   #5b8fc8;
+  --c-extract:  #9b80d6;
+  --c-classify: #d46798;
+  --c-action:   #d99a4a;
+}
+
+/* ── Node reveal / active glow / done ───────────────────────── */
+.wiz-fnode {
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.45s ease, box-shadow 0.35s ease;
+
+  &[data-in="1"] { opacity: 1; }
+
+  &[data-active="1"] {
+    z-index: 5;
+    box-shadow:
+      0 0 0 1px var(--nc),
+      0 0 0 6px color-mix(in srgb, var(--nc) 14%, transparent),
+      0 22px 50px -24px rgba(20, 16, 8, 0.4);
+  }
+}
+
+/* ── Classify hit highlight (category port row) ─────────────── */
+.wiz-classify-row {
+  border-radius: 7px;
+  transition: background 0.3s ease;
+
+  &[data-hit="1"] {
+    background: color-mix(in srgb, var(--nc) 18%, transparent);
+
+    .ae-port-label { color: var(--fg); font-weight: 600; }
+  }
+}
+
+/* ── Extract reveal highlight (extraction port row) ─────────── */
+.wiz-extract-row {
+  border-radius: 7px;
+  transition: background 0.35s ease;
+
+  &[data-show="1"] {
+    background: color-mix(in srgb, var(--nc) 16%, transparent);
+  }
+}
+
+/* ── Animation overlay (mirrors the Foblex canvas matrix) ───── */
+.wiz-overlay {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 16;
+}
+
+/* ── Traveling email packet ─────────────────────────────────── */
+.wiz-packet-trail {
+  position: absolute;
+  z-index: 3;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  box-shadow: 0 0 12px 2px var(--accent);
+}
+
+.wiz-packet {
+  position: absolute;
+  z-index: 6;
+  width: 172px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+
+  &[data-on="1"] { opacity: 1; }
+}
+
+.wiz-packet-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 11px;
+  box-shadow: 0 0 0 5px var(--accent-soft, rgba(0, 0, 0, 0.05)), 0 16px 34px -14px rgba(20, 16, 8, 0.55);
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1), box-shadow 0.3s ease;
+
+  .wiz-packet[data-state="arrive"] & {
+    animation: wizPktDrop 0.6s cubic-bezier(0.34, 1.45, 0.5, 1);
+  }
+
+  .wiz-packet[data-state="pulse"] & {
+    animation: wizPktPulse 1.3s ease-in-out infinite;
+    box-shadow: 0 0 0 6px var(--accent-soft, rgba(0, 0, 0, 0.05)), 0 18px 38px -14px rgba(20, 16, 8, 0.6);
+  }
+
+  .wiz-packet[data-state="fly"] & {
+    transform: scale(0.6) rotate(-3deg);
+    box-shadow: 0 16px 28px -14px rgba(20, 16, 8, 0.45);
+  }
+}
+
+.wiz-packet-avatar {
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  transition: opacity 0.25s ease;
+
+  .wiz-packet[data-state="fly"] & { opacity: 0; }
+}
+
+.wiz-packet-txt {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+  transition: opacity 0.25s ease;
+
+  .wiz-packet[data-state="fly"] & { opacity: 0; }
+}
+
+.wiz-packet-from {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wiz-packet-subj {
+  font-size: 10px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wiz-packet-mail {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.5, 0.5, 1);
+
+  .wiz-packet[data-state="fly"] & {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+.wiz-packet-stamp {
+  position: absolute;
+  top: -14px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: currentColor;
+  background: color-mix(in srgb, currentColor 13%, var(--bg));
+  border: 1.5px solid currentColor;
+  border-radius: 7px;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, currentColor 22%, transparent),
+    0 7px 16px -7px rgba(20, 16, 8, 0.5);
+  transform: rotate(var(--ang, -10deg));
+  animation: wizStamp 0.6s cubic-bezier(0.3, 1.45, 0.45, 1) both;
+  z-index: 3;
+}
+
+/* ── Floating reply bubble (typing) ─────────────────────────── */
+.wiz-reply-bubble {
+  position: absolute;
+  transform: translateY(-50%);
+  max-width: 220px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  box-shadow: 0 10px 30px -14px rgba(20, 16, 8, 0.5);
+  z-index: 7;
+  pointer-events: none;
+
+  .cur {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--c-action);
+    vertical-align: -2px;
+    animation: wizBlink 1s steps(2) infinite;
+  }
+}
+
+/* ── Snackbar caption (bottom-center) ───────────────────────── */
+.wiz-snackbar {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  z-index: 9;
+  transform: translateX(-50%) translateY(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34, 1.4, 0.5, 1);
+
+  &[data-on="1"] {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.wiz-snackbar-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 17px 9px 13px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(20, 16, 8, 0.05), 0 18px 40px -20px rgba(20, 16, 8, 0.4);
+  animation: wizSnackIn 0.35s cubic-bezier(0.34, 1.45, 0.5, 1);
+}
+
+.wiz-snackbar-pip {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: currentColor;
+    animation: wizSnackRing 1.4s ease-out infinite;
+  }
+}
+
+/* ── Sign-up hint snackbar (warning variant) ────────────────── */
+.wiz-snackbar-warn {
+  bottom: auto;
+  top: 64px;
+
+  .wiz-snackbar-in {
+    background: color-mix(in srgb, var(--warning) 12%, var(--bg));
+    border-color: color-mix(in srgb, var(--warning) 38%, var(--border));
+    color: var(--fg);
+    animation: none;
+  }
+}
+
+.wiz-snackbar-warn-ic {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--warning);
+  color: #fff;
+
+  app-icon {
+    display: grid;
+    place-items: center;
+    width: 12px;
+    height: 12px;
+    line-height: 0;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes wizBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes wizPktDrop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wizPktPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes wizStamp {
+  0%   { opacity: 0; transform: rotate(var(--ang, -10deg)) scale(2.3); }
+  45%  { opacity: 1; transform: rotate(var(--ang, -10deg)) scale(0.86); }
+  70%  { transform: rotate(var(--ang, -10deg)) scale(1.07); }
+  100% { opacity: 1; transform: rotate(var(--ang, -10deg)) scale(1); }
+}
+
+@keyframes wizSnackIn {
+  0%   { opacity: 0; transform: translateY(7px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wizSnackRing {
+  0%   { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(3); }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ae-canvas-wrap,
+  .ae-canvas-wrap * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.08s !important;
+  }
+}

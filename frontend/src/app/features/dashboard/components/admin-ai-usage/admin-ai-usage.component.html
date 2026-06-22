@@ -1,0 +1,127 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_ai_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('admin_ai_subtitle') }}</div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-loading">{{ i18n.t('loading') }}</div>
+  } @else if (!stats()) {
+    <div class="admin-loading" role="alert">{{ i18n.t('admin_load_failed') }}</div>
+  } @else if (stats(); as s) {
+    <!-- Stat Cards -->
+    <div class="adm-kpis" style="--adm-kpi-cols: 5">
+      <div class="adm-kpi" data-testid="ai-stat-total">
+        <span class="adm-kpi-label">{{ i18n.t('admin_ai_total_tokens') }}</span>
+        <span class="adm-kpi-value">{{ fmt.compactNumber(s.totalTokens) }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="ai-stat-prompt">
+        <span class="adm-kpi-label">{{ i18n.t('admin_ai_prompt_tokens') }}</span>
+        <span class="adm-kpi-value">{{ fmt.compactNumber(s.totalPromptTokens) }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="ai-stat-output">
+        <span class="adm-kpi-label">{{ i18n.t('admin_ai_output_tokens') }}</span>
+        <span class="adm-kpi-value">{{ fmt.compactNumber(s.totalOutputTokens) }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="ai-stat-billable">
+        <span class="adm-kpi-label">{{ i18n.t('admin_ai_billable_chars') }}</span>
+        <span class="adm-kpi-value">{{ fmt.compactNumber(s.totalBillableChars) }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="ai-stat-cost">
+        <span class="adm-kpi-label">{{ i18n.t('admin_ai_total_cost') }}</span>
+        <span class="adm-kpi-value">{{ formatCost(s.totalCostCents) }}</span>
+      </div>
+    </div>
+
+    <!-- Timeline Chart -->
+    <div class="ai-chart-card">
+      <div class="chart-header">
+        <h2>{{ i18n.t('admin_ai_timeline') }}</h2>
+        <select data-testid="ai-period-select" (change)="onPeriodChange($event)">
+          <option value="daily">{{ i18n.t('admin_period_daily') }}</option>
+          <option value="weekly">{{ i18n.t('admin_period_weekly') }}</option>
+          <option value="monthly">{{ i18n.t('admin_period_monthly') }}</option>
+        </select>
+      </div>
+      @if (timeline().length > 1) {
+        <svg class="line-chart" viewBox="0 0 600 120" preserveAspectRatio="none">
+          <path [attr.d]="chartAreaPath()" class="chart-area" />
+          <path [attr.d]="chartPath()" class="chart-line" />
+        </svg>
+      } @else {
+        <div class="chart-empty">{{ i18n.t('admin_ai_no_data') }}</div>
+      }
+    </div>
+
+    <!-- Breakdowns -->
+    <div class="breakdown-grid">
+      <div class="breakdown-card">
+        <h2>{{ i18n.t('admin_ai_by_model') }}</h2>
+        @for (m of s.byModel; track m.model) {
+          <div class="breakdown-row">
+            <span class="breakdown-label">{{ m.model }}</span>
+            <div class="breakdown-bar-wrap">
+              <div class="breakdown-bar" data-testid="ai-model-bar" [style.width.%]="barWidth(m.totalTokens)"></div>
+            </div>
+            <span class="breakdown-value">{{ fmt.compactNumber(m.totalTokens) }}</span>
+          </div>
+        } @empty {
+          <div class="chart-empty">{{ i18n.t('admin_ai_no_data') }}</div>
+        }
+      </div>
+
+      <div class="breakdown-card">
+        <h2>{{ i18n.t('admin_ai_by_operation') }}</h2>
+        @for (o of s.byOperation; track o.operation) {
+          <div class="breakdown-row">
+            <span class="breakdown-label">{{ o.operation }}</span>
+            <div class="breakdown-bar-wrap">
+              <div class="breakdown-bar breakdown-bar--purple" [style.width.%]="barWidth(o.totalTokens)"></div>
+            </div>
+            <span class="breakdown-value">{{ fmt.compactNumber(o.totalTokens) }}</span>
+          </div>
+        } @empty {
+          <div class="chart-empty">{{ i18n.t('admin_ai_no_data') }}</div>
+        }
+      </div>
+    </div>
+
+    <!-- By User Table -->
+    <div class="ai-user-section">
+      <h2>{{ i18n.t('admin_ai_by_user') }}</h2>
+      <div class="adm-table-wrap">
+        <table class="adm-table" data-testid="ai-user-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ i18n.t('admin_col_name') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_email') }}</th>
+              <th scope="col">{{ i18n.t('admin_ai_col_prompt') }}</th>
+              <th scope="col">{{ i18n.t('admin_ai_col_output') }}</th>
+              <th scope="col">{{ i18n.t('admin_ai_col_total') }}</th>
+              <th scope="col">{{ i18n.t('admin_ai_requests') }}</th>
+              <th scope="col">{{ i18n.t('admin_ai_user_cost') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of byUser(); track u.userId) {
+              <tr>
+                <td>{{ u.fullName }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ fmt.compactNumber(u.promptTokens) }}</td>
+                <td>{{ fmt.compactNumber(u.outputTokens) }}</td>
+                <td><strong>{{ fmt.compactNumber(u.totalTokens) }}</strong></td>
+                <td>{{ u.requestCount }}</td>
+                <td>{{ formatCost(u.costCents) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="7" class="empty-row">{{ i18n.t('admin_ai_no_data') }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</app-page-content>

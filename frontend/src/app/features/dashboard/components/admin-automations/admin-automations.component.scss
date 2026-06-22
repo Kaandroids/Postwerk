@@ -1,0 +1,103 @@
+$card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 40px -12px rgba(0, 0, 0, 0.08);
+
+.admin-loading { text-align: center; padding: 60px 0; color: var(--fg-muted); }
+
+// KPI strip, tables and status badges use the shared global recipe (.adm-kpis / .adm-table /
+// .adm-badge) in styles/admin.scss. Only page-specific bits remain below.
+
+// ── Success-rate card ──────────────────────────────────────────────
+.success-rate-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: $card-shadow;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.rate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 9px;
+}
+
+.rate-pct {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--success);
+}
+
+.rate-bar-wrap {
+  height: 8px;
+  background: var(--bg-2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.rate-bar {
+  height: 100%;
+  background: var(--success);
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+
+// ── Table sections ─────────────────────────────────────────────────
+.top-section, .exec-section {
+  margin-bottom: 18px;
+  h2 { margin: 0 0 14px; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+}
+
+// Tables use the global .adm-table recipe; keep a light row-hover for these read-only tables.
+.adm-table tbody tr:hover td { background: var(--bg-2); }
+
+.text-success { color: var(--success); font-weight: 600; font-variant-numeric: tabular-nums; }
+.text-danger { color: var(--danger); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.error-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg-subtle);
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--fg-subtle);
+  padding: 30px 0;
+}
+
+// ── Pagination ─────────────────────────────────────────────────────
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+
+  button {
+    appearance: none;
+    border: 0.5px solid var(--border);
+    background: var(--bg);
+    color: var(--fg-muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.12s;
+    &:hover:not(:disabled) { background: var(--bg-2); }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+  }
+}

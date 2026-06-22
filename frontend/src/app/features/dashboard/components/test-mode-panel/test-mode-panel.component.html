@@ -1,0 +1,139 @@
+<div class="sm-wrap">
+  <div class="sm-inner">
+
+    <!-- Header -->
+    <div class="sm-head">
+      <div class="sm-head-text">
+        <h1 class="sm-title">{{ i18n.t('test_mode_tab') }}</h1>
+        <p class="sm-sub">{{ i18n.t('test_mode_subtitle') }}</p>
+      </div>
+    </div>
+
+    <!-- Two-column layout: feed (left) + sticky stats sidebar (right) -->
+    <div class="sm-layout">
+
+      <!-- Main column -->
+      <div class="sm-main">
+
+        <!-- Filter pills -->
+        <div class="sm-filters">
+          @for (f of filters; track f) {
+            <button class="sm-filter-pill" [attr.data-active]="filter() === f" (click)="setFilter(f)">
+              {{ i18n.t('test_mode_filter_' + f.toLowerCase()) }}
+            </button>
+          }
+          <button class="sm-clear-btn" (click)="clearResults()" [title]="i18n.t('test_mode_clear')"
+            [attr.aria-label]="i18n.t('test_mode_clear')">
+            <app-icon name="trash" />
+          </button>
+        </div>
+
+        <!-- Feed -->
+        @if (loading()) {
+          <div class="sm-state">{{ i18n.t('loading') }}</div>
+        } @else if (results().length === 0) {
+          <div class="sm-inactive">
+            <span class="sm-empty-glyph"><app-icon name="mail" /></span>
+            <h2 class="sm-empty-title">{{ i18n.t('test_mode_waiting_title') }}</h2>
+            <p class="sm-empty-text">{{ i18n.t('test_mode_no_results') }}</p>
+          </div>
+        } @else {
+          <div class="sm-feed-label">
+            <span class="sm-eyebrow">{{ i18n.t('test_mode_feed_label') }}</span>
+            <span class="sm-count">{{ results().length }} {{ i18n.t('test_mode_entries') }}</span>
+          </div>
+
+          <div class="sm-feed">
+            @for (r of results(); track r.id) {
+              <div class="sm-card" [attr.data-grade]="grade(r)">
+
+                <!-- Mail header -->
+                <div class="sm-mail">
+                  <span class="sm-avatar">{{ initials(r.emailFrom) }}</span>
+                  <div class="sm-mailbody">
+                    <div class="sm-subj">{{ r.emailSubject || i18n.t('test_mode_no_subject') }}</div>
+                    <div class="sm-addr">{{ r.emailFrom || '—' }}</div>
+                  </div>
+                  <span class="sm-time">{{ r.createdAt | date:'dd.MM HH:mm' }}</span>
+                </div>
+
+                <!-- Simulated decision -->
+                <div class="sm-decision">
+                  <div class="sm-eyebrow2">
+                    {{ i18n.t('test_mode_simulated_actions') }}@if (r.simulatedActions.length) { ({{ r.simulatedActions.length }}) }
+                    <span class="sm-simtag">{{ i18n.t('test_mode_only_simulated') }}</span>
+                  </div>
+                  @if (r.simulatedActions.length > 0) {
+                    <div class="sm-actions">
+                      @for (a of r.simulatedActions; track $index) {
+                        <div class="sm-arow" [style.--nc]="getNodeColor(a.nodeType)">
+                          <span class="sm-apip"><app-icon [name]="getNodeIcon(a.nodeType)" /></span>
+                          <span class="sm-adesc">{{ a.description }}</span>
+                          <span class="sm-atype">{{ a.nodeType }}</span>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="sm-none">{{ i18n.t('test_mode_no_actions') }}</div>
+                  }
+                </div>
+
+                <!-- Grade footer -->
+                <div class="sm-grade">
+                  @if (!r.feedback) {
+                    <span class="sm-q">{{ i18n.t('test_mode_question') }}</span>
+                    <button class="sm-fb sm-fb-ok" (click)="submitFeedback(r, 'CORRECT')">
+                      <app-icon name="thumbsUp" />{{ i18n.t('test_mode_correct') }}
+                    </button>
+                    <button class="sm-fb sm-fb-bad" (click)="submitFeedback(r, 'INCORRECT')">
+                      <app-icon name="thumbsDown" />{{ i18n.t('test_mode_incorrect') }}
+                    </button>
+                  } @else if (r.feedback === 'CORRECT') {
+                    <span class="sm-flag sm-flag-ok"><app-icon name="check" />{{ i18n.t('test_mode_mark_correct') }}</span>
+                  } @else {
+                    <span class="sm-flag sm-flag-bad"><app-icon name="x" />{{ i18n.t('test_mode_mark_incorrect') }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Pagination -->
+          @if (totalElements() > 20) {
+            <div class="sm-pagination">
+              <button class="sm-page-btn" [disabled]="page() === 0" (click)="prevPage()"
+                [attr.aria-label]="i18n.t('auto_test_back')">
+                <app-icon name="arrowLeft" />
+              </button>
+              <span class="sm-page-info">{{ page() + 1 }}</span>
+              <button class="sm-page-btn" [disabled]="!hasNextPage()" (click)="nextPage()" aria-label="Next">
+                <app-icon name="arrowRight" />
+              </button>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Sticky sidebar: live status + stat tiles -->
+      <aside class="sm-side">
+        <span class="sm-live"><i></i>{{ i18n.t('test_mode_live') }}</span>
+
+        <div class="sm-stats">
+          <div class="sm-stat">
+            <span class="sm-stat-lab">{{ i18n.t('test_mode_processed') }}</span>
+            <span class="sm-stat-val">{{ stats()?.total ?? 0 }}</span>
+          </div>
+          <div class="sm-stat">
+            <span class="sm-stat-lab">{{ i18n.t('test_mode_accuracy') }}</span>
+            <span class="sm-stat-val">{{ accuracyLabel() }}</span>
+          </div>
+          <div class="sm-stat">
+            <span class="sm-stat-lab">{{ i18n.t('test_mode_pending') }}</span>
+            <span class="sm-stat-val">{{ stats()?.pending ?? 0 }}</span>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</div>

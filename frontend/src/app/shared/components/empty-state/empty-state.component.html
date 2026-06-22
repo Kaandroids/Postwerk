@@ -1,0 +1,14 @@
+<div class="es">
+  <div class="es-glyph" aria-hidden="true">
+    @for (c of glyphColors(); track $index) {
+      <span [style.background]="c"></span>
+    }
+  </div>
+  <div class="es-title">{{ title() }}</div>
+  @if (sub()) {
+    <div class="es-sub">{{ sub() }}</div>
+  }
+  @if (ctaLabel()) {
+    <button type="button" class="es-cta" [attr.data-testid]="ctaTestid() || null" (click)="cta.emit()"><app-icon [name]="ctaIcon()" />{{ ctaLabel() }}</button>
+  }
+</div>

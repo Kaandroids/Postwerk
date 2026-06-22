@@ -1,0 +1,311 @@
+<app-page-content>
+  <!-- A. Alert strip (failing job, else backed-up queue) -->
+  @if ((alertJob() || alertQueue()) && !alertDismissed()) {
+    <div class="bj-alert" [attr.data-tone]="alertJob() ? 'danger' : 'warn'" role="alert" data-testid="admin-bj-alert">
+      <app-icon name="alertTriangle" />
+      @if (alertJob(); as j) {
+        <span class="bj-alert-text"><b>{{ j.name }}</b> {{ i18n.t('bj_alert_failed') }} — {{ agoIso(j.lastRunAt) }}@if (j.lastRunAt) { {{ i18n.t('bj_ago') }} }</span>
+        <button type="button" class="bj-alert-cta" (click)="openDetail(j)">{{ i18n.t('bj_inspect') }}</button>
+      } @else if (alertQueue(); as q) {
+        <span class="bj-alert-text"><b>{{ q.name }}</b> {{ i18n.t('bj_alert_backlog', { n: q.pending + '' }) }}</span>
+        <button type="button" class="bj-alert-cta" (click)="openDrainJob(q)">{{ i18n.t('bj_inspect') }}</button>
+      }
+      <button type="button" class="bj-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head bj-head">
+    <div>
+      <div class="dash-eyebrow bj-eyebrow-mono">{{ i18n.t('bj_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('bj_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.scheduled ?? 0 }}</b> {{ i18n.t('bj_jobs') }} ·
+        <b>{{ kpis()?.queueDepth ?? 0 }}</b> {{ i18n.t('bj_queued') }} ·
+        <b class="bj-sub-bad">{{ kpis()?.failed24h ?? 0 }}</b> {{ i18n.t('bj_failed_24h') }}
+      </div>
+    </div>
+    <div class="bj-head-controls">
+      <button type="button" class="bj-btn bj-refresh" data-testid="admin-bj-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="bj-refresh-ic" [class.bj-spin]="refreshing()"><app-icon name="refresh" /></span>
+        {{ i18n.t('bj_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="bj-updated">{{ i18n.t('bj_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="bj-flash" role="status" data-testid="admin-bj-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="bj-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- D. KPI strip -->
+  <div class="bj-kpis" data-testid="admin-bj-kpis">
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_scheduled') }}</div>
+      <div class="bj-kpi-value">{{ kpis()?.scheduled ?? 0 }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" data-tone="green">{{ i18n.t('bj_chip_live') }}</span><span class="bj-kpi-note">{{ kpis()?.paused ?? 0 }} {{ i18n.t('bj_paused_note') }}</span></div>
+    </div>
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_runs') }}</div>
+      <div class="bj-kpi-value">{{ kpis()?.runs24h ?? 0 }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" data-tone="slate">24H</span><span class="bj-kpi-note">{{ i18n.t('bj_kpi_runs_note') }}</span></div>
+    </div>
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_failed') }}</div>
+      <div class="bj-kpi-value" [class.bj-val-danger]="(kpis()?.failed24h ?? 0) > 0">{{ kpis()?.failed24h ?? 0 }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" [attr.data-tone]="(kpis()?.failed24h ?? 0) > 0 ? 'danger' : 'green'">{{ (kpis()?.failed24h ?? 0) > 0 ? i18n.t('bj_chip_errors') : i18n.t('bj_chip_ok') }}</span><span class="bj-kpi-note">{{ i18n.t('bj_kpi_failed_note') }}</span></div>
+    </div>
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_queue') }}</div>
+      <div class="bj-kpi-value" [class.bj-val-warn]="(kpis()?.queueDepth ?? 0) > 100">{{ kpis()?.queueDepth ?? 0 }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" [attr.data-tone]="(kpis()?.queueDepth ?? 0) > 100 ? 'amber' : 'green'">{{ (kpis()?.queueDepth ?? 0) > 100 ? i18n.t('bj_chip_backlog') : i18n.t('bj_chip_clear') }}</span><span class="bj-kpi-note">{{ i18n.t('bj_kpi_queue_note') }}</span></div>
+    </div>
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_avg') }}</div>
+      <div class="bj-kpi-value">{{ duration(kpis()?.avgDurationMs) }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" data-tone="slate"><app-icon name="clock" /></span><span class="bj-kpi-note">{{ i18n.t('bj_kpi_avg_note') }}</span></div>
+    </div>
+    <div class="bj-kpi">
+      <div class="bj-kpi-label">{{ i18n.t('bj_kpi_next') }}</div>
+      <div class="bj-kpi-value">{{ nextRunKpi(kpis()?.nextRunMinutes) }}</div>
+      <div class="bj-kpi-foot"><span class="bj-kpi-chip" data-tone="slate">{{ i18n.t('bj_chip_queued') }}</span><span class="bj-kpi-note">{{ i18n.t('bj_kpi_next_note') }}</span></div>
+    </div>
+  </div>
+
+  <!-- E. Queue summary -->
+  @if (queues().length > 0) {
+    <div class="bj-queues" data-testid="admin-bj-queues">
+      @for (q of queues(); track q.id) {
+        <button type="button" class="bj-queue" [attr.data-tone]="q.tone" (click)="openDrainJob(q)">
+          <div class="bj-queue-top">
+            <span class="bj-queue-ic"><app-icon [name]="q.id === 'approval-queue' ? 'check' : 'clock'" /></span>
+            <div class="bj-queue-id">
+              <div class="bj-queue-name">{{ q.name }}</div>
+              <div class="bj-queue-sub mono">{{ i18n.t('bj_drains') }} {{ q.drainJobId }}</div>
+            </div>
+            @if (q.tone === 'backlog') { <span class="bj-badge" data-tone="amber">{{ i18n.t('bj_backed_up') }}</span> }
+          </div>
+          <div class="bj-queue-count">{{ q.pending }}</div>
+          <div class="bj-queue-breakdown">
+            @for (b of q.breakdown; track b.label) {
+              <span class="bj-bk"><span class="bj-dot" [attr.data-tone]="b.dot"></span>{{ b.value }} {{ b.label }}</span>
+            }
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- F. Toolbar -->
+  <div class="bj-toolbar">
+    <div class="bj-search">
+      <app-icon name="search" />
+      <input type="text" data-testid="admin-bj-search" [attr.aria-label]="i18n.t('bj_search')" [placeholder]="i18n.t('bj_search')" [value]="search()" (input)="onSearch($event)" />
+    </div>
+    <div class="bj-filters">
+      <div class="bj-filter">
+        <label for="bj-f-type">{{ i18n.t('bj_filter_type') }}</label>
+        <select id="bj-f-type" data-testid="admin-bj-filter-type" (change)="onType($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="Scheduler">{{ i18n.t('bj_type_scheduler') }}</option>
+          <option value="Worker">{{ i18n.t('bj_type_worker') }}</option>
+          <option value="Maintenance">{{ i18n.t('bj_type_maintenance') }}</option>
+        </select>
+      </div>
+      <div class="bj-filter">
+        <label for="bj-f-status">{{ i18n.t('bj_filter_status') }}</label>
+        <select id="bj-f-status" data-testid="admin-bj-filter-status" (change)="onStatus($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="healthy">{{ i18n.t('bj_status_healthy') }}</option>
+          <option value="failing">{{ i18n.t('bj_status_failing') }}</option>
+          <option value="paused">{{ i18n.t('bj_status_paused') }}</option>
+        </select>
+      </div>
+      <div class="bj-filter">
+        <label for="bj-f-lastrun">{{ i18n.t('bj_filter_lastrun') }}</label>
+        <select id="bj-f-lastrun" data-testid="admin-bj-filter-lastrun" (change)="onLastRun($event)">
+          <option value="">{{ i18n.t('bj_lastrun_any') }}</option>
+          <option value="succeeded">{{ i18n.t('bj_lastrun_succeeded') }}</option>
+          <option value="failed">{{ i18n.t('bj_lastrun_failed') }}</option>
+          <option value="never">{{ i18n.t('bj_lastrun_never') }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- G. Jobs table / states -->
+  @if (loading()) {
+    <div class="bj-card" data-testid="admin-bj-skeleton" aria-hidden="true">
+      <div class="bj-skel-head"></div>
+      @for (r of [1,2,3,4]; track r) { <div class="bj-skel-row"></div> }
+    </div>
+  } @else if (filteredJobs().length === 0 && statusFilter() === 'failing') {
+    <div class="bj-empty" data-testid="admin-bj-empty-healthy"><app-icon name="checkCircle" /><div class="bj-empty-title">{{ i18n.t('bj_empty_healthy') }}</div></div>
+  } @else if (filteredJobs().length === 0 && hasActiveFilters()) {
+    <div class="bj-empty" data-testid="admin-bj-empty-filtered"><app-icon name="search" /><div class="bj-empty-title">{{ i18n.t('bj_empty_filtered') }}</div><button type="button" class="bj-btn" (click)="clearFilters()">{{ i18n.t('bj_clear_filters') }}</button></div>
+  } @else {
+    <div class="bj-card">
+      <div class="bj-scroll">
+        <table class="dtable" data-testid="admin-bj-table">
+          <thead>
+            <tr>
+              <th scope="col"><button class="bj-th-sort" [attr.data-active]="sortKey() === 'name'" (click)="toggleSort('name')"><span>{{ i18n.t('bj_col_job') }}</span>@if (sortKey() === 'name') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col">{{ i18n.t('bj_col_schedule') }}</th>
+              <th scope="col"><button class="bj-th-sort" [attr.data-active]="sortKey() === 'lastRun'" (click)="toggleSort('lastRun')"><span>{{ i18n.t('bj_col_lastrun') }}</span>@if (sortKey() === 'lastRun') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col">{{ i18n.t('bj_col_duration') }}</th>
+              <th scope="col"><button class="bj-th-sort" [attr.data-active]="sortKey() === 'nextRun'" (click)="toggleSort('nextRun')"><span>{{ i18n.t('bj_col_nextrun') }}</span>@if (sortKey() === 'nextRun') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col">{{ i18n.t('bj_col_status') }}</th>
+              <th scope="col" class="bj-col-menu"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (j of filteredJobs(); track j.id) {
+              <tr class="bj-row" data-testid="admin-bj-row" [attr.data-failing]="j.status === 'failing' ? '1' : null" [attr.data-paused]="j.status === 'paused' ? '1' : null" tabindex="0" (click)="openDetail(j)" (keydown.enter)="openDetail(j)" (keydown.space)="openDetail(j); $event.preventDefault()">
+                <td>
+                  <div class="bj-cell-job">
+                    <span class="bj-job-ic" [attr.data-type]="j.type"><app-icon [name]="kindIcon(j.type)" /></span>
+                    <span class="bj-cell-job-text"><span class="bj-cell-name">{{ j.name }}</span><span class="bj-cell-sub mono">{{ j.id }}</span></span>
+                  </div>
+                </td>
+                <td class="mono bj-muted">{{ j.scheduleHuman }}</td>
+                <td>
+                  <span class="bj-lastrun">
+                    @if (j.lastRunAt) { <span class="bj-dot" [attr.data-tone]="j.lastRunOk ? 'green' : 'danger'"></span> }
+                    <span [class.bj-never]="!j.lastRunAt">{{ agoIso(j.lastRunAt) }}</span>
+                  </span>
+                </td>
+                <td class="mono bj-muted">{{ duration(j.lastDurationMs) }}</td>
+                <td class="mono bj-muted">{{ j.status === 'paused' ? i18n.t('bj_status_paused') : untilIso(j.nextRunAt) }}</td>
+                <td><span class="bj-health"><span class="bj-dot" [attr.data-tone]="statusTone(j.status)"></span><span class="bj-badge" [attr.data-tone]="statusTone(j.status)">{{ statusLabel(j.status) }}</span></span></td>
+                <td class="bj-col-menu" (click)="$event.stopPropagation()">
+                  <div class="bj-menu-wrap">
+                    <button type="button" class="bj-icon-btn" [attr.data-testid]="'admin-bj-menu-' + j.id" [attr.aria-label]="i18n.t('bj_row_menu')" (click)="toggleMenu(j.id, $event)"><app-icon name="list" /></button>
+                    @if (openMenuId() === j.id) {
+                      <div class="bj-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="bj-menu-item" role="menuitem" (click)="openDetail(j); openMenuId.set(null)"><app-icon name="link" /><span>{{ i18n.t('bj_menu_view') }}</span></button>
+                        <button type="button" class="bj-menu-item" role="menuitem" [attr.data-testid]="'admin-bj-run-' + j.id"
+                          [disabled]="!canManage() || j.status === 'paused'" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+                          (click)="runNow(j, $event); openMenuId.set(null)">
+                          @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }<span>{{ i18n.t('bj_run_now') }}</span>
+                        </button>
+                        @if (j.status === 'paused') {
+                          <button type="button" class="bj-menu-item" role="menuitem" [attr.data-testid]="'admin-bj-resume-' + j.id"
+                            [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+                            (click)="resume(j, $event); openMenuId.set(null)">
+                            @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }<span>{{ i18n.t('bj_resume') }}</span>
+                          </button>
+                        } @else {
+                          <button type="button" class="bj-menu-item bj-menu-item--danger" role="menuitem" [attr.data-testid]="'admin-bj-pause-' + j.id"
+                            [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')"
+                            (click)="pause(j, $event); openMenuId.set(null)">
+                            @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }<span>{{ i18n.t('bj_pause') }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- I. Job detail modal -->
+  @if (detailOpen() && detail(); as d) {
+    <div class="bj-scrim" (click)="closeDetail()"></div>
+    <div class="bj-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-bj-modal" [attr.aria-label]="d.job.name" (click)="$event.stopPropagation()">
+      <div class="bj-modal-head">
+        <div class="bj-modal-id">
+          <span class="bj-swatch" [attr.data-tone]="statusTone(d.job.status)" aria-hidden="true"><app-icon [name]="kindIcon(d.job.type)" /></span>
+          <div class="bj-modal-id-text">
+            <div class="bj-modal-name">{{ d.job.name }}</div>
+            <div class="bj-modal-kind mono">{{ d.job.type }} · {{ d.job.id }}</div>
+            <div class="bj-modal-pills">
+              <span class="bj-badge" [attr.data-tone]="statusTone(d.job.status)"><span class="bj-dot" [attr.data-tone]="statusTone(d.job.status)"></span>{{ statusLabel(d.job.status) }}</span>
+              <span class="bj-badge bj-badge--chk mono">{{ i18n.t('bj_last_run') }} {{ agoIso(d.job.lastRunAt) }}</span>
+              <span class="bj-badge bj-badge--chk mono">{{ d.job.scheduleHuman }}</span>
+            </div>
+          </div>
+        </div>
+        <button class="bj-modal-close" type="button" (click)="closeDetail()" data-testid="admin-bj-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <div class="bj-modal-actions">
+        <button class="bj-btn bj-btn--solid" type="button" data-testid="admin-bj-modal-run"
+          [disabled]="busy() || d.job.status === 'paused' || !canManage()"
+          [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="runNow(d.job)">
+          @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }
+          {{ i18n.t('bj_run_now') }}
+        </button>
+        @if (d.job.status === 'paused') {
+          <button class="bj-btn" type="button" data-testid="admin-bj-modal-resume" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="resume(d.job)">
+            @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }
+            {{ i18n.t('bj_resume') }}
+          </button>
+        } @else {
+          <button class="bj-btn bj-btn--danger" type="button" data-testid="admin-bj-modal-pause" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="pause(d.job)">
+            @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }
+            {{ i18n.t('bj_pause') }}
+          </button>
+        }
+      </div>
+
+      <div class="bj-tabs" role="tablist">
+        <button class="bj-tab" role="tab" [attr.data-active]="modalTab() === 'overview'" (click)="setTab('overview')">{{ i18n.t('bj_tab_overview') }}</button>
+        <button class="bj-tab" role="tab" [attr.data-active]="modalTab() === 'runs'" (click)="setTab('runs')">{{ i18n.t('bj_tab_runs') }}</button>
+      </div>
+
+      <div class="bj-modal-body">
+        @switch (modalTab()) {
+          @case ('overview') {
+            <div class="bj-grid2">
+              <div class="bj-panel">
+                <div class="bj-panel-head">{{ i18n.t('bj_panel_about') }}</div>
+                <div class="bj-fields">
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_field_desc') }}</span></div>
+                  <div class="bj-field-desc">{{ d.job.description }}</div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_field_type') }}</span><span class="bj-field-val">{{ d.job.type }}</span></div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_col_schedule') }}</span><span class="bj-field-val mono">{{ d.job.scheduleHuman }}</span></div>
+                </div>
+              </div>
+              <div class="bj-panel">
+                <div class="bj-panel-head">{{ i18n.t('bj_panel_lastrun') }}</div>
+                <div class="bj-fields">
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_col_status') }}</span><span class="bj-field-val"><span class="bj-badge" [attr.data-tone]="statusTone(d.job.status)">{{ statusLabel(d.job.status) }}</span></span></div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_last_run') }}</span><span class="bj-field-val">{{ d.job.lastRunAt ? fmt.dateTime(d.job.lastRunAt) : i18n.t('bj_never') }}</span></div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_col_duration') }}</span><span class="bj-field-val mono">{{ duration(d.job.lastDurationMs) }}</span></div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_col_nextrun') }}</span><span class="bj-field-val">{{ d.job.status === 'paused' ? i18n.t('bj_status_paused') : untilIso(d.job.nextRunAt) }}</span></div>
+                  <div class="bj-field"><span class="bj-field-label">{{ i18n.t('bj_runs_24h') }}</span><span class="bj-field-val num">{{ d.job.runsLast24h }} · {{ d.job.failedLast24h }} {{ i18n.t('bj_failed_lc') }}</span></div>
+                </div>
+              </div>
+            </div>
+            @if (d.job.status === 'failing' && d.recentRuns.length > 0 && !d.recentRuns[0].ok) {
+              <div class="bj-lasterr"><app-icon name="alertTriangle" /><div class="bj-lasterr-msg mono">{{ d.recentRuns[0].message ?? i18n.t('bj_run_failed') }}</div></div>
+            }
+          }
+          @case ('runs') {
+            @if (detailLoading()) {
+              <div class="bj-empty bj-empty--sm">{{ i18n.t('loading') }}</div>
+            } @else if (d.recentRuns.length === 0) {
+              <div class="bj-empty bj-empty--sm"><app-icon name="clock" /><div class="bj-empty-title">{{ i18n.t('bj_runs_empty') }}</div></div>
+            } @else {
+              <div class="bj-timeline">
+                @for (r of d.recentRuns; track $index) {
+                  <div class="bj-run">
+                    <span class="bj-run-dot" [attr.data-ok]="r.ok ? '1' : '0'"></span>
+                    <div class="bj-run-body">
+                      <div class="bj-run-title">{{ r.ok ? i18n.t('bj_run_ok') : i18n.t('bj_run_failed') }}@if (r.triggeredBy === 'manual') { <span class="bj-badge bj-badge--manual">{{ i18n.t('bj_manual') }}</span> } @if (r.message) { <span class="bj-run-msg mono">{{ r.message }}</span> }</div>
+                      <div class="bj-run-meta">{{ duration(r.durationMs) }} · {{ fmt.dateTime(r.at) }}</div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+</app-page-content>

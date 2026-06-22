@@ -1,0 +1,564 @@
+<!-- ── Toolbar (single header for the canvas phase) ── -->
+<div class="ae-toolbar">
+  <div class="ae-toolbar-left">
+    <span class="ae-toolrail-mark"><app-icon name="workflow" /></span>
+    <span class="ae-toolbar-name">{{ automationName() || i18n.t('wiz_stage_eyebrow') }}</span>
+
+    <!-- AI build / thinking indicator -->
+    @if (narration()) {
+      <span class="wiz-think" [class.ready]="isReady()" data-testid="wizard-think">
+        @if (isReady()) {
+          <span class="wiz-think-check"><app-icon name="check" /></span>
+        } @else {
+          <span class="wiz-think-dots"><i></i><i></i><i></i></span>
+        }
+        <span class="wiz-think-text">{{ narration() }}</span>
+      </span>
+    }
+  </div>
+  <div class="ae-toolbar-right">
+    <div class="ae-tabs">
+      <button class="ae-tab" [class.active]="editorTab() === 'canvas'"
+        data-testid="wizard-tab-canvas">
+        <app-icon name="workflow" />
+        <span>{{ i18n.t('auto_tab_canvas') }}</span>
+      </button>
+      <button class="ae-tab" (click)="showSignupHint()"
+        [title]="i18n.t('wiz_tab_locked')" data-testid="wizard-tab-tests">
+        <app-icon name="beaker" />
+        <span>{{ i18n.t('auto_tab_tests') }}</span>
+      </button>
+      <button class="ae-tab" (click)="showSignupHint()"
+        [title]="i18n.t('wiz_tab_locked')" data-testid="wizard-tab-simulations">
+        <app-icon name="inbox" />
+        <span>{{ i18n.t('auto_tab_simulations') }}</span>
+      </button>
+    </div>
+
+    <span class="wiz-chrome-sep"></span>
+
+    <div class="wiz-chrome-ctl">
+      <app-lang-switcher />
+      <app-theme-toggle />
+    </div>
+  </div>
+  <div class="ae-toolbar-accent" aria-hidden="true"></div>
+</div>
+
+<!-- ── Main area (tool rail + canvas) ──────────────────────── -->
+<div class="ae-main">
+  <!-- ── Tool library rail (Bausteine) ───────────────────── -->
+  <aside class="ae-toolrail" [class.collapsed]="railCollapsed()">
+    <div class="ae-toolrail-head">
+      <span class="ae-toolrail-mark"><app-icon name="grid" /></span>
+      <div class="ae-toolrail-titles">
+        <span class="ae-toolrail-eyebrow">{{ i18n.t('auto_lib_eyebrow') }}</span>
+        <span class="ae-toolrail-title">{{ i18n.t('auto_lib_title') }}</span>
+      </div>
+      <button class="ae-toolrail-toggle" (click)="toggleRail()"
+        [title]="railCollapsed() ? i18n.t('auto_lib_expand') : i18n.t('auto_lib_collapse')"
+        aria-label="Toggle library">
+        <app-icon name="chevronRight" />
+      </button>
+    </div>
+
+    @if (!railCollapsed()) {
+      <div class="ae-toolrail-search">
+        <span class="ic"><app-icon name="search" /></span>
+        <input type="text" [value]="librarySearch()"
+          (input)="librarySearch.set(v($event))"
+          [placeholder]="i18n.t('auto_lib_search')" />
+        @if (librarySearch()) {
+          <button class="clr" (click)="librarySearch.set('')" aria-label="Clear">
+            <app-icon name="x" />
+          </button>
+        }
+      </div>
+    }
+
+    <div class="ae-toolrail-scroll">
+      @for (group of libraryGroups(); track group.labelKey) {
+        <div class="ae-toolgroup">
+          @if (!railCollapsed()) {
+            <div class="ae-toolgroup-h">
+              <span class="lbl">{{ i18n.t(group.labelKey) }}</span>
+              <span class="cnt">{{ group.items.length }}</span>
+            </div>
+          }
+          <div class="ae-toolgroup-items">
+            @for (item of group.items; track item.type) {
+              <div class="ae-toolitem" role="button" tabindex="0"
+                [style.--nc]="item.color"
+                (click)="addNode(item.type)"
+                (keydown.enter)="addNode(item.type)"
+                (keydown.space)="$event.preventDefault(); addNode(item.type)"
+                (mouseenter)="showLibTip($event, item)"
+                (mouseleave)="hideLibTip()">
+                <span class="ae-toolitem-rail"></span>
+                <span class="ae-glyph" [attr.data-k]="item.type">
+                  <app-icon [name]="item.icon" />
+                </span>
+                @if (!railCollapsed()) {
+                  <span class="ae-toolitem-text">
+                    <span class="n">{{ i18n.t(item.labelKey) }}</span>
+                    <span class="s">{{ nodeSub(item) }}</span>
+                  </span>
+                  <span class="ae-toolitem-add" aria-hidden="true"><app-icon name="plus" /></span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @if (!railCollapsed() && libraryGroups().length === 0) {
+        <div class="ae-toolrail-empty">{{ i18n.t('auto_lib_no_matches') }}</div>
+      }
+    </div>
+
+    @if (!railCollapsed()) {
+      <div class="ae-toolrail-foot">
+        <app-icon name="grid" />
+        <span>{{ libraryTotal() }} {{ i18n.t('auto_lib_count') }}</span>
+        <span class="hint">{{ i18n.t('auto_lib_click_add') }}</span>
+      </div>
+    }
+  </aside>
+
+  @if (railCollapsed() && libTip(); as tip) {
+    <div class="ae-tip" [style.top.px]="tip.top" [style.left.px]="tip.left" [style.--nc]="tip.nc">
+      <span class="ae-tip-name">{{ tip.name }}</span>
+      @if (tip.sub) { <span class="ae-tip-sub">{{ tip.sub }}</span> }
+      <span class="ae-tip-add"><app-icon name="plus" /> {{ i18n.t('auto_lib_click_add') }}</span>
+    </div>
+  }
+
+  <!-- ── Canvas ──────────────────────────────────────────── -->
+  <div class="ae-canvas-wrap"
+    [class.ae-panning]="panning()"
+    (mousedown)="onCanvasMouseDown($event)">
+    <f-flow fDraggable
+      [fCanvasMoveTrigger]="disableCanvasDrag"
+      (fSelectionChange)="onSelectionChanged($event)"
+      (fCreateConnection)="onConnectionCreated($event)"
+      (fMoveNodes)="onNodeMoved($event)">
+      <f-background>
+        <f-circle-pattern [color]="'rgba(128,128,128,0.35)'" [radius]="22" />
+      </f-background>
+      <f-canvas fZoom [fZoomMinimum]="0.2" [fZoomMaximum]="3"
+        (fCanvasChange)="onCanvasChange($event)">
+
+        <!-- Nodes -->
+        @for (node of nodes(); track node.id) {
+          <div fNode
+            [fNodeId]="node.id"
+            [fNodePosition]="node.position"
+            class="ae-node wiz-fnode"
+            [attr.data-type]="node.nodeType"
+            [attr.data-in]="isNodeRevealed(node.id) ? '1' : '0'"
+            [attr.data-active]="isNodeActive(node.id) ? '1' : '0'"
+            [attr.data-done]="isNodeDone(node.id) ? '1' : '0'"
+            [style.--nc]="getNodeColor(node.nodeType)">
+
+            <div class="ae-node-header" fDragHandle>
+              <span class="ae-node-icon">
+                <app-icon [name]="getNodeIcon(node.nodeType)" />
+              </span>
+              <div class="ae-node-header-text">
+                <span class="ae-node-type-label">{{ getNodeTypeLabel(node.nodeType) }}</span>
+                <span class="ae-node-label">{{ node.label }}</span>
+              </div>
+            </div>
+
+            <!-- TRIGGER body: mode-aware -->
+            @if (node.nodeType === 'TRIGGER') {
+              <div class="ae-node-body ae-trigger-body">
+                @if (getTriggerMode(node) === 'EMAIL') {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="mail" />
+                    <span>{{ getTriggerFolder(node) }}</span>
+                  </span>
+                } @else if (getTriggerMode(node) === 'WEBHOOK') {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="globe" />
+                    <span>{{ i18n.t('auto_webhook_inbound_label') }}</span>
+                  </span>
+                } @else {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="calendar" />
+                    <span>{{ getScheduleDisplayText(node) }}</span>
+                  </span>
+                }
+              </div>
+            }
+
+            <!-- FILTER body: check count -->
+            @if (node.nodeType === 'FILTER') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="filter" />
+                  <span>{{ getFilterChecks(node).length }} {{ i18n.t('auto_filter_checks') }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- DELAY body: delay minutes -->
+            @if (node.nodeType === 'DELAY') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="clock" />
+                  <span>{{ getDelayMinutes(node) }} min</span>
+                </span>
+              </div>
+            }
+
+            <!-- LABEL body: category name -->
+            @if (node.nodeType === 'LABEL') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="tag" />
+                  <span>{{ getLabelCategoryName(node) || node.label }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- REMOVE_LABEL body: category name -->
+            @if (node.nodeType === 'REMOVE_LABEL') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="tag" />
+                  <span>{{ getRemoveLabelCategoryName(node) || node.label }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- WEBHOOK body: method + url -->
+            @if (node.nodeType === 'WEBHOOK') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="globe" />
+                  <span>{{ getWebhookMethod(node) }} {{ getWebhookUrlPreview(node) || '...' }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- Port rows -->
+            <div class="ae-node-ports">
+              <!-- TRIGGER: mode-aware outputs -->
+              @if (node.nodeType === 'TRIGGER') {
+                @if (getTriggerMode(node) === 'EMAIL') {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_new_email') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'new-email')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_reply') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'reply')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                } @else {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_output') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+              }
+
+              <!-- DELAY -->
+              @if (node.nodeType === 'DELAY') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_delayed') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- LABEL -->
+              @if (node.nodeType === 'LABEL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ getLabelCategoryName(node) || i18n.t('auto_port_labeled') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- FILTER -->
+              @if (node.nodeType === 'FILTER') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (check of getFilterChecks(node); track $index; let i = $index) {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ check.label || ('Check ' + (i + 1)) }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'check_' + i)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_filter_fallback') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'fallback')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- EXTRACT -->
+              @if (node.nodeType === 'EXTRACT') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (ext of getExtractions(node); track ext.parameterSetId; let i = $index) {
+                  <div class="ae-port-row ae-port-out-row wiz-extract-row"
+                       [attr.data-show]="isNodeActive(node.id) && wizard.extractCount() > i ? '1' : '0'">
+                    <span class="ae-port-label">{{ ext.label }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'extraction_' + i)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+              }
+
+              <!-- CATEGORIZE -->
+              @if (node.nodeType === 'CATEGORIZE') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (entry of getCategoryEntries(node); track entry.categoryId; let i = $index) {
+                  <div class="ae-port-row ae-port-out-row wiz-classify-row"
+                       [attr.data-hit]="wizard.classifyHit() === entry.categoryId ? '1' : '0'">
+                    <span class="ae-port-label">{{ entry.label }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'category_' + i)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_uncategorized') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'uncategorized')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- EMAIL_ACTION -->
+              @if (node.nodeType === 'EMAIL_ACTION') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- SEND_EMAIL -->
+              @if (node.nodeType === 'SEND_EMAIL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- WEBHOOK -->
+              @if (node.nodeType === 'WEBHOOK') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_success') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'success')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_failure') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'failure')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- REMOVE_LABEL -->
+              @if (node.nodeType === 'REMOVE_LABEL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ getRemoveLabelCategoryName(node) || i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Connections (always rendered so Foblex computes their geometry;
+             faded in progressively after their source/target nodes appear). -->
+        @for (edge of edges(); track edge.id) {
+          <f-connection
+            [class.wiz-conn-on]="isEdgeRendered(edge)"
+            [fConnectionId]="edge.id"
+            [fOutputId]="edge.outputId"
+            [fInputId]="edge.inputId"
+            [fType]="EFConnectionType.BEZIER">
+          </f-connection>
+        }
+
+        <f-connection-for-create [fType]="EFConnectionType.BEZIER"></f-connection-for-create>
+      </f-canvas>
+    </f-flow>
+
+    <!-- ── Animation overlay (mirrors the Foblex canvas transform) ── -->
+    <div class="wiz-overlay" [style.transform]="overlayTransform()" aria-hidden="true">
+      <!-- Traveling email packet -->
+      <div class="wiz-packet-trail" #trailEl data-testid="wizard-packet-trail"></div>
+      <div
+        class="wiz-packet"
+        #packetEl
+        [attr.data-on]="wizard.packet().on ? '1' : '0'"
+        [attr.data-state]="wizard.pktState()"
+        data-testid="wizard-packet"
+      >
+        <div class="wiz-packet-card">
+          <div class="wiz-packet-avatar" [style.background]="wizard.packet().avatar">{{ wizard.packet().initials }}</div>
+          <div class="wiz-packet-txt">
+            <span class="wiz-packet-from">{{ wizard.packet().from }}</span>
+            <span class="wiz-packet-subj">{{ wizard.packet().subj }}</span>
+          </div>
+          <div class="wiz-packet-mail"><app-icon name="mail" /></div>
+          @for (stamp of wizard.stamps(); track stamp.id) {
+            <div class="wiz-packet-stamp" [style.color]="stamp.color" [style.--ang]="stamp.angle + 'deg'">
+              {{ i18n.t(stamp.key) }}
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Floating reply bubble (typing) -->
+      @if (replyBubble(); as rb) {
+        <div class="wiz-reply-bubble" [style.left.px]="rb.x" [style.top.px]="rb.y" data-testid="wizard-reply-bubble">
+          {{ rb.text }}<span class="cur"></span>
+        </div>
+      }
+    </div>
+
+    <!-- ── Snackbar caption (bottom-center, viewport-fixed) ── -->
+    @if (wizard.caption(); as cap) {
+      <div class="wiz-snackbar" [attr.data-on]="cap.text ? '1' : '0'" data-testid="wizard-snackbar">
+        <div class="wiz-snackbar-in">
+          <span class="wiz-snackbar-pip" [style.color]="cap.color"></span>
+          {{ cap.text }}
+        </div>
+      </div>
+    }
+
+    <!-- ── Sign-up hint (shown when a guest tries to add a block) ── -->
+    <div class="wiz-snackbar wiz-snackbar-warn" [attr.data-on]="signupHint() ? '1' : '0'"
+      data-testid="wizard-signup-hint">
+      <div class="wiz-snackbar-in">
+        <span class="wiz-snackbar-warn-ic"><app-icon name="lock" /></span>
+        {{ i18n.t('wiz_signup_to_edit') }}
+      </div>
+    </div>
+
+    <!-- Tips overlay (top-left "?" help button) -->
+    <div class="ae-tips-wrap f-drag-blocker">
+      <button class="ae-canvas-btn" (click)="tipsOpen.set(!tipsOpen())" [title]="i18n.t('auto_tips')">
+        <app-icon name="help" />
+      </button>
+      @if (tipsOpen()) {
+        <div class="ae-tips-backdrop" (click)="tipsOpen.set(false)"></div>
+        <div class="ae-tips-panel">
+          <div class="ae-tips-title">{{ i18n.t('auto_tips') }}</div>
+          <div class="ae-tips-list">
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_pan_key') }}</span>
+              <span>{{ i18n.t('auto_tips_pan') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_zoom_key') }}</span>
+              <span>{{ i18n.t('auto_tips_zoom') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_connect_key') }}</span>
+              <span>{{ i18n.t('auto_tips_connect') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_delete_key') }}</span>
+              <span>{{ i18n.t('auto_tips_delete_conn') }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Canvas zoom controls (bottom-left pill) -->
+    <div class="ae-zoom f-drag-blocker">
+      <button (click)="zoomOut()" [title]="i18n.t('auto_zoom_out')" aria-label="Zoom out">
+        <app-icon name="minus" />
+      </button>
+      <span class="lvl">{{ zoomLevel() }}%</span>
+      <button (click)="zoomIn()" [title]="i18n.t('auto_zoom_in')" aria-label="Zoom in">
+        <app-icon name="plus" />
+      </button>
+      <span class="sep"></span>
+      <button (click)="resetZoom()" [title]="i18n.t('auto_reset_zoom')" aria-label="Reset zoom">
+        <app-icon name="maximize" />
+      </button>
+      <button (click)="focusOnStart()" [title]="i18n.t('auto_focus_start')" aria-label="Focus start">
+        <app-icon name="target" />
+      </button>
+    </div>
+
+    <!-- Legend (bottom-left, above the zoom pill) -->
+    <div class="ae-legend f-drag-blocker" [class.ae-legend-collapsed]="!legendOpen()">
+      <button class="ae-legend-toggle" (click)="legendOpen.set(!legendOpen())">
+        <span class="ae-legend-title">{{ i18n.t('auto_legend') }}</span>
+        <app-icon [name]="legendOpen() ? 'chevronDown' : 'chevronUp'" />
+      </button>
+      @if (legendOpen()) {
+        <div class="ae-legend-items">
+          <div class="ae-legend-item">
+            <span class="ae-legend-shape ae-legend-circle ae-legend-hollow"></span>
+            <span>{{ i18n.t('auto_legend_input') }}</span>
+          </div>
+          <div class="ae-legend-item">
+            <span class="ae-legend-shape ae-legend-circle ae-legend-filled"></span>
+            <span>{{ i18n.t('auto_legend_output') }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Mini status (top-right floating card) -->
+    <div class="ae-mini-status f-drag-blocker">
+      <span class="grp"><app-icon name="grid" /> {{ nodes().length }} {{ i18n.t('auto_nodes') }}</span>
+      <span class="grp"><app-icon name="link" /> {{ edges().length }} {{ i18n.t('auto_edges') }}</span>
+    </div>
+  </div>
+</div>

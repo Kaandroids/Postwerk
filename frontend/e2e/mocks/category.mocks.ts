@@ -1,0 +1,26 @@
+export const mockCategories = [
+  {
+    id: 1,
+    name: 'Bestellung',
+    color: '#6366f1',
+    description: 'Bestellungen und Auftragsbestätigungen von Kunden und Lieferanten',
+    positiveExample: 'Ihre Bestellung #12345 wurde bestätigt',
+    negativeExample: 'Newsletter: Unsere neuen Produkte',
+    accuracy: 0.92,
+    emailCount: 145,
+    locked: false,
+    createdAt: '2024-01-20T10:00:00Z',
+  },
+  {
+    id: 2,
+    name: 'Newsletter',
+    color: '#10b981',
+    description: 'Marketing-Newsletter und Werbe-E-Mails von Unternehmen',
+    positiveExample: 'Unser wöchentlicher Newsletter mit den neuesten Angeboten',
+    negativeExample: 'Ihre Rechnung #67890 ist fällig',
+    accuracy: 0.88,
+    emailCount: 230,
+    locked: false,
+    createdAt: '2024-01-22T10:00:00Z',
+  },
+];

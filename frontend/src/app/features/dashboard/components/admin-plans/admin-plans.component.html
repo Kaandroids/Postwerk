@@ -1,0 +1,118 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_plans_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('admin_plans_subtitle') }}</div>
+    </div>
+    @if (view() === 'list') {
+      <button class="create-btn" data-testid="plan-create-btn" (click)="showCreateForm()" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+        @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }
+        {{ i18n.t('admin_plans_create') }}
+      </button>
+    }
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (view() === 'list') {
+    @if (loading()) {
+      <div class="admin-loading">{{ i18n.t('loading') }}</div>
+    } @else {
+      <div class="plans-grid">
+        @for (plan of plans(); track plan.id) {
+          <div class="plan-card" data-testid="plan-card">
+            <div class="plan-name">{{ plan.name }}</div>
+            <div class="plan-price">{{ plan.price | number:'1.2-2' }} € <span class="plan-period">/ {{ i18n.t('admin_plans_month') }}</span></div>
+            <div class="plan-limits">
+              <div class="plan-limit"><span class="limit-label">Tokens</span><span>{{ plan.tokenLimit === 0 ? '∞' : plan.tokenLimit | number }}</span></div>
+              <div class="plan-limit"><span class="limit-label">{{ i18n.t('admin_plans_automations') }}</span><span>{{ plan.automationLimit === 0 ? '∞' : plan.automationLimit }}</span></div>
+              <div class="plan-limit"><span class="limit-label">{{ i18n.t('admin_plans_accounts') }}</span><span>{{ plan.emailAccountLimit === 0 ? '∞' : plan.emailAccountLimit }}</span></div>
+              <div class="plan-limit"><span class="limit-label">{{ i18n.t('admin_plan_cost_limit') }}</span><span>{{ plan.costLimitCents === -1 ? '∞' : plan.costLimitCents === 0 ? '–' : (plan.costLimitCents / 100 | number:'1.2-2') + ' €' }}</span></div>
+              <div class="plan-limit"><span class="limit-label">{{ i18n.t('admin_plans_inbound_webhooks') }}</span><span>{{ plan.inboundWebhookLimit === -1 ? '∞' : plan.inboundWebhookLimit }}</span></div>
+            </div>
+            <div class="plan-users">{{ plan.userCount }} {{ i18n.t('admin_plans_users') }}</div>
+            <div class="plan-actions">
+              <button class="plan-action-btn" data-testid="plan-edit-btn" (click)="showEditForm(plan)" [attr.aria-label]="i18n.t('admin_plans_edit')" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+                @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }
+              </button>
+              <button class="plan-action-btn plan-action-btn--danger" data-testid="plan-delete-btn" (click)="deletePlan(plan)" [attr.aria-label]="i18n.t('admin_plans_delete')" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+                @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <div class="plans-empty">
+            <app-icon name="creditCard" />
+            <p>{{ i18n.t('admin_plans_empty') }}</p>
+            <button class="create-btn" (click)="showCreateForm()" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+              @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> }
+              {{ i18n.t('admin_plans_create') }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <!-- Plan Form -->
+    <div class="form-grid" data-testid="plan-form">
+      <div class="form-col">
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plans_field_name') }}</label>
+          <input class="input" data-testid="plan-name-input" type="text" [(ngModel)]="name" [placeholder]="i18n.t('admin_plans_name_ph')" />
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plans_field_price') }}</label>
+          <input class="input" type="number" [(ngModel)]="price" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label class="field-label">Token Limit</label>
+          <input class="input" type="number" [(ngModel)]="tokenLimit" min="0" />
+          <span class="field-hint">0 = {{ i18n.t('admin_plans_unlimited') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plans_field_automations') }}</label>
+          <input class="input" type="number" [(ngModel)]="automationLimit" min="0" />
+          <span class="field-hint">0 = {{ i18n.t('admin_plans_unlimited') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plans_field_accounts') }}</label>
+          <input class="input" type="number" [(ngModel)]="emailAccountLimit" min="0" />
+          <span class="field-hint">0 = {{ i18n.t('admin_plans_unlimited') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plan_cost_limit') }}</label>
+          <input class="input" data-testid="plan-cost-limit-input" type="number" [(ngModel)]="costLimitEur" min="-1" step="0.5" />
+          <span class="field-hint">0 = {{ i18n.t('admin_plan_cost_disabled') }}, -1 = {{ i18n.t('admin_plans_unlimited') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_plans_field_inbound_webhooks') }}</label>
+          <input class="input" data-testid="plan-inbound-webhook-input" type="number" [(ngModel)]="inboundWebhookLimit" min="-1" />
+          <span class="field-hint">0 = 0, -1 = {{ i18n.t('admin_plans_unlimited') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-check">
+            <input type="checkbox" data-testid="plan-api-webhook-toggle" [(ngModel)]="apiWebhookEnabled" />
+            {{ i18n.t('admin_plans_field_api_webhook') }}
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button class="save-btn" data-testid="plan-save-btn" (click)="save()" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+            @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> }
+            {{ editingPlan() ? i18n.t('admin_plans_save') : i18n.t('admin_plans_create') }}
+          </button>
+          <button class="cancel-btn" data-testid="plan-cancel-btn" (click)="cancel()">{{ i18n.t('admin_plans_cancel') }}</button>
+        </div>
+      </div>
+
+      <div class="info-col">
+        <div class="info-card info-card--blue">
+          <app-icon name="creditCard" />
+          <h2 class="info-card-title">{{ i18n.t('admin_plans_info_title') }}</h2>
+          <p>{{ i18n.t('admin_plans_info_text') }}</p>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

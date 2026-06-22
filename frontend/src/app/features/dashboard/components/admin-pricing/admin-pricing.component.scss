@@ -1,0 +1,59 @@
+/* AI model pricing — table + note. Form/button styles are reused from admin-plans.component.scss
+   (added to this component's styleUrls), so only the pricing-table specifics live here. */
+
+.pricing-note {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+
+.pricing-table {
+  display: flex;
+  flex-direction: column;
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+
+.pricing-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 14px;
+  color: var(--fg);
+
+  &:last-child { border-bottom: none; }
+
+  &--head {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--fg-subtle);
+    background: var(--bg);
+  }
+}
+
+.pricing-model {
+  font-weight: 600;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.pricing-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .pricing-row { grid-template-columns: 1.6fr 1fr 1fr auto; gap: 8px; padding: 10px 12px; font-size: 13px; }
+}

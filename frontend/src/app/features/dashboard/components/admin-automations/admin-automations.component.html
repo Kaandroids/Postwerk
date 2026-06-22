@@ -1,0 +1,118 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_automations_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('admin_automations_subtitle') }}</div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="admin-loading">{{ i18n.t('loading') }}</div>
+  } @else if (stats(); as s) {
+    <!-- Stats Cards -->
+    <div class="adm-kpis" style="--adm-kpi-cols: 4">
+      <div class="adm-kpi" data-testid="auto-stat-total">
+        <span class="adm-kpi-label">{{ i18n.t('admin_auto_total') }}</span>
+        <span class="adm-kpi-value">{{ s.totalExecutions }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="auto-stat-success">
+        <span class="adm-kpi-label">{{ i18n.t('admin_auto_success') }}</span>
+        <span class="adm-kpi-value" data-tone="green">{{ s.successCount }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="auto-stat-failed">
+        <span class="adm-kpi-label">{{ i18n.t('admin_auto_failed') }}</span>
+        <span class="adm-kpi-value" data-tone="danger">{{ s.failedCount }}</span>
+      </div>
+      <div class="adm-kpi" data-testid="auto-stat-active">
+        <span class="adm-kpi-label">{{ i18n.t('admin_auto_active') }}</span>
+        <span class="adm-kpi-value">{{ s.activeAutomations }} / {{ s.totalAutomations }}</span>
+      </div>
+    </div>
+
+    <!-- Success Rate Bar -->
+    <div class="success-rate-card" data-testid="auto-success-bar">
+      <div class="rate-header">
+        <span>{{ i18n.t('admin_auto_success_rate') }}</span>
+        <span class="rate-pct">{{ s.successRate | number:'1.0-0' }}%</span>
+      </div>
+      <div class="rate-bar-wrap">
+        <div class="rate-bar" [style.width.%]="successRateWidth()"></div>
+      </div>
+    </div>
+
+    <!-- Top Automations -->
+    @if (s.topAutomations.length > 0) {
+      <div class="top-section">
+        <h2>{{ i18n.t('admin_auto_top') }}</h2>
+        <div class="adm-table-wrap">
+          <table class="adm-table" data-testid="auto-top-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ i18n.t('admin_col_name') }}</th>
+                <th scope="col">{{ i18n.t('admin_auto_total') }}</th>
+                <th scope="col">{{ i18n.t('admin_auto_success') }}</th>
+                <th scope="col">{{ i18n.t('admin_auto_failed') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of s.topAutomations; track a.automationId) {
+                <tr>
+                  <td>{{ a.automationName }}</td>
+                  <td>{{ a.executionCount }}</td>
+                  <td class="text-success">{{ a.successCount }}</td>
+                  <td class="text-danger">{{ a.failedCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    }
+
+    <!-- Recent Executions -->
+    <div class="exec-section">
+      <h2>{{ i18n.t('admin_auto_recent') }}</h2>
+      <div class="admin-table-wrap">
+        <table class="admin-table" data-testid="auto-exec-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ i18n.t('admin_col_name') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_status') }}</th>
+              <th scope="col">{{ i18n.t('admin_auto_processed') }}</th>
+              <th scope="col">{{ i18n.t('admin_auto_triggered') }}</th>
+              <th scope="col">{{ i18n.t('admin_auto_error') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of executions(); track e.id) {
+              <tr>
+                <td>{{ e.automationName }}</td>
+                <td>
+                  <span class="adm-badge" [attr.data-tone]="execTone(e.status)">{{ e.status }}</span>
+                </td>
+                <td>{{ e.processedCount }}</td>
+                <td>{{ fmt.dateTime(e.triggeredAt) }}</td>
+                <td class="error-cell">{{ e.errorLog ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="empty-row">{{ i18n.t('admin_auto_no_executions') }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages() > 1) {
+        <div class="admin-pagination">
+          <button [attr.aria-label]="i18n.t('admin_pager_prev')" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)">
+            <app-icon name="chevronLeft" />
+          </button>
+          <span>{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+          <button [attr.aria-label]="i18n.t('admin_pager_next')" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)">
+            <app-icon name="arrowRight" />
+          </button>
+        </div>
+      }
+    </div>
+  }
+</app-page-content>

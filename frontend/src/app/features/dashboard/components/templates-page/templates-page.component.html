@@ -1,0 +1,251 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <div class="tpl-page">
+      <div class="dash-page-head tpl-page-head">
+        <div>
+          <div class="dash-eyebrow">{{ i18n.t('tpl_pretitle') }}</div>
+          <h1 class="dash-title">{{ i18n.t('tpl_list_title') }}</h1>
+          <div class="dash-subtitle">
+            {{ i18n.t('tpl_list_subtitle', { count: '' + templates().length }) }}
+          </div>
+        </div>
+        <div class="tpl-head-actions">
+          <button class="tpl-action-btn" (click)="exportData()" [title]="i18n.t('tpl_export')">
+            <app-icon name="download" />
+          </button>
+          <button class="tpl-action-btn" (click)="fileInput.click()" [title]="i18n.t('tpl_import')">
+            <app-icon name="upload" />
+          </button>
+          <input #fileInput type="file" accept=".json" hidden (change)="importData($event)" />
+          <button class="tpl-add-btn" (click)="showAddForm()">
+            <app-icon name="plus" />
+            <span>{{ i18n.t('tpl_list_add') }}</span>
+          </button>
+        </div>
+      </div>
+
+      @if (templates().length === 0) {
+        <app-empty-state
+          [title]="i18n.t('tpl_list_empty_title')"
+          [sub]="i18n.t('tpl_list_empty_sub')"
+          [ctaLabel]="i18n.t('tpl_list_empty_cta')"
+          [glyphColors]="['#8b5cf6', '#3b82f6', '#ec4899']"
+          (cta)="showAddForm()" />
+      } @else {
+        <div class="tpl-list">
+          @for (t of templates(); track t.id) {
+            <div class="tpl-card">
+              <div class="tpl-card-body">
+                <div class="tpl-card-name">{{ t.name }}</div>
+                <div class="tpl-card-subject">{{ t.subject }}</div>
+                <div class="tpl-card-snippet">{{ t.body | slice:0:120 }}{{ t.body.length > 120 ? '...' : '' }}</div>
+                @if (t.params.length > 0) {
+                  <div class="tpl-card-params">
+                    @for (p of t.params; track p) {
+                      <span class="tpl-param-chip">{{"{{" + p + "}}"}}</span>
+                    }
+                  </div>
+                }
+                @if (t.parameterSetName) {
+                  <div class="tpl-card-ps-badge">
+                    <app-icon name="code" />
+                    <span>{{ t.parameterSetName }}</span>
+                  </div>
+                }
+              </div>
+              <div class="tpl-card-actions">
+                <button class="tpl-icon-btn lock-btn"
+                  [class.locked]="t.locked"
+                  [attr.data-testid]="'template-lock-' + t.id"
+                  (click)="toggleLock(t)">
+                  <app-icon [name]="t.locked ? 'lock' : 'unlock'" />
+                </button>
+                <button class="tpl-icon-btn" data-testid="tpl-edit-btn" [title]="i18n.t('tpl_edit')" (click)="editTemplate(t)">
+                  <app-icon name="edit" />
+                </button>
+                <button class="tpl-icon-btn tpl-icon-btn-danger" [title]="i18n.t('tpl_delete')" (click)="deleteTemplate(t.id)">
+                  <app-icon name="trash" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="tpl-page">
+      <div class="dash-page-head tpl-page-head">
+        <div>
+          <button class="dash-back" data-testid="tpl-back-btn" (click)="cancel()">
+            <app-icon name="arrowLeft" />
+            <span>{{ i18n.t('tpl_back') }}</span>
+          </button>
+          <h1 class="dash-title">{{ editId() ? i18n.t('tpl_edit_title') : i18n.t('tpl_create_title') }}</h1>
+          <div class="dash-subtitle">{{ i18n.t('tpl_create_subtitle') }}</div>
+        </div>
+      </div>
+
+      <div class="tpl-editor">
+        <app-error-banner [message]="error()" />
+
+        <div class="tpl-editor-grid">
+          <div class="tpl-form">
+            <div class="tpl-field">
+              <label class="tpl-field-label" for="tpl-name">{{ i18n.t('tpl_name') }}</label>
+              <input id="tpl-name" class="tpl-input" type="text"
+                [placeholder]="i18n.t('tpl_name_placeholder')"
+                [attr.data-error]="hasErr('name') ? '1' : '0'"
+                [value]="name()"
+                (input)="name.set(v($event))"
+                maxlength="255" />
+            </div>
+
+            <div class="tpl-field">
+              <label class="tpl-field-label" for="tpl-subject">{{ i18n.t('tpl_subject') }}</label>
+              <input id="tpl-subject" class="tpl-input" type="text"
+                [placeholder]="i18n.t('tpl_subject_placeholder')"
+                [attr.data-error]="hasErr('subject') ? '1' : '0'"
+                [value]="subject()"
+                (input)="subject.set(v($event))" />
+            </div>
+
+            <div class="tpl-field">
+              <label class="tpl-field-label">
+                <span>{{ i18n.t('tpl_body') }}</span>
+                <span class="tpl-field-aux">{{ i18n.t('tpl_params_hint') }}</span>
+              </label>
+
+              <!-- Editor mode tabs -->
+              <div class="tpl-mode-tabs">
+                <button type="button" class="tpl-mode-tab"
+                  [class.tpl-mode-tab-active]="editorMode() === 'visual'"
+                  (click)="switchEditorMode('visual')">
+                  <app-icon name="eye" />
+                  <span>{{ i18n.t('tpl_editor_visual') }}</span>
+                </button>
+                <button type="button" class="tpl-mode-tab"
+                  [class.tpl-mode-tab-active]="editorMode() === 'html'"
+                  (click)="switchEditorMode('html')">
+                  <app-icon name="code" />
+                  <span>{{ i18n.t('tpl_editor_html') }}</span>
+                </button>
+              </div>
+
+              @if (editorMode() === 'visual') {
+                <app-tiptap-editor
+                  [content]="body()"
+                  [placeholder]="i18n.t('tpl_body_placeholder')"
+                  [hasError]="hasErr('body')"
+                  (contentChange)="onTiptapChange($event)" />
+              } @else {
+                <textarea class="tpl-textarea tpl-textarea-html" rows="12"
+                  [placeholder]="i18n.t('tpl_body_placeholder')"
+                  [attr.data-error]="hasErr('body') ? '1' : '0'"
+                  [value]="body()"
+                  (input)="body.set(v($event))"></textarea>
+              }
+            </div>
+
+            <!-- Parameter set toggle -->
+            <div class="tpl-field">
+              <label class="tpl-ps-toggle">
+                <input type="checkbox"
+                  [checked]="useParameterSet()"
+                  (change)="onUseParameterSetChange($event)" />
+                <span>{{ i18n.t('tpl_parameter_set') }}</span>
+              </label>
+
+              @if (useParameterSet()) {
+                <div class="tpl-ps-select-wrap">
+                  <label class="tpl-field-label tpl-field-label-sm">{{ i18n.t('tpl_parameter_set_select') }}</label>
+                  <select class="tpl-input tpl-select"
+                    (change)="parameterSetId.set(v($event) || null)">
+                    <option value="" [selected]="!parameterSetId()">{{ i18n.t('tpl_parameter_set_none') }}</option>
+                    @for (ps of parameterSets(); track ps.id) {
+                      <option [value]="ps.id" [selected]="parameterSetId() === ps.id">{{ ps.name }}</option>
+                    }
+                  </select>
+                </div>
+                @if (selectedParameterSet(); as ps) {
+                  <div class="tpl-ps-params">
+                    <span class="tpl-ps-params-label">{{ i18n.t('tpl_available_params') }}</span>
+                    <div class="tpl-ps-params-list">
+                      @for (param of ps.parameters; track param.name) {
+                        <span class="tpl-param-chip tpl-param-chip-sm">{{"{{" + param.name + "}}"}}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+
+          <div class="tpl-insight-col">
+            <div class="tpl-insight">
+              <!-- Preview card -->
+              <div class="tpl-ins-card" data-tone="blue">
+                <div class="tpl-ins-card-head">
+                  <span class="tpl-ins-icon"><app-icon name="eye" /></span>
+                  <span class="tpl-ins-title">{{ i18n.t('tpl_preview_title') }}</span>
+                </div>
+                <div class="tpl-preview">
+                  <div class="tpl-preview-subject">{{ subject() || i18n.t('tpl_preview_empty_subject') }}</div>
+                  <div class="tpl-preview-body" [innerHTML]="sanitizedBody()"></div>
+                </div>
+              </div>
+
+              <!-- Params card -->
+              @if (detectedParams().length > 0) {
+                <div class="tpl-ins-card" data-tone="green">
+                  <div class="tpl-ins-card-head">
+                    <span class="tpl-ins-icon"><app-icon name="code" /></span>
+                    <span class="tpl-ins-title">{{ i18n.t('tpl_params_title') }}</span>
+                  </div>
+                  <div class="tpl-params-list">
+                    @for (p of detectedParams(); track p) {
+                      <span class="tpl-param-chip">{{"{{" + p + "}}"}}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Parameter set info -->
+              @if (selectedParameterSet(); as ps) {
+                <div class="tpl-ins-card" data-tone="violet">
+                  <div class="tpl-ins-card-head">
+                    <span class="tpl-ins-icon tpl-ins-icon-violet"><app-icon name="code" /></span>
+                    <span class="tpl-ins-title">{{ i18n.t('tpl_parameter_set_badge') }}</span>
+                  </div>
+                  <div class="tpl-ins-text">{{ ps.name }}</div>
+                  <div class="tpl-ps-params-list tpl-ps-params-list-sm">
+                    @for (param of ps.parameters; track param.name) {
+                      <span class="tpl-param-chip tpl-param-chip-sm">{{"{{" + param.name + "}}"}}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Info card -->
+              <div class="tpl-ins-card" data-tone="amber">
+                <span class="tpl-ins-icon"><app-icon name="help" /></span>
+                <div class="tpl-ins-body">
+                  <div class="tpl-ins-title">{{ i18n.t('tpl_info_title') }}</div>
+                  <div class="tpl-ins-text">{{ i18n.t('tpl_info_text') }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tpl-editor-foot">
+          <app-button variant="ghost" type="button" data-testid="tpl-cancel-btn" (click)="cancel()">
+            {{ i18n.t('tpl_cancel') }}
+          </app-button>
+          <app-button variant="primary" type="submit" data-testid="tpl-save-btn" [disabled]="loading() || !canSave()" (click)="submit($event)">
+            {{ loading() ? i18n.t('loading') : (editId() ? i18n.t('tpl_edit_submit') : i18n.t('tpl_submit')) }}
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

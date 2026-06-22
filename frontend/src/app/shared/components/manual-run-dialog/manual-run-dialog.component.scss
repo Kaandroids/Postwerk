@@ -1,0 +1,240 @@
+/* Manual run — centered overlay above page content. */
+.mrd-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: color-mix(in srgb, var(--fg) 40%, transparent);
+  backdrop-filter: blur(3px);
+  animation: mrd-fade 0.16s ease;
+}
+@keyframes mrd-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.mrd-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 111;
+  width: min(520px, 92vw);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  border: 0.5px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 44px 110px -30px rgba(0, 0, 0, 0.55);
+  animation: mrd-modal-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+@keyframes mrd-modal-in {
+  from { transform: scale(0.97) translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mrd-scrim, .mrd-modal { animation: none; }
+}
+
+/* Head */
+.mrd-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.mrd-head-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.mrd-head-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+  border: 0.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.mrd-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+  margin-bottom: 3px;
+}
+.mrd-title {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mrd-close {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg-muted);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  &:hover { background: var(--bg); color: var(--fg); border-color: var(--border-strong); }
+}
+
+.mrd-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mrd-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 14px 24px;
+  border-top: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* States */
+.mrd-state {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 4px;
+  font-size: 13.5px;
+  color: var(--fg-muted);
+
+  app-icon { width: 16px; height: 16px; color: var(--fg-subtle); }
+
+  &--ok {
+    color: var(--success);
+    app-icon { color: var(--success); }
+  }
+}
+
+.mrd-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-2));
+  border: 0.5px solid color-mix(in srgb, var(--danger) 34%, transparent);
+}
+
+.mrd-intro, .mrd-confirm { font-size: 13px; color: var(--fg-muted); margin: 0; line-height: 1.5; }
+
+/* Fields */
+.mrd-fields { display: flex; flex-direction: column; gap: 14px; }
+.mrd-field { display: flex; flex-direction: column; gap: 6px; }
+.mrd-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mrd-req { color: var(--danger); }
+.mrd-type {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--fg-subtle);
+  text-transform: lowercase;
+}
+.mrd-hint { font-size: 11.5px; color: var(--fg-subtle); line-height: 1.4; }
+.mrd-hint--error { color: var(--danger); }
+
+.mrd-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+  &::placeholder { color: var(--fg-subtle); }
+  &:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+.mrd-textarea { height: auto; min-height: 72px; padding: 10px 12px; line-height: 1.5; resize: vertical; }
+.mrd-date { font-family: var(--font-mono); font-size: 12.5px; }
+
+/* Checkbox */
+.mrd-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  cursor: pointer;
+
+  input { position: absolute; opacity: 0; width: 0; height: 0; }
+  input:checked + .mrd-check-box { background: var(--accent); border-color: var(--accent); color: #fff; }
+  input:checked + .mrd-check-box app-icon { opacity: 1; }
+}
+.mrd-check-box {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  app-icon { opacity: 0; color: #fff; width: 12px; height: 12px; display: grid; place-items: center; }
+}
+
+/* Buttons */
+.mrd-btn {
+  appearance: none;
+  border: 0.5px solid var(--border-strong);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 16px;
+  height: 38px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+
+  &:hover:not(:disabled) { background: var(--bg-2); border-color: var(--border-strong); }
+  &:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  app-icon { width: 15px; height: 15px; }
+
+  &--solid {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    &:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, #000); border-color: color-mix(in srgb, var(--accent) 88%, #000); }
+  }
+}

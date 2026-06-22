@@ -1,0 +1,168 @@
+<div class="ib-expand-head">
+  <div>
+    <div class="ib-expand-from">
+      @if (email().fromPersonal) {
+        <span class="ib-expand-name">{{ email().fromPersonal }}</span>
+        <span class="ib-expand-email">{{ email().fromAddress }}</span>
+      } @else {
+        <span class="ib-expand-name">{{ email().fromAddress }}</span>
+      }
+    </div>
+    <div class="ib-expand-subj">{{ email().subject }}</div>
+  </div>
+  <div class="ib-expand-meta">
+    {{ getRelativeTime(email().receivedAt) }}
+  </div>
+</div>
+
+@if (parsedAttachments().length > 0) {
+  <div class="ib-attachments">
+    <button class="ib-attachments-toggle" (click)="attachmentsOpen.set(!attachmentsOpen())">
+      <app-icon name="paperclip" />
+      <span>{{ parsedAttachments().length }} {{ parsedAttachments().length === 1 ? i18n.t('inbox_attachment_singular') : i18n.t('inbox_attachment_plural') }}</span>
+      <app-icon class="ib-attachments-chevron" [class.is-open]="attachmentsOpen()" name="chevronDown" />
+    </button>
+    @if (attachmentsOpen()) {
+      <div class="ib-attachments-list">
+        @for (att of parsedAttachments(); track att.name) {
+          <button class="ib-attachment-item" (click)="downloadAttachment($index, att.name)">
+            <span class="ib-attachment-name">{{ att.name }}</span>
+            <span class="ib-attachment-size">{{ att.size }}</span>
+            <app-icon name="download" />
+          </button>
+        }
+      </div>
+    }
+  </div>
+}
+
+@if (email().bodyHtml) {
+  <div class="ib-expand-body ib-html-body" [innerHTML]="sanitizedHtml()"></div>
+} @else {
+  <div class="ib-expand-body" [innerHTML]="linkedText()"></div>
+}
+
+<div class="ib-actions">
+  @if (showReply()) {
+    <button class="ib-action-btn primary" data-testid="reply-btn" (click)="reply.emit()"><app-icon name="reply" /> {{ i18n.t('inbox_reply') }}</button>
+  }
+  <button class="ib-action-btn" data-testid="forward-btn" (click)="forward.emit()"><app-icon name="forward" /> {{ i18n.t('inbox_forward') }}</button>
+  <button class="ib-action-btn" (click)="star.emit()">
+    <app-icon [name]="email().isStarred ? 'starFilled' : 'star'" /> {{ i18n.t('inbox_star') }}
+  </button>
+  @if (showReprocess()) {
+    <button class="ib-action-btn" (click)="reprocess.emit()" [disabled]="reprocessing()">
+      <app-icon name="workflow" />
+      {{ reprocessing() ? i18n.t('inbox_reprocessing') : i18n.t('inbox_reprocess') }}
+    </button>
+  }
+  <button class="ib-action-btn danger" data-testid="delete-btn" (click)="deleted.emit()"><app-icon name="trash" /> {{ i18n.t('inbox_delete') }}</button>
+</div>
+
+<!-- Automation Traces -->
+@if ((email().automationTraces?.length ?? 0) > 0) {
+  <div class="ib-traces">
+    <div class="ib-traces-title">
+      <app-icon name="workflow" />
+      {{ i18n.t('inbox_automations') }} ({{ email().automationTraces?.length ?? 0 }})
+    </div>
+
+    @for (trace of email().automationTraces ?? []; track trace.id) {
+      <div class="ib-trace-card" [style.--trace-color]="trace.automationColor || '#6b7280'">
+        <button class="ib-trace-header" (click)="toggleTraceOpen(trace.id)">
+          <span class="ib-trace-name">{{ trace.automationName }}</span>
+          @if (trace.simulation) {
+            <span class="ib-trace-sim" data-testid="trace-simulation-badge">{{ i18n.t('inbox_trace_simulation') }}</span>
+          }
+          <span class="ib-trace-status" [attr.data-status]="trace.status">
+            {{ getTraceStatusLabel(trace.status) }}
+          </span>
+          <span class="ib-trace-time">{{ getRelativeTime(trace.startedAt) }}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="ib-dd-chev" [class.is-open]="traceOpen() === trace.id"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        @if (traceOpen() === trace.id) {
+          <div class="ib-trace-body">
+            @for (node of trace.nodeTraces; track node.id) {
+              <div class="ib-node-step" [attr.data-status]="node.resultStatus">
+                <div class="ib-node-line"></div>
+                <div class="ib-node-dot"></div>
+                <div class="ib-node-content">
+                  <div class="ib-node-head">
+                    <span class="ib-node-type">{{ getNodeTypeLabel(node.nodeType) }}</span>
+                    @if (node.nodeLabel) {
+                      <span class="ib-node-label">{{ node.nodeLabel }}</span>
+                    }
+                    <span class="ib-node-result" [attr.data-status]="node.resultStatus">
+                      {{ getNodeResultLabel(node.resultStatus) }}
+                    </span>
+                  </div>
+
+                  <!-- Node detail based on type -->
+                  @if (node.nodeType === 'FILTER' && node.resultDetail) {
+                    <div class="ib-node-detail">
+                      @if (node.resultDetail.conditions) {
+                        @for (cond of node.resultDetail.conditions; track $index) {
+                          <div class="ib-cond-row" [attr.data-result]="cond.result ? '1' : '0'">
+                            <span class="ib-cond-field">{{ cond.field }}</span>
+                            <span class="ib-cond-op">{{ cond.operator }}</span>
+                            <span class="ib-cond-val">"{{ cond.value }}"</span>
+                            <span class="ib-cond-actual">({{ cond.actual }})</span>
+                            <span class="ib-cond-icon">{{ cond.result ? '✓' : '✗' }}</span>
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
+
+                  @if (node.nodeType === 'CATEGORIZE' && node.resultDetail) {
+                    <div class="ib-node-detail">
+                      @if (node.resultDetail.categoryName) {
+                        <div class="ib-cat-result">
+                          <span class="ib-cat-badge" [style.--cat-color]="node.resultDetail.categoryColor || '#6b7280'">{{ node.resultDetail.categoryName }}</span>
+                          <span class="ib-cat-conf">{{ node.resultDetail.confidence }}%</span>
+                          @if (node.resultDetail.threshold) {
+                            <span class="ib-cat-thresh">({{ i18n.t('inbox_threshold') }}: {{ node.resultDetail.threshold }}%)</span>
+                          }
+                        </div>
+                      }
+                      @if (node.resultDetail.reason) {
+                        <div class="ib-cat-reason">{{ node.resultDetail.reason }}</div>
+                      }
+                    </div>
+                  }
+
+                  @if (node.nodeType === 'EXTRACT' && node.resultDetail?.extractedValues) {
+                    <div class="ib-node-detail">
+                      <div class="ib-extract-grid">
+                        @for (key of objectKeys(node.resultDetail.extractedValues); track key) {
+                          <div class="ib-extract-row">
+                            <span class="ib-extract-key">{{ key }}:</span>
+                            <span class="ib-extract-val">{{ formatExtractValue(node.resultDetail.extractedValues[key]) }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+
+                  @if ((node.nodeType === 'REPLY' || node.nodeType === 'FORWARD' || node.nodeType === 'MOVE_FOLDER' || node.nodeType === 'SEND_EMAIL') && node.resultDetail) {
+                    <div class="ib-node-detail">
+                      <span class="ib-action-detail">
+                        @switch (node.nodeType) {
+                          @case ('FORWARD') { {{ i18n.t('inbox_action_forward') }} {{ node.resultDetail['toAddress'] }} }
+                          @case ('REPLY') { {{ i18n.t('inbox_action_reply') }} }
+                          @case ('MOVE_FOLDER') { {{ i18n.t('inbox_action_move') }} {{ node.resultDetail['folder'] }} }
+                          @case ('SEND_EMAIL') { {{ i18n.t('auto_node_send_email') }} → {{ node.resultDetail['to'] }} }
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

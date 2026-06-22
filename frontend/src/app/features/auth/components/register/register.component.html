@@ -1,0 +1,109 @@
+<div class="form-card fade-enter">
+  <div class="eyebrow">{{ i18n.t('brandTagline') }}</div>
+  <h1 class="title">{{ i18n.t('register_title') }}</h1>
+  <p class="subtitle">{{ i18n.t('register_subtitle') }}</p>
+
+  <form class="form" (ngSubmit)="submit()" novalidate>
+    <app-error-banner [message]="error()" />
+
+    <app-input
+      [label]="i18n.t('fullName')"
+      type="text"
+      [placeholder]="i18n.t('register_namePlaceholder')"
+      autocomplete="name"
+      inputId="reg-name"
+      [error]="!!fieldErr()['name']"
+      [ngModel]="name()"
+      (ngModelChange)="name.set($event)"
+      name="name"
+    />
+
+    <app-input
+      [label]="i18n.t('email')"
+      type="email"
+      [placeholder]="i18n.t('login_emailPlaceholder')"
+      autocomplete="email"
+      inputId="reg-email"
+      [error]="!!fieldErr()['email']"
+      [ngModel]="email()"
+      (ngModelChange)="email.set($event)"
+      name="email"
+    />
+
+    <app-input
+      [label]="i18n.t('company')"
+      [aux]="i18n.t('optional')"
+      type="text"
+      [placeholder]="i18n.t('register_companyPlaceholder')"
+      autocomplete="organization"
+      inputId="reg-company"
+      [ngModel]="company()"
+      (ngModelChange)="company.set($event)"
+      name="company"
+    />
+
+    <app-input
+      [label]="i18n.t('phone')"
+      [aux]="i18n.t('optional')"
+      type="tel"
+      [placeholder]="i18n.t('register_phonePlaceholder')"
+      autocomplete="tel"
+      inputId="reg-phone"
+      [ngModel]="phone()"
+      (ngModelChange)="phone.set($event)"
+      name="phone"
+    />
+
+    <div class="field">
+      <label class="field-label" for="reg-password">
+        <span>{{ i18n.t('password') }}</span>
+        <span class="field-label-aux">{{ i18n.t('register_passwordHint') }}</span>
+      </label>
+      <app-password-input
+        placeholder="••••••••"
+        [ariaLabel]="i18n.t('password')"
+        [error]="!!fieldErr()['password']"
+        [ngModel]="password()"
+        (ngModelChange)="password.set($event)"
+        name="password"
+      />
+      <app-strength-meter [password]="password()" />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="reg-confirm">{{ i18n.t('confirmPassword') }}</label>
+      <app-password-input
+        placeholder="••••••••"
+        [ariaLabel]="i18n.t('confirmPassword')"
+        [error]="!!fieldErr()['confirm']"
+        [ngModel]="confirm()"
+        (ngModelChange)="confirm.set($event)"
+        name="confirm"
+      />
+    </div>
+
+    <app-checkbox
+      [error]="!!fieldErr()['terms']"
+      [ngModel]="terms()"
+      (ngModelChange)="terms.set($event)"
+      name="terms"
+    >
+      {{ i18n.t('register_acceptTerms_pre') }}<a routerLink="/legal/agb">{{ i18n.t('register_acceptTerms_terms') }}</a>{{ i18n.t('register_acceptTerms_mid') }}<a routerLink="/legal/datenschutz">{{ i18n.t('register_acceptTerms_privacy') }}</a>{{ i18n.t('register_acceptTerms_post') }}
+    </app-checkbox>
+
+    <app-checkbox
+      [ngModel]="marketing()"
+      (ngModelChange)="marketing.set($event)"
+      name="marketing"
+    >{{ i18n.t('register_marketing') }}</app-checkbox>
+
+    <app-button type="submit" variant="primary" [disabled]="loading()">
+      {{ loading() ? i18n.t('loading') : i18n.t('register_submit') }}
+    </app-button>
+  </form>
+
+  <div class="alt-cta">
+    {{ i18n.t('register_haveAccount') }}
+    <a routerLink="/auth/login" class="link-accent">{{ i18n.t('register_loginLink') }}</a>
+  </div>
+</div>

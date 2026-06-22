@@ -1,0 +1,55 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.legal-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 96px 32px 80px;
+  width: 100%;
+  flex: 1 0 auto;
+  animation: fadeIn 0.3s ease both;
+}
+
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  font-family: inherit;
+  &:hover { color: var(--fg); }
+}
+
+h1 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 48px;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+
+.legal-meta {
+  color: var(--fg-muted);
+  font-size: 13px;
+  margin-bottom: 32px;
+}
+
+p {
+  line-height: 1.7;
+  color: var(--fg);
+  white-space: pre-line;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}

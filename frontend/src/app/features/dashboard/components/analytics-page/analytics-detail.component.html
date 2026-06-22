@@ -1,0 +1,150 @@
+<app-page-content>
+  <div class="an-head">
+    <div class="an-head-titles">
+      <button class="an-back" (click)="back()" data-testid="analytics-detail-back">
+        <app-icon name="arrowLeft" />{{ i18n.t('an_detail_back') }}
+      </button>
+      @if (data(); as d) {
+        <div class="an-title-row">
+          <span class="an-title-dot" [style.background]="d.automation.color || 'var(--accent)'"
+                [style.color]="d.automation.color || 'var(--accent)'"></span>
+          <h1 class="dash-title">{{ d.automation.name }}</h1>
+        </div>
+        <div class="an-subtitle-row">
+          <span class="an-pill" [attr.data-tone]="statusTone(d.automation.status)">
+            <span class="an-pill-dot"></span>{{ statusLabel(d.automation.status) }}
+          </span>
+          <span class="dash-subtitle">
+            {{ kindLabel(d.automation.kind) }} · {{ i18n.t('an_detail_lastrun') }} {{ rel(d.automation.lastRunAt) }}
+          </span>
+        </div>
+      } @else {
+        <h1 class="dash-title">{{ i18n.t('an_title') }}</h1>
+      }
+    </div>
+    <div class="an-head-controls">
+      <div class="an-range" role="group" [attr.aria-label]="i18n.t('an_title')" data-testid="analytics-range">
+        @for (r of ranges; track r) {
+          <button [attr.data-active]="range() === r ? '1' : '0'" [attr.data-testid]="'analytics-range-' + r" (click)="setRange(r)">
+            {{ i18n.t('an_range_' + r) }}
+          </button>
+        }
+      </div>
+      <button class="an-refresh" [attr.data-spin]="refreshing() ? '1' : '0'" (click)="refresh()"
+              data-testid="analytics-refresh" [attr.aria-label]="i18n.t('an_refresh')" [attr.title]="i18n.t('an_refresh')">
+        <app-icon name="refresh" />
+      </button>
+    </div>
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (loading()) {
+    <div data-testid="analytics-detail-skeleton">
+      <div class="an-kpi an-kpi-5">
+        @for (i of [0, 1, 2, 3, 4]; track i) { <div class="an-sk an-sk-kpi"></div> }
+      </div>
+      <div class="an-sk an-sk-chart" style="margin-bottom: 16px"></div>
+      <div class="an-detail-grid"><div class="an-sk an-sk-tall"></div><div class="an-sk an-sk-tall"></div></div>
+    </div>
+  } @else if (error()) {
+    <!-- error banner shown above -->
+  } @else if (neverRun()) {
+    <app-empty-state [title]="i18n.t('an_detail_empty_title')" [sub]="i18n.t('an_detail_empty_sub')" />
+  } @else if (data(); as d) {
+    <!-- KPI strip -->
+    <div class="an-kpi an-kpi-5">
+      @for (t of kpis(); track t.label) {
+        <div class="an-tile" [attr.data-tone]="t.tone">
+          <div class="an-tile-head">
+            <span class="an-tile-icon"><app-icon [name]="t.icon" /></span>
+            <span class="an-tile-label">{{ t.label }}</span>
+          </div>
+          <div class="an-tile-value">{{ t.value }}</div>
+          <div class="an-tile-foot">
+            <span class="an-tile-sub">{{ t.sub }}</span>
+            @if (t.spark) { <app-sparkline [data]="t.spark.data" [tone]="t.spark.tone" /> }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Execution trend -->
+    <div class="an-card" data-testid="analytics-detail-trend" style="margin-bottom: 16px">
+      <div class="an-card-head">
+        <div>
+          <div class="an-card-title">{{ i18n.t('an_exec_trend') }}</div>
+          <div class="an-card-sub">{{ i18n.t('an_exec_trend_sub') }}</div>
+        </div>
+        <div class="an-legend-inline">
+          <span class="an-leg"><span class="an-leg-dot" style="background: var(--success)"></span>{{ i18n.t('an_legend_success') }}</span>
+          <span class="an-leg"><span class="an-leg-dot" style="background: var(--danger)"></span>{{ i18n.t('an_legend_failed') }}</span>
+        </div>
+      </div>
+      <app-trend-chart [data]="d.trend" [height]="200" testid="analytics-detail-trend-chart" />
+    </div>
+
+    <!-- Recent runs + node failures -->
+    <div class="an-detail-grid">
+      <div class="an-card" data-testid="analytics-detail-runs">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_detail_runs') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_detail_runs_sub') }}</div>
+          </div>
+        </div>
+        <div class="an-table">
+          <div class="an-thead an-row an-runs-cols">
+            <div>{{ i18n.t('an_col_result') }}</div>
+            <div>{{ i18n.t('an_col_email') }}</div>
+            <div class="an-col-hideable">{{ i18n.t('an_col_duration') }}</div>
+            <div class="an-col-hideable an-right">{{ i18n.t('an_col_started') }}</div>
+          </div>
+          @for (r of d.recentRuns; track r.traceId) {
+            <div class="an-row an-runs-cols" data-testid="analytics-detail-run-row">
+              <div>
+                <span class="an-pill" [attr.data-tone]="runTone(r.status)"><span class="an-pill-dot"></span>{{ runStatus(r.status) }}</span>
+              </div>
+              <div class="an-run-email">
+                <div class="an-run-subj">{{ r.emailSubject || '—' }}</div>
+                <div class="an-run-from">{{ r.emailFrom || '—' }}</div>
+                @if (r.errorMessage) { <div class="an-run-err">{{ r.errorMessage }}</div> }
+              </div>
+              <div class="an-col-hideable an-num">{{ duration(r.durationMs) }}</div>
+              <div class="an-col-hideable an-right an-row-time">{{ rel(r.startedAt) }}</div>
+            </div>
+          } @empty {
+            <div class="an-row-empty">—</div>
+          }
+        </div>
+      </div>
+
+      <div class="an-card" data-testid="analytics-detail-nodes">
+        <div class="an-card-head">
+          <div>
+            <div class="an-card-title">{{ i18n.t('an_detail_nodes') }}</div>
+            <div class="an-card-sub">{{ i18n.t('an_detail_nodes_sub') }}</div>
+          </div>
+          <span class="an-flag">{{ i18n.t('an_badge_new_query') }}</span>
+        </div>
+        <div class="an-fail-list">
+          @for (n of d.nodeFailures; track n.nodeId) {
+            <div class="an-fail-row">
+              <div class="an-fail-name">
+                <span>{{ n.nodeLabel || nodeLabel(n.nodeType) }}</span>
+                <span class="an-pill an-pill-mono">{{ nodeLabel(n.nodeType) }}</span>
+              </div>
+              <div class="an-fail-meta">{{ n.failures | number }} / {{ n.total | number }}</div>
+              <div class="an-fail-bar-wrap">
+                <app-bar [pct]="n.failRate" tone="danger" />
+                <span class="an-fail-rate">{{ n.failRate }}%</span>
+              </div>
+            </div>
+          } @empty {
+            <div class="an-row-empty">—</div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

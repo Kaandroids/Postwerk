@@ -1,0 +1,692 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }} · {{ i18n.t('adm_sec_customers') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_users_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ totalElements() }}</b> {{ i18n.t('admin_users_subtitle') }}
+      </div>
+    </div>
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  <!-- Toolbar -->
+  <div class="au-toolbar">
+    <div class="au-search">
+      <app-icon name="search" />
+      <input
+        type="text"
+        data-testid="admin-user-search"
+        [attr.aria-label]="i18n.t('admin_users_search')"
+        [placeholder]="i18n.t('admin_users_search')"
+        [value]="search()"
+        (input)="onSearch($event)" />
+    </div>
+    <div class="au-filters">
+      <div class="au-filter">
+        <label>{{ i18n.t('admin_filter_role') }}</label>
+        <select data-testid="admin-role-filter" [attr.aria-label]="i18n.t('admin_filter_role')" (change)="onRoleFilter($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="ADMIN">Admin</option>
+          <option value="USER">User</option>
+        </select>
+      </div>
+      <div class="au-filter">
+        <label>{{ i18n.t('admin_filter_status') }}</label>
+        <select data-testid="admin-status-filter" [attr.aria-label]="i18n.t('admin_filter_status')" (change)="onStatusFilter($event)">
+          <option value="">{{ i18n.t('admin_filter_active') }}</option>
+          <option value="deleted">{{ i18n.t('admin_filter_deleted') }}</option>
+        </select>
+      </div>
+      <div class="au-filter">
+        <label>{{ i18n.t('admin_filter_plan') }}</label>
+        <select data-testid="admin-plan-filter" [attr.aria-label]="i18n.t('admin_filter_plan')" (change)="onPlanFilter($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          @for (name of planNames(); track name) {
+            <option [value]="name">{{ name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  @if (loading()) {
+    <div class="au-card">
+      <table class="dtable">
+        <tbody>
+          @for (s of [1,2,3,4,5,6]; track s) {
+            <tr class="au-skel-row">
+              <td>
+                <div class="au-user-cell">
+                  <div class="au-skel au-skel-avatar"></div>
+                  <div class="au-skel au-skel-line"></div>
+                </div>
+              </td>
+              <td><div class="au-skel au-skel-pill"></div></td>
+              <td><div class="au-skel au-skel-num"></div></td>
+              <td><div class="au-skel au-skel-bar"></div></td>
+              <td><div class="au-skel au-skel-pill"></div></td>
+              <td><div class="au-skel au-skel-pill"></div></td>
+              <td><div class="au-skel au-skel-line"></div></td>
+              <td><div class="au-skel au-skel-line"></div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div class="au-loading-label">{{ i18n.t('loading') }}</div>
+    </div>
+  } @else if (totalElements() === 0) {
+    <div class="au-empty">
+      <app-icon name="user" />
+      <div class="au-empty-title">{{ i18n.t('admin_users_empty') }}</div>
+      <div class="au-empty-sub">{{ i18n.t('admin_users_empty_sub') }}</div>
+    </div>
+  } @else {
+    <div class="au-card">
+      <div class="au-scroll">
+        <table class="dtable">
+          <thead>
+            <tr>
+              <th scope="col">
+                <button class="au-th-sort" [attr.data-active]="sortKey() === 'fullName'" (click)="toggleSort('fullName')">
+                  <span>{{ i18n.t('admin_col_user') }}</span>
+                  @if (sortKey() === 'fullName') {
+                    <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" />
+                  }
+                </button>
+              </th>
+              <th scope="col">{{ i18n.t('admin_col_plan') }}</th>
+              <th scope="col" class="au-num">{{ i18n.t('admin_col_orgs') }}</th>
+              <th scope="col" class="au-col-usage">{{ i18n.t('admin_col_ai_usage') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_status') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_staff_role') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_last_login') }}</th>
+              <th scope="col">
+                <button class="au-th-sort" [attr.data-active]="sortKey() === 'createdAt'" (click)="toggleSort('createdAt')">
+                  <span>{{ i18n.t('admin_col_created') }}</span>
+                  @if (sortKey() === 'createdAt') {
+                    <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" />
+                  }
+                </button>
+              </th>
+              <th scope="col" class="au-col-actions"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of sortedUsers(); track user.id) {
+              <tr class="au-row" data-testid="admin-user-row" [attr.data-selected]="selectedUser()?.id === user.id" tabindex="0" (click)="selectUser(user)" (keydown.enter)="selectUser(user)" (keydown.space)="selectUser(user); $event.preventDefault()">
+                <td>
+                  <div class="au-user-cell">
+                    <span class="au-avatar" [style.--av-hue]="avatarHue(user)">{{ initials(user) }}</span>
+                    <div class="au-user-text">
+                      <div class="au-user-name">
+                        {{ user.fullName }}
+                        @if (!user.deleted) {
+                          <span class="au-verified" [title]="i18n.t('admin_user_active')"><app-icon name="verified" /></span>
+                        }
+                      </div>
+                      <div class="au-user-mail au-mono">{{ user.email }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  @if (user.planName) {
+                    <span class="au-badge" [attr.data-tone]="planTone(user.planName)">{{ user.planName }}</span>
+                  } @else {
+                    <span class="au-dash">—</span>
+                  }
+                </td>
+                <td class="au-num">{{ user.orgCount }}</td>
+                <td class="au-col-usage">
+                  @switch (aiCapState(user)) {
+                    @case ('unlimited') {
+                      <span class="au-ai-note au-ai-note--ok">∞ {{ i18n.t('admin_ai_unlimited') }}</span>
+                    }
+                    @case ('off') {
+                      <span class="au-ai-note au-ai-note--off">{{ i18n.t('admin_ai_off') }}</span>
+                    }
+                    @default {
+                      <div class="au-minibar" [title]="eurFromMicros(user.aiCostMicrosThisMonth) + ' / ' + eurFromCents(user.costLimitCents)">
+                        <div class="au-minibar-track">
+                          <div class="au-minibar-fill" [attr.data-tone]="aiUsageTone(user)" [style.width.%]="aiUsageRatio(user) * 100"></div>
+                        </div>
+                        <span class="au-minibar-cap">
+                          {{ eurFromMicros(user.aiCostMicrosThisMonth) }}<span class="au-minibar-sub"> / {{ eurFromCents(user.costLimitCents) }}</span>
+                        </span>
+                      </div>
+                    }
+                  }
+                </td>
+                <td>
+                  @if (user.deleted) {
+                    <span class="au-badge" data-tone="danger"><span class="au-dot"></span>{{ i18n.t('admin_filter_deleted') }}</span>
+                  } @else {
+                    <span class="au-badge" data-tone="green"><span class="au-dot"></span>{{ i18n.t('admin_filter_active') }}</span>
+                  }
+                </td>
+                <td>
+                  @if (user.staffRole) {
+                    <span class="au-badge" data-tone="plum"><app-icon name="shield" />{{ user.staffRole }}</span>
+                  } @else {
+                    <span class="au-dash">—</span>
+                  }
+                </td>
+                <td class="au-muted">{{ fmt.date(user.lastLoginAt) }}</td>
+                <td class="au-muted">{{ fmt.date(user.createdAt) }}</td>
+                <td class="au-col-actions" (click)="$event.stopPropagation()">
+                  <div class="au-row-actions">
+                    <button
+                      class="au-icon-btn"
+                      data-testid="admin-role-toggle"
+                      (click)="toggleRole(user)"
+                      [disabled]="busy() || !identity.has('USER_MANAGE')"
+                      [attr.title]="identity.has('USER_MANAGE') ? i18n.t('admin_action_toggle_role') : i18n.t('admin_perm_required')">
+                      @if (!identity.has('USER_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="shield" /> }
+                    </button>
+                    @if (!user.deleted) {
+                      <button
+                        class="au-icon-btn au-icon-btn--danger"
+                        data-testid="admin-disable-btn"
+                        (click)="disableUser(user)"
+                        [disabled]="busy() || !identity.has('USER_MANAGE')"
+                        [attr.title]="identity.has('USER_MANAGE') ? i18n.t('admin_action_disable') : i18n.t('admin_perm_required')">
+                        <app-icon name="lock" />
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination footer -->
+      <div class="au-pager">
+        <div class="au-pager-info">
+          {{ rangeStart() }}–{{ rangeEnd() }} {{ i18n.t('admin_pager_of') }} {{ totalElements() }}
+        </div>
+        <div class="au-pager-ctrls">
+          <button class="au-pager-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')">
+            <app-icon name="chevronLeft" />
+          </button>
+          <span class="au-pager-pages">{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+          <button class="au-pager-btn" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')">
+            <app-icon name="chevronRight" />
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Detail modal ───────────────────────────────────────────────── -->
+  @if (selectedUser(); as u) {
+    <div class="au-scrim" (click)="closeDetail()"></div>
+    <div
+      class="au-modal"
+      data-testid="admin-user-drawer"
+      appFocusTrap role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="u.fullName"
+      (click)="$event.stopPropagation()">
+
+      <!-- Header -->
+      <div class="au-modal-head">
+        <div class="au-modal-head-top">
+          <div class="au-id-row">
+            <span class="au-avatar au-avatar--lg" [style.--av-hue]="avatarHue(u)">{{ initials(u) }}</span>
+            <div class="au-id-text">
+              <div class="au-modal-name">
+                {{ u.fullName }}
+                @if (!u.deleted) {
+                  <span class="au-verified"><app-icon name="verified" /></span>
+                }
+              </div>
+              <div class="au-modal-mail au-mono">{{ u.email }}</div>
+              <div class="au-modal-pills">
+                <span class="au-badge" [attr.data-tone]="u.role === 'ADMIN' ? 'accent' : 'slate'">{{ u.role }}</span>
+                @if (u.staffRole) {
+                  <span class="au-badge" data-tone="plum"><app-icon name="shield" />{{ u.staffRole }}</span>
+                }
+                @if (u.deleted) {
+                  <span class="au-badge" data-tone="danger">{{ i18n.t('admin_filter_deleted') }}</span>
+                }
+                <button class="au-copy-id" (click)="copyUserId(u.id)" [title]="i18n.t('admin_copy_id')">
+                  <span class="au-copy-id-label">{{ i18n.t('admin_user_id') }}</span>
+                  <span class="au-copy-id-val au-mono">{{ u.id.slice(0, 8) }}…</span>
+                  <app-icon [name]="copiedId() ? 'check' : 'copy'" />
+                </button>
+              </div>
+            </div>
+          </div>
+          <button class="au-modal-close" (click)="closeDetail()" [attr.aria-label]="i18n.t('confirm_cancel')">
+            <app-icon name="close" />
+          </button>
+        </div>
+
+        <!-- Action row -->
+        <div class="au-modal-actions">
+          <button class="au-btn" (click)="toggleRole(u)" [disabled]="busy() || !identity.has('USER_MANAGE')" [attr.title]="identity.has('USER_MANAGE') ? null : i18n.t('admin_perm_required')">
+            @if (!identity.has('USER_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="shield" /> }
+            {{ u.role === 'ADMIN' ? i18n.t('admin_action_demote') : i18n.t('admin_action_promote') }}
+          </button>
+          @if (u.deleted) {
+            <button class="au-btn au-btn--accent" (click)="disableUser(u)" [disabled]="busy() || !identity.has('USER_MANAGE')" [attr.title]="identity.has('USER_MANAGE') ? null : i18n.t('admin_perm_required')">
+              @if (!identity.has('USER_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="unlock" /> }
+              {{ i18n.t('admin_user_enable_confirm') }}
+            </button>
+          } @else {
+            <button class="au-btn au-btn--danger" (click)="disableUser(u)" [disabled]="busy() || !identity.has('USER_MANAGE')" [attr.title]="identity.has('USER_MANAGE') ? null : i18n.t('admin_perm_required')">
+              <app-icon name="lock" />
+              {{ i18n.t('admin_action_disable') }}
+            </button>
+          }
+          <button
+            class="au-btn"
+            data-testid="admin-reset-password-btn"
+            (click)="resetPassword(u)"
+            [disabled]="busy() || !identity.has('USER_CREDENTIAL_RESET')"
+            [attr.title]="identity.has('USER_CREDENTIAL_RESET') ? null : i18n.t('admin_perm_required')">
+            @if (!identity.has('USER_CREDENTIAL_RESET')) { <app-icon name="lock" /> } @else { <app-icon name="key" /> }
+            {{ i18n.t('admin_reset_password') }}
+          </button>
+          @if (flash()) {
+            <span class="au-flash" data-testid="admin-action-flash"><app-icon name="check" /> {{ flash() }}</span>
+          }
+        </div>
+
+        <!-- Tabs -->
+        <div class="au-tabs" role="tablist">
+          @for (tab of detailTabs; track tab.key) {
+            <button
+              class="au-tab"
+              role="tab"
+              [attr.data-active]="activeTab() === tab.key"
+              [attr.aria-selected]="activeTab() === tab.key"
+              [disabled]="tabLocked(tab.key)"
+              [attr.title]="tabLocked(tab.key) ? i18n.t('admin_perm_required') : null"
+              (click)="setTab(tab.key)">
+              {{ i18n.t(tab.labelKey) }}
+              @if (tabLocked(tab.key)) { <app-icon name="lock" /> }
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="au-modal-body">
+        @switch (activeTab()) {
+          @case ('overview') {
+            <div class="au-tab-grid">
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_panel_profile') }}</span></div>
+                <div class="au-panel-body au-fields">
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_col_name') }}</span><span class="au-field-val">{{ u.fullName }}</span></div>
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_col_email') }}</span><span class="au-field-val au-mono">{{ u.email }}</span></div>
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_detail_company') }}</span><span class="au-field-val">{{ u.company ?? '—' }}</span></div>
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_col_role') }}</span><span class="au-field-val"><span class="au-badge" [attr.data-tone]="u.role === 'ADMIN' ? 'accent' : 'slate'">{{ u.role }}</span></span></div>
+                </div>
+              </div>
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_panel_account') }}</span></div>
+                <div class="au-panel-body au-fields">
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_col_created') }}</span><span class="au-field-val">{{ fmt.date(u.createdAt) }}</span></div>
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_col_last_login') }}</span><span class="au-field-val">{{ fmt.dateTime(u.lastLoginAt) }}</span></div>
+                  <div class="au-field"><span class="au-field-label">{{ i18n.t('admin_user_last_ip') }}</span><span class="au-field-val au-mono">{{ u.lastLoginIp ?? '—' }}</span></div>
+                </div>
+                <div class="au-hint"><app-icon name="clock" /> {{ i18n.t('admin_user_ip_hint') }}</div>
+              </div>
+              <div class="au-panel au-panel--wide">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_panel_usage') }}</span></div>
+                <div class="au-panel-body">
+                  <div class="au-stat-grid">
+                    <div class="au-stat">
+                      <div class="au-stat-label">{{ i18n.t('admin_detail_accounts') }}</div>
+                      <div class="au-stat-val">{{ u.emailAccountCount }}</div>
+                    </div>
+                    <div class="au-stat">
+                      <div class="au-stat-label">{{ i18n.t('admin_detail_automations') }}</div>
+                      <div class="au-stat-val">{{ u.automationCount }}</div>
+                    </div>
+                    <div class="au-stat">
+                      <div class="au-stat-label">{{ i18n.t('admin_detail_tokens') }}</div>
+                      <div class="au-stat-val">{{ fmt.compactNumber(u.totalTokensUsed) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @case ('plan') {
+            <div class="au-tab-stack">
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_tab_plan') }}</span></div>
+                <div class="au-panel-body">
+                  <p class="au-panel-p">{{ i18n.t('admin_user_plan_intro') }}</p>
+                  <div class="au-field2">
+                    <div class="au-field2-label">
+                      {{ i18n.t('admin_user_assign_plan') }}
+                      @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> }
+                    </div>
+                    <select class="au-select" (change)="onPlanChange(u, $event)" [disabled]="busy() || plans().length === 0 || !identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+                      <option value="">{{ i18n.t('admin_user_select_plan') }}</option>
+                      @for (plan of plans(); track plan.id) {
+                        <option [value]="plan.id">{{ plan.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  @if (plans().length === 0) {
+                    <div class="au-hint"><app-icon name="info" /> {{ i18n.t('admin_user_no_plans') }}</div>
+                  }
+                </div>
+              </div>
+
+              <!-- AI quota: grant-credit shortcut -->
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('gcd_panel_title') }}</span></div>
+                <div class="au-panel-body">
+                  <p class="au-panel-p">{{ i18n.t('gcd_panel_intro_user') }}</p>
+                  <div class="au-field2">
+                    <div class="au-field2-label">{{ i18n.t('gcd_current_cap') }}</div>
+                    <div class="au-field2-val">
+                      @switch (aiCapState(u)) {
+                        @case ('unlimited') { <span class="au-badge" data-tone="green">∞ {{ i18n.t('admin_ai_unlimited') }}</span> }
+                        @case ('off') { <span class="au-badge" data-tone="slate">{{ i18n.t('admin_ai_off') }}</span> }
+                        @default { <span class="au-field-val">{{ eurFromCents(u.costLimitCents) }}</span> }
+                      }
+                    </div>
+                  </div>
+                  <button
+                    class="au-btn au-btn--accent"
+                    data-testid="admin-grant-credit-btn"
+                    (click)="openGrantCredit()"
+                    [disabled]="!identity.has('QUOTA_OVERRIDE')"
+                    [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')">
+                    @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="creditCard" /> }
+                    {{ i18n.t('gcd_button') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
+          @case ('staff') {
+            <div class="au-tab-stack">
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_tab_staff') }}</span></div>
+                <div class="au-panel-body">
+                  <p class="au-panel-p">{{ i18n.t('admin_user_staff_intro') }}</p>
+                  <div class="au-field2">
+                    <div class="au-field2-label">{{ i18n.t('admin_user_current_staff') }}</div>
+                    <div class="au-field2-val">
+                      @if (u.staffRole) {
+                        <span class="au-badge" data-tone="plum"><app-icon name="shield" />{{ u.staffRole }}</span>
+                      } @else {
+                        <span class="au-badge" data-tone="slate">{{ i18n.t('admin_user_no_staff') }}</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="au-field2">
+                    <div class="au-field2-label">
+                      {{ i18n.t('admin_user_set_staff') }}
+                      @if (!identity.has('STAFF_MANAGE')) { <app-icon name="lock" /> }
+                    </div>
+                    <select class="au-select" (change)="onStaffRoleChange(u, $event)" [disabled]="busy() || !identity.has('STAFF_MANAGE')" [attr.title]="identity.has('STAFF_MANAGE') ? null : i18n.t('admin_perm_required')">
+                      <option value="" [selected]="!u.staffRole">{{ i18n.t('admin_user_no_staff') }}</option>
+                      @for (role of staffRoles; track role) {
+                        <option [value]="role" [selected]="u.staffRole === role">{{ role }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          @case ('orgs') {
+            @if (orgsLoading()) {
+              <div class="au-tab-loading">{{ i18n.t('loading') }}</div>
+            } @else if (orgsError()) {
+              <div class="au-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+            } @else if ((orgsData()?.length ?? 0) === 0) {
+              <div class="au-tab-empty">
+                <app-icon name="building" />
+                <div class="au-tab-empty-title">{{ i18n.t('admin_user_orgs_empty') }}</div>
+              </div>
+            } @else {
+              <table class="dtable au-subtable" data-testid="admin-user-orgs-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ i18n.t('admin_org_col_organization') }}</th>
+                    <th scope="col">{{ i18n.t('admin_org_member_role') }}</th>
+                    <th scope="col">{{ i18n.t('admin_col_status') }}</th>
+                    <th scope="col">{{ i18n.t('admin_col_joined') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (o of orgsData(); track o.orgId) {
+                    <tr>
+                      <td>
+                        <div class="au-sub-org">
+                          <div class="au-sub-org-name">
+                            {{ o.name }}
+                            @if (o.personal) { <span class="au-tag">{{ i18n.t('admin_org_type_personal') }}</span> }
+                          </div>
+                          <div class="au-sub-sub au-mono">{{ o.slug }}</div>
+                        </div>
+                      </td>
+                      <td><span class="au-badge" [attr.data-tone]="roleTone(o.role)">{{ o.role }}</span></td>
+                      <td><span class="au-badge" [attr.data-tone]="statusTone(o.status)"><span class="au-dot"></span>{{ o.status }}</span></td>
+                      <td class="au-muted">{{ fmt.date(o.joinedAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+
+          @case ('mailboxes') {
+            @if (mailboxesLoading()) {
+              <div class="au-tab-loading">{{ i18n.t('loading') }}</div>
+            } @else if (mailboxesError()) {
+              <div class="au-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+            } @else if ((mailboxesData()?.length ?? 0) === 0) {
+              <div class="au-tab-empty">
+                <app-icon name="mail" />
+                <div class="au-tab-empty-title">{{ i18n.t('admin_user_mailboxes_empty') }}</div>
+              </div>
+            } @else {
+              <table class="dtable au-subtable" data-testid="admin-user-mailboxes-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ i18n.t('admin_col_email') }}</th>
+                    <th scope="col">{{ i18n.t('admin_mailbox_display_name') }}</th>
+                    <th scope="col">{{ i18n.t('admin_col_status') }}</th>
+                    <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of mailboxesData(); track m.id) {
+                    <tr>
+                      <td>
+                        <div class="au-sub-mb">
+                          <span class="au-swatch" [style.background]="m.color"></span>
+                          <span class="au-mono">{{ m.email }}</span>
+                        </div>
+                      </td>
+                      <td>{{ m.displayName || '—' }}</td>
+                      <td>
+                        @if (m.active) {
+                          <span class="au-badge" data-tone="green"><span class="au-dot"></span>{{ i18n.t('admin_filter_active') }}</span>
+                        } @else {
+                          <span class="au-badge" data-tone="slate">{{ i18n.t('admin_mailbox_inactive') }}</span>
+                        }
+                      </td>
+                      <td class="au-muted">{{ fmt.date(m.createdAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+
+          @case ('activity') {
+            @if (activityLoading()) {
+              <div class="au-tab-loading">{{ i18n.t('loading') }}</div>
+            } @else if (activityError()) {
+              <div class="au-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+            } @else if ((activityData()?.length ?? 0) === 0) {
+              <div class="au-tab-empty">
+                <app-icon name="clock" />
+                <div class="au-tab-empty-title">{{ i18n.t('admin_user_activity_empty') }}</div>
+              </div>
+            } @else {
+              <table class="dtable au-subtable" data-testid="admin-user-activity-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{{ i18n.t('admin_activity_action') }}</th>
+                    <th scope="col">{{ i18n.t('admin_activity_detail') }}</th>
+                    <th scope="col">{{ i18n.t('admin_user_last_ip') }}</th>
+                    <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (a of activityData(); track a.id) {
+                    <tr>
+                      <td><span class="au-badge" data-tone="slate">{{ a.action }}</span></td>
+                      <td class="au-activity-detail">{{ a.detail ?? '—' }}</td>
+                      <td class="au-mono au-muted">{{ a.ipAddress ?? '—' }}</td>
+                      <td class="au-muted">{{ fmt.dateTime(a.createdAt) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          }
+
+          @case ('security') {
+            <div class="au-tab-stack">
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_user_tab_security') }}</span></div>
+                <div class="au-panel-body">
+                  <p class="au-panel-p">{{ i18n.t('admin_sessions_intro') }}</p>
+                  @if (sessionsLoading()) {
+                    <div class="au-tab-loading">{{ i18n.t('loading') }}</div>
+                  } @else if (sessionsError()) {
+                    <div class="au-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+                  } @else {
+                    <div class="au-sec-row">
+                      <div class="au-stat au-sec-stat">
+                        <div class="au-stat-label">{{ i18n.t('admin_sessions_active') }}</div>
+                        <div class="au-stat-val" data-testid="admin-sessions-count">{{ sessionsCount() ?? 0 }}</div>
+                      </div>
+                      <button
+                        class="au-btn au-btn--danger"
+                        data-testid="admin-revoke-sessions-btn"
+                        (click)="revokeSessions(u)"
+                        [disabled]="revoking() || !identity.has('USER_MANAGE')"
+                        [attr.title]="identity.has('USER_MANAGE') ? null : i18n.t('admin_perm_required')">
+                        @if (!identity.has('USER_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="logout" /> }
+                        {{ i18n.t('admin_revoke_sessions') }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          @case ('notes') {
+            <div class="au-tab-stack" data-testid="admin-staff-notes">
+              <div class="au-panel">
+                <div class="au-panel-head"><span class="au-panel-title">{{ i18n.t('admin_notes_title') }}</span></div>
+                <div class="au-panel-body">
+                  <div class="au-note-compose">
+                    <textarea
+                      class="au-note-input"
+                      data-testid="admin-note-input"
+                      maxlength="4000"
+                      rows="3"
+                      [placeholder]="i18n.t('admin_note_placeholder')"
+                      [value]="noteDraft()"
+                      [disabled]="noteSubmitting() || !identity.has('USER_VIEW')"
+                      (input)="onNoteInput($event)"></textarea>
+                    <div class="au-note-compose-foot">
+                      <button
+                        class="au-btn au-btn--accent"
+                        data-testid="admin-note-add-btn"
+                        (click)="addNote(u)"
+                        [disabled]="noteSubmitting() || !noteDraft().trim() || !identity.has('USER_VIEW')"
+                        [attr.title]="identity.has('USER_VIEW') ? null : i18n.t('admin_perm_required')">
+                        @if (!identity.has('USER_VIEW')) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }
+                        {{ i18n.t('admin_note_add') }}
+                      </button>
+                    </div>
+                  </div>
+
+                  @if (notesLoading()) {
+                    <div class="au-tab-loading">{{ i18n.t('loading') }}</div>
+                  } @else if (notesError()) {
+                    <div class="au-tab-error"><app-icon name="alertTriangle" /> {{ i18n.t('admin_tab_load_failed') }}</div>
+                  } @else if ((notesData()?.length ?? 0) === 0) {
+                    <div class="au-tab-empty au-notes-empty">
+                      <app-icon name="pin" />
+                      <div class="au-tab-empty-title">{{ i18n.t('admin_notes_empty') }}</div>
+                    </div>
+                  } @else {
+                    <ul class="au-note-list">
+                      @for (note of notesData(); track note.id) {
+                        <li class="au-note" data-testid="admin-note-item">
+                          <div class="au-note-body">{{ note.body }}</div>
+                          <div class="au-note-meta">
+                            <span class="au-note-author">{{ note.authorName || i18n.t('admin_note_unknown_author') }}</span>
+                            @if (note.authorEmail) { <span class="au-note-email au-mono">{{ note.authorEmail }}</span> }
+                            <span class="au-note-date">{{ fmt.date(note.createdAt) }}</span>
+                            @if (canDeleteNote(note)) {
+                              <button
+                                class="au-icon-btn au-icon-btn--danger au-note-del"
+                                data-testid="admin-note-delete-btn"
+                                (click)="deleteNote(u, note)"
+                                [disabled]="deletingNoteId() === note.id"
+                                [attr.title]="i18n.t('admin_org_delete')">
+                                <app-icon name="trash" />
+                              </button>
+                            }
+                          </div>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          @default {
+            <div class="au-tab-empty">
+              <app-icon name="sparkle" />
+              <div class="au-tab-empty-title">{{ i18n.t('admin_coming_soon') }}</div>
+              <div class="au-tab-empty-sub">{{ i18n.t('admin_not_built_text') }}</div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Grant AI credit shortcut (overlay above the detail modal) -->
+    @if (grantCreditOpen()) {
+      <app-grant-credit-dialog
+        targetType="USER"
+        [targetId]="u.id"
+        [targetName]="u.fullName || u.email"
+        [targetSub]="u.email"
+        [plan]="u.planName"
+        [baseCapCents]="u.costLimitCents"
+        (close)="grantCreditOpen.set(false)"
+        (granted)="onCreditGranted($event)" />
+    }
+  }
+</app-page-content>

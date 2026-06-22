@@ -1,0 +1,34 @@
+.dash {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  height: 100vh;
+  background: var(--bg-2);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  transition: grid-template-columns 0.25s ease;
+  overflow: hidden;
+}
+
+.dash[data-sidebar="0"] {
+  grid-template-columns: 0 1fr;
+}
+
+.dash[data-sidebar="0"] :host ::ng-deep app-sidebar {
+  transform: translateX(-100%);
+}
+
+:host ::ng-deep app-sidebar {
+  transition: transform 0.25s ease;
+  overflow: hidden;
+}
+
+.dash-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 760px) {
+  .dash { grid-template-columns: 0 1fr; }
+}

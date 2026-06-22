@@ -1,0 +1,171 @@
+// Admin console feature styles — loaded once globally via styles.scss (like marketplace.scss),
+// so they stay off the per-component style budget. Semantic theme vars only (no hardcoded colors).
+// All admin-specific classes are prefixed `adm-`.
+
+// "Not built yet" / coming-soon empty state (shared placeholder + un-backed detail tabs).
+.adm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  min-height: 46vh;
+  padding: 40px 20px;
+}
+.adm-empty-ic {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+  color: var(--accent);
+}
+.adm-empty-title {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--fg);
+  margin: 0;
+}
+.adm-empty-text {
+  font-size: 14px;
+  color: var(--fg-muted);
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0;
+}
+.adm-coming-soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+  color: var(--accent);
+}
+
+/* ── Shared list-page recipe ──────────────────────────────────────────────────
+   The KPI strip, table, badge and dashed empty-state used by the "new generation"
+   admin pages, extracted here so the older pages (AI usage / automations / audit log)
+   render in the same visual language. Caller sets the KPI column count via
+   `--adm-kpi-cols` (default 4). Badge tone via `data-tone`. */
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(var(--adm-kpi-cols, 4), 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.adm-kpi {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 13px;
+  padding: 14px 15px 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.adm-kpi-value {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 4px;
+}
+.adm-kpi-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adm-kpi-value[data-tone="green"]  { color: color-mix(in srgb, oklch(0.58 0.13 150) 82%, var(--fg)); }
+.adm-kpi-value[data-tone="danger"] { color: var(--danger); }
+
+.adm-table-wrap {
+  overflow-x: auto;
+  border: 0.5px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead th {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-subtle);
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 0.5px solid var(--border);
+    vertical-align: middle;
+    color: var(--fg);
+  }
+
+  tbody tr:last-child td { border-bottom: 0; }
+}
+
+/* Pill badge tinted from a per-tone base color (--b), matching the new-gen badges. */
+.adm-badge {
+  --b: var(--fg-subtle);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 21px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
+  background: color-mix(in srgb, var(--b) 14%, var(--bg-2));
+  color: color-mix(in srgb, var(--b) 65%, var(--fg));
+
+  &[data-tone="accent"] { --b: var(--accent); }
+  &[data-tone="violet"] { --b: var(--tone-violet); }
+  &[data-tone="green"]  { --b: oklch(0.58 0.13 150); }
+  &[data-tone="amber"]  { --b: var(--tone-amber); }
+  &[data-tone="danger"] { --b: var(--danger); }
+  &[data-tone="slate"]  { --b: oklch(0.6 0.03 250); }
+}
+/* Global stylesheet → :host-context doesn't apply; use a plain descendant selector. */
+[data-theme="dark"] .adm-badge { color: color-mix(in srgb, var(--b) 78%, var(--fg)); }
+
+/* Dashed "no rows" state (distinct from the centered coming-soon .adm-empty). */
+.adm-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 56px 24px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  color: var(--fg-subtle);
+
+  app-icon { color: var(--fg-subtle); transform: scale(1.6); margin-bottom: 8px; }
+}

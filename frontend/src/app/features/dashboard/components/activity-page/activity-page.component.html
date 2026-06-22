@@ -1,0 +1,57 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('activity_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('activity_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('activity_subtitle') }}</div>
+    </div>
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (loading()) {
+    <div class="av-empty">{{ i18n.t('activity_loading') }}</div>
+  } @else if (entries().length === 0) {
+    <div class="av-empty">
+      <app-icon name="analytics" />
+      <p>{{ i18n.t('activity_empty') }}</p>
+    </div>
+  } @else {
+    <div class="av-list">
+      @for (e of entries(); track e.traceId) {
+        <div class="av-card" data-testid="activity-entry">
+          <div class="av-head">
+            <span class="av-dot" [style.background]="e.automationColor || 'var(--accent)'"></span>
+            <span class="av-name">{{ e.automationName }}</span>
+            <span class="av-status" [attr.data-status]="e.status">{{ e.status }}</span>
+            <span class="av-time">{{ e.startedAt | date:'short' }}</span>
+          </div>
+
+          @if (e.emailSubject || e.emailFrom) {
+            <div class="av-email">
+              <span class="av-subject">{{ e.emailSubject || '—' }}</span>
+              @if (e.emailFrom) { <span class="av-from">{{ e.emailFrom }}</span> }
+            </div>
+          }
+
+          @if (e.errorMessage) {
+            <div class="av-error">{{ e.errorMessage }}</div>
+          }
+
+          @if (e.steps.length) {
+            <div class="av-steps">
+              @for (s of e.steps; track $index) {
+                <div class="av-step">
+                  <span class="av-step-type">{{ s.nodeType }}</span>
+                  <span class="av-step-label">{{ s.nodeLabel || s.nodeType }}</span>
+                  @if (s.summary) { <span class="av-step-summary">{{ s.summary }}</span> }
+                  <span class="av-step-status" [attr.data-st]="s.resultStatus">{{ s.resultStatus }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</app-page-content>

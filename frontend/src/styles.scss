@@ -1,0 +1,57 @@
+@use 'styles/variables' as *;
+@use 'styles/themes';
+@use 'styles/mixins';
+@use 'app/features/marketplace/marketplace';
+@use 'styles/automation-editor-config';
+@use 'styles/landing-nav';
+@use 'styles/docs-prose';
+@use 'styles/admin';
+
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap");
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font-family: inherit; }
+
+a {
+  color: var(--fg);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 0.5px;
+}
+a:hover { text-decoration: underline; }
+
+/* Docs surface hides native scrollbars (scrolling still works). Toggled by
+   DocsShellComponent adding `.docs-active` to <html> while mounted. */
+html.docs-active,
+html.docs-active body,
+html.docs-active * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html.docs-active *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}

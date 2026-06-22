@@ -1,0 +1,47 @@
+@if (open()) {
+  <div class="cmdk-scrim" (click)="close()">
+    <div class="cmdk" role="dialog" (click)="$event.stopPropagation()">
+      <div class="cmdk-input-row">
+        <app-icon name="search" />
+        <input #inputEl class="cmdk-input" type="text" [value]="q()"
+          [placeholder]="i18n.t('doc_search_placeholder')"
+          (input)="onInput($any($event.target).value)" (keydown)="onKey($event)" />
+        <kbd class="cmdk-esc">esc</kbd>
+      </div>
+
+      <div class="cmdk-results">
+        @if (flat().length) {
+          @if (!q().trim()) {
+            <div class="cmdk-group-h">{{ i18n.t('doc_search_suggested') }}</div>
+          }
+          @for (group of groups(); track group.section) {
+            @if (q().trim()) {
+              <div class="cmdk-group-h">{{ group.section }}</div>
+            }
+            @for (item of group.items; track item.slug) {
+              <button class="cmdk-item" [class.is-active]="globalIndex(group, $index) === active()"
+                (click)="choose(item)" (mouseenter)="active.set(globalIndex(group, $index))">
+                <span class="cmdk-ic" [style.color]="colorFor(item)">
+                  <app-icon [name]="iconFor(item)" />
+                </span>
+                <span class="cmdk-tx">
+                  <span class="cmdk-t">{{ item.title }}</span>
+                  <span class="cmdk-c">{{ item.section }}</span>
+                </span>
+                <app-icon name="arrowRight" class="cmdk-go" />
+              </button>
+            }
+          }
+        } @else {
+          <div class="cmdk-empty">{{ i18n.t('doc_search_empty', { q: q() }) }}</div>
+        }
+      </div>
+
+      <div class="cmdk-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> {{ i18n.t('doc_search_nav') }}</span>
+        <span><kbd>↵</kbd> {{ i18n.t('doc_search_open') }}</span>
+        <span><kbd>esc</kbd> {{ i18n.t('doc_search_close') }}</span>
+      </div>
+    </div>
+  </div>
+}

@@ -1,0 +1,266 @@
+<app-page-content>
+  <!-- Page head -->
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('audit_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('audit_title') }}</h1>
+      <div class="dash-subtitle">
+        {{ i18n.t('audit_subtitle_count', { count: totalElements().toString() }) }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="ib-filters-row al-filters-row">
+    <div class="ib-search-wrap">
+      <span class="ib-search-icon"><app-icon name="search" /></span>
+      <input
+        type="search"
+        class="ib-search-input"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        [placeholder]="i18n.t('audit_search_placeholder')"
+      />
+    </div>
+
+    <div class="ib-dd-group">
+      <!-- Date dropdown -->
+      <div class="ib-dd" (clickOutside)="dateDropdownOpen.set(false)">
+        <button
+          class="ib-dd-trigger"
+          type="button"
+          [attr.data-open]="dateDropdownOpen() ? '1' : '0'"
+          [attr.data-active]="dateFilter() ? '1' : '0'"
+          (click)="dateDropdownOpen.set(!dateDropdownOpen())"
+        >
+          <span class="ib-dd-label">{{ i18n.t('audit_filter_date') }}</span>
+          <span class="ib-dd-value">{{ getDateLabel() }}</span>
+          <app-icon name="chevronDown" />
+        </button>
+        @if (dateDropdownOpen()) {
+          <div class="ib-dd-menu" role="menu">
+            <button class="ib-dd-item" type="button" [attr.data-active]="!dateFilter() ? '1' : '0'" (click)="onDateFilterChange('')">
+              <span>{{ i18n.t('audit_filter_all') }}</span>
+            </button>
+            <button class="ib-dd-item" type="button" [attr.data-active]="dateFilter() === 'today' ? '1' : '0'" (click)="onDateFilterChange('today')">
+              <span>{{ i18n.t('audit_filter_today') }}</span>
+            </button>
+            <button class="ib-dd-item" type="button" [attr.data-active]="dateFilter() === '7d' ? '1' : '0'" (click)="onDateFilterChange('7d')">
+              <span>{{ i18n.t('audit_filter_7d') }}</span>
+            </button>
+            <button class="ib-dd-item" type="button" [attr.data-active]="dateFilter() === '30d' ? '1' : '0'" (click)="onDateFilterChange('30d')">
+              <span>{{ i18n.t('audit_filter_30d') }}</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Kind dropdown -->
+      <div class="ib-dd" (clickOutside)="kindDropdownOpen.set(false)">
+        <button
+          class="ib-dd-trigger"
+          type="button"
+          [attr.data-open]="kindDropdownOpen() ? '1' : '0'"
+          [attr.data-active]="kindFilter() ? '1' : '0'"
+          (click)="kindDropdownOpen.set(!kindDropdownOpen())"
+        >
+          <span class="ib-dd-label">{{ i18n.t('audit_filter_action') }}</span>
+          <span class="ib-dd-value">{{ getKindLabel() }}</span>
+          <app-icon name="chevronDown" />
+        </button>
+        @if (kindDropdownOpen()) {
+          <div class="ib-dd-menu" role="menu">
+            <button class="ib-dd-item" type="button" [attr.data-active]="!kindFilter() ? '1' : '0'" (click)="onKindFilterChange('')">
+              <span>{{ i18n.t('audit_filter_all') }}</span>
+            </button>
+            @for (a of actions; track a) {
+              <button class="ib-dd-item" type="button" [attr.data-active]="kindFilter() === a ? '1' : '0'" (click)="onKindFilterChange(a)">
+                <span>{{ i18n.t('audit_action_' + a) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Member dropdown (shown when the org-wide view has more than one actor) -->
+      @if (members().length > 1) {
+        <div class="ib-dd" (clickOutside)="memberDropdownOpen.set(false)">
+          <button
+            class="ib-dd-trigger"
+            type="button"
+            [attr.data-open]="memberDropdownOpen() ? '1' : '0'"
+            [attr.data-active]="memberFilter() ? '1' : '0'"
+            (click)="memberDropdownOpen.set(!memberDropdownOpen())"
+          >
+            <span class="ib-dd-label">{{ i18n.t('audit_filter_member') }}</span>
+            <span class="ib-dd-value">{{ getMemberLabel() }}</span>
+            <app-icon name="chevronDown" />
+          </button>
+          @if (memberDropdownOpen()) {
+            <div class="ib-dd-menu" role="menu">
+              <button class="ib-dd-item" type="button" [attr.data-active]="!memberFilter() ? '1' : '0'" (click)="onMemberFilterChange('')">
+                <span>{{ i18n.t('audit_all_members') }}</span>
+              </button>
+              @for (m of members(); track m.id) {
+                <button class="ib-dd-item" type="button" [attr.data-active]="memberFilter() === m.id ? '1' : '0'" (click)="onMemberFilterChange(m.id)">
+                  <span>{{ m.name }}</span>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Result count -->
+      <span class="al-result-count">
+        {{ filteredLogs().length }} / {{ totalElements() }}
+      </span>
+
+      <!-- CSV export -->
+      <button class="al-export-btn" type="button" (click)="exportCsv()">
+        <app-icon name="download" />
+        <span>CSV</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  @if (loading()) {
+    <div class="al-loading">{{ i18n.t('loading') }}</div>
+  } @else if (dayGroups().length === 0) {
+    <div class="al-empty">
+      <div class="al-empty-icon"><app-icon name="shield" /></div>
+      <div class="al-empty-title">{{ i18n.t('audit_empty') }}</div>
+    </div>
+  } @else {
+    <div class="al-timeline">
+      @for (group of dayGroups(); track group.key) {
+        <section class="al-day">
+          <!-- Day header -->
+          <div class="al-day-head">
+            <h2 class="al-day-title">{{ group.header }}</h2>
+            <span class="al-day-count">{{ group.items.length }}</span>
+            <span class="al-day-rule" aria-hidden="true"></span>
+            <span class="al-day-date mono">{{ group.isoDate }}</span>
+          </div>
+
+          <!-- Day rows -->
+          <div class="al-day-list">
+            @for (log of group.items; track log.id) {
+              <div class="al-row" [attr.data-open]="isOpen(log.id) ? '1' : '0'" [attr.data-tone]="getTone(log.action)">
+                <!-- Row head -->
+                <button class="al-row-head" (click)="toggleExpand(log)" [attr.aria-expanded]="isOpen(log.id)">
+                  <span class="al-disc" [class]="'al-disc al-disc-' + getTone(log.action)">
+                    <app-icon [name]="getIcon(log.action)" />
+                  </span>
+                  <span class="al-row-title">
+                    <span class="al-row-action">{{ i18n.t('audit_action_' + log.action) }}</span>
+                    <span class="al-row-meta">
+                      <span class="al-row-actor">{{ log.userName || '\u2014' }}</span>
+                      <span class="al-dot-sep" aria-hidden="true">&middot;</span>
+                      <span class="al-row-ip mono">{{ log.ipAddress || '\u2014' }}</span>
+                    </span>
+                  </span>
+                  <span class="al-row-time">
+                    <span class="al-row-time-rel">{{ relTime(log.createdAt) }}</span>
+                    <span class="al-row-time-clock mono">{{ formatTime(log.createdAt) }}</span>
+                  </span>
+                  <span class="al-row-chev" aria-hidden="true">
+                    <app-icon name="chevronDown" />
+                  </span>
+                </button>
+
+                <!-- Detail panel -->
+                @if (isOpen(log.id)) {
+                  <div class="al-detail">
+                    <div class="al-detail-grid">
+                      <!-- Left: Context -->
+                      <div class="al-detail-col">
+                        <div class="al-detail-section-label">{{ i18n.t('audit_context') }}</div>
+                        <dl class="al-meta">
+                          <div class="al-meta-row">
+                            <dt>{{ i18n.t('audit_col_actor') }}</dt>
+                            <dd>{{ log.userName || '—' }}</dd>
+                          </div>
+                          <div class="al-meta-row">
+                            <dt>{{ i18n.t('audit_detail_event_id') }}</dt>
+                            <dd class="mono">{{ log.id }}</dd>
+                          </div>
+                          <div class="al-meta-row">
+                            <dt>{{ i18n.t('audit_detail_timestamp') }}</dt>
+                            <dd class="mono">{{ formatDateFull(log.createdAt) }}</dd>
+                          </div>
+                          <div class="al-meta-row">
+                            <dt>{{ i18n.t('audit_col_action') }}</dt>
+                            <dd>
+                              <span class="al-pill" [class]="'al-pill al-pill-' + getTone(log.action)">
+                                {{ i18n.t('audit_action_' + log.action) }}
+                              </span>
+                            </dd>
+                          </div>
+                          <div class="al-meta-row">
+                            <dt>{{ i18n.t('audit_col_ip') }}</dt>
+                            <dd class="mono">{{ log.ipAddress || '\u2014' }}</dd>
+                          </div>
+                        </dl>
+                      </div>
+
+                      <!-- Right: Payload / Diff -->
+                      <div class="al-detail-col">
+                        <div class="al-detail-section-label-row">
+                          <span class="al-detail-section-label">
+                            @if (hasDiff(log.detail)) {
+                              {{ i18n.t('audit_diff') }}
+                            } @else {
+                              {{ i18n.t('audit_payload') }}
+                            }
+                          </span>
+                          <button class="al-copy-btn" (click)="copyJson(log); $event.stopPropagation()">
+                            <app-icon [name]="copied() ? 'checkCircle' : 'copy'" />
+                            <span>{{ copied() ? i18n.t('audit_detail_copied') : i18n.t('audit_detail_copy') }}</span>
+                          </button>
+                        </div>
+
+                        @if (hasDiff(log.detail)) {
+                          <!-- Diff view -->
+                          <div class="al-diff">
+                            <div class="al-diff-head">
+                              <span class="al-diff-label al-diff-label-before">{{ i18n.t('audit_diff_before') }}</span>
+                              <span class="al-diff-label al-diff-label-after">{{ i18n.t('audit_diff_after') }}</span>
+                            </div>
+                            @for (dk of getDiffKeys(log.detail); track dk) {
+                              <div class="al-diff-row" [attr.data-changed]="isDiffChanged(log.detail, dk) ? '1' : '0'">
+                                <span class="al-diff-key mono">{{ dk }}</span>
+                                <span class="al-diff-value al-diff-value-before mono">{{ getDiffValue(log.detail, 'before', dk) }}</span>
+                                <span class="al-diff-arrow">&rarr;</span>
+                                <span class="al-diff-value al-diff-value-after mono">{{ getDiffValue(log.detail, 'after', dk) }}</span>
+                              </div>
+                            }
+                          </div>
+                        } @else if (getDetailEntries(log.detail).length > 0) {
+                          <!-- Payload key-value -->
+                          <div class="al-payload">
+                            @for (entry of getDetailEntries(log.detail); track entry.key) {
+                              <div class="al-payload-row">
+                                <span class="al-payload-key mono">{{ entry.key }}</span>
+                                <span class="al-payload-value mono">{{ entry.value }}</span>
+                              </div>
+                            }
+                          </div>
+                        } @else {
+                          <div class="al-empty-payload">
+                            {{ i18n.t('audit_no_data') }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+</app-page-content>

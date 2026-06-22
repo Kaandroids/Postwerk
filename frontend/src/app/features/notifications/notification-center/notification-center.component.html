@@ -1,0 +1,48 @@
+<div class="nc">
+  <button class="nc-bell" [attr.aria-label]="i18n.t('notif_aria')" [attr.title]="i18n.t('notif_title')"
+          [attr.data-active]="open() ? '1' : '0'" (click)="toggle()" data-testid="topbar-notifications-btn">
+    <app-icon name="bell" />
+    @if (notifications.unreadCount() > 0) {
+      <span class="nc-badge" data-testid="notif-unread-badge">
+        {{ notifications.unreadCount() > 99 ? '99+' : notifications.unreadCount() }}
+      </span>
+    }
+  </button>
+
+  @if (open()) {
+    <div class="nc-panel" data-testid="notification-panel">
+      <div class="nc-head">
+        <span class="nc-head-title">{{ i18n.t('notif_title') }}</span>
+        @if (notifications.unreadCount() > 0) {
+          <button class="nc-mark" (click)="markAllRead()" data-testid="notif-mark-all">
+            {{ i18n.t('notif_mark_all_read') }}
+          </button>
+        }
+      </div>
+
+      <div class="nc-list">
+        @if (notifications.loading()) {
+          <div class="nc-empty">{{ i18n.t('notif_loading') }}</div>
+        } @else if (notifications.items().length === 0) {
+          <div class="nc-empty">
+            <span class="nc-empty-icon"><app-icon name="bell" /></span>
+            <span>{{ i18n.t('notif_empty') }}</span>
+          </div>
+        } @else {
+          @for (n of notifications.items(); track n.id) {
+            <button class="nc-item" [class.nc-item-unread]="!n.read" [attr.data-sev]="n.severity"
+                    (click)="onItemClick(n)" data-testid="notification-item">
+              <span class="nc-item-icon"><app-icon [name]="severityIcon(n.severity)" /></span>
+              <span class="nc-item-body">
+                <span class="nc-item-title">{{ title(n) }}</span>
+                @if (body(n)) { <span class="nc-item-text">{{ body(n) }}</span> }
+                <span class="nc-item-time">{{ relativeTime(n.createdAt) }}</span>
+              </span>
+              @if (!n.read) { <span class="nc-item-dot"></span> }
+            </button>
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

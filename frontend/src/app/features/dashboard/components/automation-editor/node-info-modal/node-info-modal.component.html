@@ -1,0 +1,20 @@
+<div class="nim-scrim" (click)="close.emit()">
+  <div class="nim" role="dialog" (click)="$event.stopPropagation()">
+    <div class="nim-head">
+      <span class="nim-head-label">{{ i18n.t('doc_node_help') }}</span>
+      <button class="nim-close" (click)="close.emit()" aria-label="Close">
+        <app-icon name="x" />
+      </button>
+    </div>
+
+    <div class="nim-body">
+      <app-node-reference [type]="nodeType()" [compact]="true" />
+    </div>
+
+    <div class="nim-foot">
+      <a class="nim-docs-link" [href]="docsUrl()" target="_blank" rel="noopener">
+        {{ i18n.t('doc_read_full') }}<app-icon name="external" />
+      </a>
+    </div>
+  </div>
+</div>

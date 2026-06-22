@@ -1,0 +1,90 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_pricing_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('admin_pricing_subtitle') }}</div>
+    </div>
+    @if (view() === 'list') {
+      <button class="create-btn" data-testid="pricing-create-btn" (click)="showCreateForm()" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+        @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }
+        {{ i18n.t('admin_pricing_create') }}
+      </button>
+    }
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (view() === 'list') {
+    @if (loading()) {
+      <div class="admin-loading">{{ i18n.t('loading') }}</div>
+    } @else {
+      <div class="pricing-note">{{ i18n.t('admin_pricing_note') }}</div>
+      <div class="pricing-table" data-testid="pricing-table">
+        <div class="pricing-row pricing-row--head">
+          <span>{{ i18n.t('admin_pricing_model') }}</span>
+          <span>{{ i18n.t('admin_pricing_input') }}</span>
+          <span>{{ i18n.t('admin_pricing_output') }}</span>
+          <span></span>
+        </div>
+        @for (m of models(); track m.id) {
+          <div class="pricing-row" data-testid="pricing-row">
+            <span class="pricing-model">{{ m.model }}</span>
+            <span>{{ m.inputPerMillion | number:'1.2-6' }} $</span>
+            <span>{{ m.outputPerMillion | number:'1.2-6' }} $</span>
+            <span class="pricing-actions">
+              <button class="plan-action-btn" data-testid="pricing-edit-btn" (click)="showEditForm(m)" [attr.aria-label]="i18n.t('admin_pricing_edit')" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+                @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }
+              </button>
+              <button class="plan-action-btn plan-action-btn--danger" data-testid="pricing-delete-btn" (click)="deleteModel(m)" [attr.aria-label]="i18n.t('admin_pricing_delete')" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+                @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }
+              </button>
+            </span>
+          </div>
+        } @empty {
+          <div class="plans-empty">
+            <app-icon name="creditCard" />
+            <p>{{ i18n.t('admin_pricing_empty') }}</p>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    <!-- Pricing Form -->
+    <div class="form-grid" data-testid="pricing-form">
+      <div class="form-col">
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_pricing_model') }}</label>
+          <input class="input" data-testid="pricing-model-input" type="text" [(ngModel)]="model" [placeholder]="i18n.t('admin_pricing_model_ph')" [disabled]="!!editing()" />
+          @if (editing()) { <span class="field-hint">{{ i18n.t('admin_pricing_model_locked') }}</span> }
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_pricing_input') }}</label>
+          <input class="input" data-testid="pricing-input-rate" type="number" [(ngModel)]="inputPerMillion" min="0" step="0.01" />
+          <span class="field-hint">{{ i18n.t('admin_pricing_rate_hint') }}</span>
+        </div>
+        <div class="field">
+          <label class="field-label">{{ i18n.t('admin_pricing_output') }}</label>
+          <input class="input" data-testid="pricing-output-rate" type="number" [(ngModel)]="outputPerMillion" min="0" step="0.01" />
+          <span class="field-hint">{{ i18n.t('admin_pricing_rate_hint') }}</span>
+        </div>
+
+        <div class="form-actions">
+          <button class="save-btn" data-testid="pricing-save-btn" (click)="save()" [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')">
+            @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> }
+            {{ editing() ? i18n.t('admin_plans_save') : i18n.t('admin_pricing_create') }}
+          </button>
+          <button class="cancel-btn" data-testid="pricing-cancel-btn" (click)="cancel()">{{ i18n.t('admin_plans_cancel') }}</button>
+        </div>
+      </div>
+
+      <div class="info-col">
+        <div class="info-card info-card--blue">
+          <app-icon name="creditCard" />
+          <h2 class="info-card-title">{{ i18n.t('admin_pricing_info_title') }}</h2>
+          <p>{{ i18n.t('admin_pricing_info_text') }}</p>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

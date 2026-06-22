@@ -1,0 +1,14 @@
+<div class="app">
+  <app-landing-nav />
+
+  <main class="legal-page fade-enter">
+    <button class="legal-back" (click)="goBack()">
+      <app-icon name="arrowLeft" /> {{ i18n.t('legal_back') }}
+    </button>
+    <h1>{{ title() }}</h1>
+    <div class="legal-meta">{{ i18n.t('brandName') }} · Hannover</div>
+    <p>{{ body() }}</p>
+  </main>
+
+  <app-landing-footer />
+</div>

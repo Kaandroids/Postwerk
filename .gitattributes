@@ -1,0 +1,2 @@
+# Keep shell scripts LF so they run on the Linux VM (avoids "bad interpreter ^M").
+*.sh text eol=lf

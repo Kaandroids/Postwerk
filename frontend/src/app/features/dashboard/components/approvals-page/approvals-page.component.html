@@ -1,0 +1,73 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('approvals_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('approvals_title') }}</h1>
+      <div class="dash-subtitle">{{ actions().length }} {{ i18n.t('approvals_subtitle') }}</div>
+    </div>
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (loading()) {
+    <div class="ap-empty">{{ i18n.t('approvals_loading') }}</div>
+  } @else if (actions().length === 0) {
+    <app-empty-state [title]="i18n.t('approvals_empty')" />
+  } @else {
+    <div class="ap-list">
+      @for (a of actions(); track a.id) {
+        <div class="ap-card" data-testid="pending-action">
+          <div class="ap-card-head">
+            <span class="ap-type">{{ a.nodeType }}</span>
+            <span class="ap-label">{{ a.nodeLabel || a.nodeType }}</span>
+            <span class="ap-time">{{ a.createdAt | date:'short' }}</span>
+          </div>
+          @if (detailEntries(a).length) {
+            <div class="ap-detail">
+              @for (e of detailEntries(a); track e.key) {
+                <div class="ap-row">
+                  <span class="ap-key">{{ e.key }}</span>
+                  <span class="ap-val">{{ e.value }}</span>
+                </div>
+              }
+            </div>
+          }
+          @if (a.triggerCategory && a.triggerCategory.name) {
+            <div class="ap-trigger">
+              <span class="ap-trigger-label">{{ i18n.t('approvals_triggered_by') }}</span>
+              <span class="ap-trigger-cat">{{ a.triggerCategory.name }}@if (a.triggerCategory.confidence != null) { · {{ a.triggerCategory.confidence }}%}</span>
+              @if (categories().length) {
+                <button class="ap-link" type="button" (click)="toggleCorrect(a)" data-testid="wrong-category">
+                  {{ i18n.t('approvals_wrong_category') }}
+                </button>
+              }
+            </div>
+            @if (correctingId() === a.id) {
+              <div class="ap-correct">
+                <label class="ap-correct-label">{{ i18n.t('approvals_correct_category') }}</label>
+                <select class="ap-correct-select" [attr.aria-label]="i18n.t('approvals_correct_category')"
+                  (change)="reclassify(a, $any($event.target).value)" data-testid="correct-category-select">
+                  <option value="">—</option>
+                  @for (c of categories(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+          }
+
+          <div class="ap-actions">
+            <button class="ap-btn ap-reject" [disabled]="busyId() === a.id"
+              (click)="reject(a)" data-testid="reject-btn">
+              {{ i18n.t('approvals_reject') }}
+            </button>
+            <button class="ap-btn ap-approve" [disabled]="busyId() === a.id"
+              (click)="approve(a)" data-testid="approve-btn">
+              {{ i18n.t('approvals_approve') }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</app-page-content>

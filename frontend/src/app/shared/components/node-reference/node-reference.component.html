@@ -1,0 +1,157 @@
+@let d = doc();
+@if (d) {
+  <article class="nref" [class.nref--compact]="compact()" [style.--nc]="color()">
+    <header class="nref-head">
+      <span class="nref-glyph"><app-icon [name]="icon()" /></span>
+      <div class="nref-head-text">
+        <span class="nref-kind">{{ i18n.t('doc_node') }} · {{ type().toLowerCase() }}</span>
+        <h3 class="nref-name">{{ label() }}</h3>
+      </div>
+    </header>
+
+    <p class="nref-summary">{{ tr(d.summary) }}</p>
+
+    <!-- Modes (multi-tab nodes) — each mode is its own titled block -->
+    @if (d.modes?.length) {
+      <section class="nref-sec">
+        <div class="nref-sec-h">{{ i18n.t('doc_nref_modes') }}</div>
+        <div class="nref-modeblocks">
+          @for (m of d.modes ?? []; track $index) {
+            <div class="nref-modeblock">
+              <div class="nref-modeblock-title">{{ tr(m.name) }}</div>
+              <p class="nref-modeblock-desc">{{ tr(m.desc) }}</p>
+
+              @if (m.produces?.length) {
+                <div class="nref-modeblock-sub">{{ i18n.t('doc_nref_produces') }}</div>
+                <ul class="nref-vars">
+                  @for (p of m.produces ?? []; track p.v) {
+                    <li class="nref-vrow"><code>{{ varToken(p.v) }}</code><span class="nref-vd">{{ tr(p.d) }}</span></li>
+                  }
+                </ul>
+              }
+
+              @if (m.handlesOut?.length) {
+                <div class="nref-modeblock-sub">{{ i18n.t('doc_nref_outputs') }}</div>
+                <div class="nref-modeblock-handles">
+                  @for (h of m.handlesOut ?? []; track h.name) {
+                    <div class="nref-handle">
+                      <span class="nref-hdot" [class.is-filled]="handleFilled(h.htype)"
+                        [style.--ht]="handleColor(h.htype)"></span>
+                      <span class="nref-hn">{{ h.name }}</span>
+                      <span class="nref-hd">{{ tr(h.desc) }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Configuration -->
+    <section class="nref-sec">
+      <div class="nref-sec-h">{{ i18n.t('doc_nref_config') }}</div>
+      @if (d.fields.length) {
+        <div class="nref-table-wrap">
+          <table class="nref-table">
+            <thead>
+              <tr>
+                <th>{{ i18n.t('doc_nref_field') }}</th>
+                <th>{{ i18n.t('doc_nref_type') }}</th>
+                <th>{{ i18n.t('doc_nref_desc') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of d.fields; track f.name) {
+                <tr>
+                  <td><code class="nref-fname">{{ f.name }}</code></td>
+                  <td class="nref-ftype">{{ f.type }}</td>
+                  <td>{{ tr(f.desc) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="nref-empty">{{ i18n.t('doc_nref_config_none') }}</p>
+      }
+    </section>
+
+    <!-- Produced variables (per-mode when modes differ) -->
+    @if (d.produces.length && !modesDetailed()) {
+      <section class="nref-sec">
+        <div class="nref-sec-h">{{ i18n.t('doc_nref_produces') }}</div>
+        <ul class="nref-vars">
+          @for (p of d.produces; track p.v) {
+            <li class="nref-vrow">
+              <code>{{ varToken(p.v) }}</code>
+              <span class="nref-vd">{{ tr(p.d) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Handles -->
+    <section class="nref-sec">
+      <div class="nref-handles">
+        <div class="nref-hcol">
+          <div class="nref-hcol-h">{{ i18n.t('doc_nref_inputs') }}</div>
+          @if (d.handlesIn.length) {
+            @for (h of d.handlesIn; track h.name) {
+              <div class="nref-handle">
+                <span class="nref-hdot" [class.is-filled]="handleFilled(h.htype)"
+                  [style.--ht]="handleColor(h.htype)"></span>
+                <span class="nref-hn">{{ h.name }}</span>
+                <span class="nref-hd">{{ tr(h.desc) }}</span>
+              </div>
+            }
+          } @else {
+            <p class="nref-empty">{{ i18n.t('doc_nref_none_in') }}</p>
+          }
+        </div>
+        @if (!modesDetailed()) {
+          <div class="nref-hcol">
+            <div class="nref-hcol-h">{{ i18n.t('doc_nref_outputs') }}</div>
+            @if (d.handlesOut.length) {
+              @for (h of d.handlesOut; track h.name) {
+                <div class="nref-handle">
+                  <span class="nref-hdot" [class.is-filled]="handleFilled(h.htype)"
+                    [style.--ht]="handleColor(h.htype)"></span>
+                  <span class="nref-hn">{{ h.name }}</span>
+                  <span class="nref-hd">{{ tr(h.desc) }}</span>
+                </div>
+              }
+            } @else {
+              <p class="nref-empty">{{ i18n.t('doc_nref_none_out') }}</p>
+            }
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Worked example -->
+    @if (d.example; as ex) {
+      <section class="nref-sec">
+        <div class="nref-example">
+          <div class="nref-ex-t"><span class="nref-ex-tag">{{ i18n.t('doc_nref_example') }}</span>{{ tr(ex.title) }}</div>
+          <p class="nref-ex-b">{{ tr(ex.body) }}</p>
+          @if (ex.code; as c) {
+            <pre class="nref-code"><code>{{ c.body }}</code></pre>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- Notes -->
+    @if (d.notes?.length) {
+      <section class="nref-sec">
+        <div class="nref-sec-h">{{ i18n.t('doc_nref_notes') }}</div>
+        @for (n of d.notes ?? []; track $index) {
+          <div class="nref-note"><app-icon name="info" /><span>{{ tr(n) }}</span></div>
+        }
+      </section>
+    }
+  </article>
+}

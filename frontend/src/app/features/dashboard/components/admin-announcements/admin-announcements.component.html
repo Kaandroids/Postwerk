@@ -1,0 +1,270 @@
+<app-page-content>
+  <!-- A. Alert strip (maintenance live) -->
+  @if (banner() > 0) {
+    <div class="an-alert" role="alert" data-testid="admin-ann-alert">
+      <app-icon name="alertTriangle" />
+      <span class="an-alert-text"><b>{{ i18n.t('ann_alert', { n: banner() + '' }) }}</b></span>
+      <button type="button" class="an-alert-cta" data-testid="admin-ann-alert-inspect" (click)="inspectBanner()">{{ i18n.t('ann_alert_inspect') }}</button>
+      <button type="button" class="an-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head an-head">
+    <div>
+      <div class="dash-eyebrow an-eyebrow-mono">{{ i18n.t('ann_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('ann_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.live ?? 0 }}</b> {{ i18n.t('ann_live_lc') }} ·
+        <b>{{ kpis()?.scheduled ?? 0 }}</b> {{ i18n.t('ann_scheduled_lc') }} ·
+        <b>{{ kpis()?.drafts ?? 0 }}</b> {{ i18n.t('ann_drafts_lc') }}
+      </div>
+    </div>
+    <div class="an-head-controls">
+      <button type="button" class="an-btn an-btn--solid" data-testid="admin-ann-new" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openNew()">
+        @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }{{ i18n.t('ann_new') }}
+      </button>
+      <button type="button" class="an-btn" data-testid="admin-ann-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="an-refresh-ic" [class.an-spin]="refreshing()"><app-icon name="refresh" /></span>{{ i18n.t('ann_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="an-updated">{{ i18n.t('ann_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="an-flash" role="status" data-testid="admin-ann-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="an-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- C. KPI strip -->
+  <div class="an-kpis" data-testid="admin-ann-kpis">
+    <div class="an-kpi"><div class="an-kpi-label">{{ i18n.t('ann_kpi_live') }}</div><div class="an-kpi-value" [attr.data-tone]="(kpis()?.live ?? 0) > 0 ? 'success' : 'default'">{{ kpis()?.live ?? 0 }}</div><div class="an-kpi-foot"><span class="an-chip" data-tone="green">{{ i18n.t('ann_chip_active') }}</span></div></div>
+    <div class="an-kpi"><div class="an-kpi-label">{{ i18n.t('ann_kpi_scheduled') }}</div><div class="an-kpi-value">{{ kpis()?.scheduled ?? 0 }}</div><div class="an-kpi-foot"><span class="an-chip" data-tone="amber">{{ i18n.t('ann_chip_queued') }}</span>@if (kpis()?.nextLiveAt) { <span class="an-kpi-note">{{ i18n.t('ann_next_live', { rel: relative(kpis()!.nextLiveAt!) }) }}</span> }</div></div>
+    <div class="an-kpi"><div class="an-kpi-label">{{ i18n.t('ann_kpi_drafts') }}</div><div class="an-kpi-value">{{ kpis()?.drafts ?? 0 }}</div><div class="an-kpi-foot"><span class="an-chip" data-tone="slate">{{ i18n.t('ann_chip_draft') }}</span></div></div>
+    <div class="an-kpi"><div class="an-kpi-label">{{ i18n.t('ann_kpi_maint') }}</div><div class="an-kpi-value" [attr.data-tone]="(kpis()?.maintenanceLive ?? 0) > 0 ? 'warning' : 'default'">{{ kpis()?.maintenanceLive ?? 0 }}</div><div class="an-kpi-foot"><span class="an-chip" [attr.data-tone]="(kpis()?.maintenanceLive ?? 0) > 0 ? 'danger' : 'slate'">{{ i18n.t('ann_chip_window') }}</span></div></div>
+    <div class="an-kpi"><div class="an-kpi-label">{{ i18n.t('ann_kpi_expired') }}</div><div class="an-kpi-value">{{ kpis()?.expired30d ?? 0 }}</div><div class="an-kpi-foot"><span class="an-chip" data-tone="slate">{{ i18n.t('ann_chip_30d') }}</span></div></div>
+  </div>
+
+  <!-- D. Toolbar -->
+  <div class="an-toolbar">
+    <div class="an-search"><app-icon name="search" /><input type="text" data-testid="admin-ann-search" [attr.aria-label]="i18n.t('ann_search')" [placeholder]="i18n.t('ann_search')" [value]="search()" (input)="onSearch($event)" /></div>
+    <div class="an-filters">
+      <div class="an-filter"><label>{{ i18n.t('ann_filter_type') }}</label><select data-testid="admin-ann-f-type" (change)="onType($event)"><option value="">{{ i18n.t('ann_filter_all') }}</option>@for (t of types; track t) { <option [value]="t">{{ typeLabel(t) }}</option> }</select></div>
+      <div class="an-filter"><label>{{ i18n.t('ann_filter_status') }}</label><select data-testid="admin-ann-f-status" (change)="onStatus($event)"><option value="">{{ i18n.t('ann_filter_all') }}</option><option value="DRAFT">{{ i18n.t('ann_status_draft') }}</option><option value="SCHEDULED">{{ i18n.t('ann_status_scheduled') }}</option><option value="LIVE">{{ i18n.t('ann_status_live') }}</option><option value="EXPIRED">{{ i18n.t('ann_status_expired') }}</option><option value="ARCHIVED">{{ i18n.t('ann_status_archived') }}</option></select></div>
+      <div class="an-filter"><label>{{ i18n.t('ann_filter_audience') }}</label><select data-testid="admin-ann-f-audience" (change)="onAudience($event)"><option value="">{{ i18n.t('ann_filter_all') }}</option>@for (a of audiences; track a) { <option [value]="a">{{ audienceLabel(a) }}</option> }</select></div>
+      <div class="an-filter"><label>{{ i18n.t('ann_filter_placement') }}</label><select data-testid="admin-ann-f-placement" (change)="onPlacement($event)"><option value="">{{ i18n.t('ann_filter_all') }}</option>@for (p of placements; track p) { <option [value]="p">{{ placementLabel(p) }}</option> }</select></div>
+    </div>
+  </div>
+
+  <!-- E. Table + states -->
+  @if (loading()) {
+    <div class="an-card" aria-hidden="true" data-testid="admin-ann-skeleton"><div class="an-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="an-skel-row"></div> }</div>
+  } @else if (rows().length === 0 && hasFilters()) {
+    <div class="an-empty" data-testid="admin-ann-empty-filtered"><app-icon name="search" /><div class="an-empty-title">{{ i18n.t('ann_empty_filtered') }}</div><button type="button" class="an-btn" (click)="clearFilters()">{{ i18n.t('ann_clear_filters') }}</button></div>
+  } @else if (rows().length === 0) {
+    <div class="an-empty" data-testid="admin-ann-empty"><app-icon name="bell" /><div class="an-empty-title">{{ i18n.t('ann_empty') }}</div>@if (canManage()) { <button type="button" class="an-btn an-btn--solid" (click)="openNew()"><app-icon name="plus" />{{ i18n.t('ann_new') }}</button> }</div>
+  } @else {
+    <div class="an-card">
+      <div class="an-scroll">
+        <table class="dtable" data-testid="admin-ann-table">
+          <thead><tr>
+            <th scope="col">{{ i18n.t('ann_col_announcement') }}</th>
+            <th scope="col">{{ i18n.t('ann_col_type') }}</th>
+            <th scope="col">{{ i18n.t('ann_col_audience') }}</th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'window' ? '1' : '0'" (click)="toggleSort('window')"><span>{{ i18n.t('ann_col_window') }}</span></button></th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'status' ? '1' : '0'" (click)="toggleSort('status')"><span>{{ i18n.t('ann_col_status') }}</span></button></th>
+            <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'updated' ? '1' : '0'" (click)="toggleSort('updated')"><span>{{ i18n.t('ann_col_updated') }}</span></button></th>
+            <th scope="col" class="an-col-menu"></th>
+          </tr></thead>
+          <tbody>
+            @for (a of rows(); track a.id) {
+              <tr class="an-row" data-testid="admin-ann-row" [attr.data-type]="a.type" [attr.data-maint]="a.status === 'LIVE' && a.type === 'MAINTENANCE' ? '1' : null" tabindex="0" (click)="openEdit(a)" (keydown.enter)="openEdit(a)" (keydown.space)="openEdit(a); $event.preventDefault()">
+                <td>
+                  <div class="an-cell-title">
+                    <span class="an-type-ic"><app-icon [name]="typeIcon(a.type)" /></span>
+                    <span class="an-cell-text">
+                      <span class="an-cell-name"><span class="an-name-text">{{ a.titleEn }}</span><span class="an-locale"><span class="an-loc" [attr.data-on]="a.titleDe ? '1' : '0'">DE</span><span class="an-loc" [attr.data-on]="a.titleEn ? '1' : '0'">EN</span></span></span>
+                      <span class="an-cell-sub mono">{{ placementLabel(a.placement) }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="an-badge" [attr.data-tone]="typeTone(a.type)"><app-icon [name]="typeIcon(a.type)" />{{ typeLabel(a.type) }}</span></td>
+                <td class="an-muted">{{ audienceSummary(a) }}</td>
+                <td>
+                  <div class="an-window">
+                    <span class="an-window-dates mono">{{ fmt.date(a.startsAt) }}@if (a.endsAt) { → {{ fmt.date(a.endsAt) }} }</span>
+                    @if (a.status === 'LIVE' || a.status === 'SCHEDULED' || a.status === 'EXPIRED') { <span class="an-window-tag" [attr.data-s]="windowState(a.status)"><span class="an-dot" [attr.data-s]="windowState(a.status)"></span>{{ windowLabel(a) }}</span> }
+                  </div>
+                </td>
+                <td><span class="an-status"><span class="an-dot" [attr.data-s]="statusDot(a.status)"></span><span class="an-badge" [attr.data-tone]="statusTone(a.status)">{{ statusLabel(a.status) }}</span></span></td>
+                <td class="an-muted">{{ fmt.date(a.updatedAt) }}@if (a.updatedByName) { · {{ a.updatedByName }} }</td>
+                <td class="an-col-menu" (click)="$event.stopPropagation()">
+                  <div class="an-menu-wrap">
+                    <button type="button" class="an-icon-btn" [attr.data-testid]="'admin-ann-menu-' + a.id" [attr.aria-label]="i18n.t('ann_row_menu')" (click)="toggleMenu(a.id, $event)"><app-icon name="list" /></button>
+                    @if (openMenuId() === a.id) {
+                      <div class="an-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="an-menu-item" role="menuitem" (click)="openEdit(a); openMenuId.set(null)"><app-icon name="edit" /><span>{{ i18n.t('ann_menu_edit') }}</span></button>
+                        @if (a.status === 'DRAFT' || a.status === 'SCHEDULED') {
+                          <button type="button" class="an-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowPublish(a, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }<span>{{ i18n.t('ann_publish') }}</span></button>
+                        }
+                        @if (a.status === 'LIVE') {
+                          <button type="button" class="an-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openEdit(a); end(); openMenuId.set(null)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }<span>{{ i18n.t('ann_end') }}</span></button>
+                        }
+                        <button type="button" class="an-menu-item" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowDuplicate(a, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="copy" /> }<span>{{ i18n.t('ann_duplicate') }}</span></button>
+                        @if (a.status !== 'ARCHIVED') {
+                          <button type="button" class="an-menu-item an-menu-item--danger" role="menuitem" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="rowArchive(a, $event)">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="archive" /> }<span>{{ i18n.t('ann_archive') }}</span></button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (totalPages() > 1) {
+        <div class="an-pager"><span class="an-pager-info">{{ total() }} {{ i18n.t('ann_announcements_lc') }}</span><div class="an-pager-ctrls"><button class="an-pager-btn" [disabled]="page() === 0" (click)="goToPage(page() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="an-pager-pages">{{ page() + 1 }} / {{ totalPages() }}</span><button class="an-pager-btn" [disabled]="page() >= totalPages() - 1" (click)="goToPage(page() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+      }
+    </div>
+  }
+
+  <!-- F. Editor modal -->
+  @if (editorOpen()) {
+    <div class="an-scrim" (click)="closeEditor()"></div>
+    <div class="an-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-ann-modal" [attr.data-type]="draft().type" (click)="$event.stopPropagation()">
+      <div class="an-modal-head">
+        <div class="an-modal-id">
+          <span class="an-type-ic" aria-hidden="true"><app-icon [name]="typeIcon(draft().type)" /></span>
+          <div class="an-modal-id-text">
+            <div class="an-modal-name">{{ creating() ? i18n.t('ann_new_title') : ((lang() === 'de' ? draft().titleDe : draft().titleEn) || i18n.t('ann_untitled')) }}</div>
+            <div class="an-modal-sub mono">{{ creating() ? i18n.t('ann_new_unsaved') : editing()?.id }}</div>
+            <div class="an-modal-pills">
+              <span class="an-badge" [attr.data-tone]="typeTone(draft().type)"><app-icon [name]="typeIcon(draft().type)" />{{ typeLabel(draft().type) }}</span>
+              @if (editing(); as e) { <span class="an-status"><span class="an-dot" [attr.data-s]="statusDot(e.status)"></span><span class="an-badge" [attr.data-tone]="statusTone(e.status)">{{ statusLabel(e.status) }}</span></span> }
+            </div>
+          </div>
+        </div>
+        <button class="an-modal-close" type="button" (click)="closeEditor()" data-testid="admin-ann-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <div class="an-modal-actions">
+        @if (editingClosed()) {
+          <span class="an-closed-note"><app-icon name="check" />{{ i18n.t('ann_closed_note', { s: statusLabel(editing()!.status) }) }}</span>
+          <button class="an-btn an-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="duplicate()"><app-icon name="copy" />{{ i18n.t('ann_duplicate') }}</button>
+        } @else {
+          <button class="an-btn an-btn--solid an-btn--sm" type="button" data-testid="admin-ann-save" [disabled]="busy() || !canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="save()">@if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="check" /> }{{ creating() ? i18n.t('ann_create') : i18n.t('ann_save') }}</button>
+          <button class="an-btn an-btn--sm" type="button" data-testid="admin-ann-publish" [disabled]="busy() || !canManage() || !canPublish()" [attr.title]="!canManage() ? i18n.t('admin_perm_required') : (!canPublish() ? i18n.t('ann_publish_needs_both') : null)" (click)="publish()"><app-icon name="play" />{{ i18n.t('ann_publish') }}</button>
+          @if (editing()?.status === 'LIVE') { <button class="an-btn an-btn--danger an-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="end()"><app-icon name="pause" />{{ i18n.t('ann_end') }}</button> }
+          @if (editing()) { <button class="an-btn an-btn--danger an-btn--sm" type="button" [disabled]="busy() || !canManage()" (click)="archive()"><app-icon name="archive" />{{ i18n.t('ann_archive') }}</button> }
+        }
+      </div>
+
+      <div class="an-tabs" role="tablist">
+        <button class="an-tab" role="tab" [attr.data-active]="editorTab() === 'editor'" (click)="setEditorTab('editor')">{{ i18n.t('ann_tab_editor') }}</button>
+        @if (editing()) { <button class="an-tab" role="tab" [attr.data-active]="editorTab() === 'history'" (click)="setEditorTab('history')">{{ i18n.t('ann_tab_history') }}</button> }
+      </div>
+
+      <div class="an-modal-body">
+        @if (detailFlash()) { <div class="an-detail-flash" data-testid="admin-ann-detail-flash"><app-icon name="check" /><span>{{ detailFlash() }}</span></div> }
+
+        @if (editorTab() === 'editor') {
+          <div class="an-editor">
+            <!-- LEFT: live preview + content -->
+            <div class="an-col">
+              <div class="an-preview-wrap" [attr.data-type]="draft().type">
+                <div class="an-panel-head">{{ i18n.t('ann_preview') }}<span class="an-hint">{{ placementLabel(draft().placement) }} · {{ lang() === 'de' ? 'DE' : 'EN' }}</span></div>
+                <div class="an-preview-stage">
+                  @if (prevTitle() || prevBody()) {
+                    <div class="an-prev-banner" [attr.data-place]="draft().placement">
+                      <span class="an-prev-ic"><app-icon [name]="typeIcon(draft().type)" /></span>
+                      <div class="an-prev-main">
+                        <div class="an-prev-title">{{ prevTitle() || i18n.t('ann_untitled') }}</div>
+                        @if (prevBody()) { <div class="an-prev-body">{{ prevBody() }}</div> }
+                        @if (prevCta()) { <span class="an-prev-cta">{{ prevCta() }}</span> }
+                      </div>
+                      @if (draft().dismissible) { <button type="button" class="an-prev-x" tabindex="-1" aria-hidden="true"><app-icon name="close" /></button> }
+                    </div>
+                  } @else {
+                    <div class="an-prev-empty">{{ i18n.t('ann_preview_empty') }}</div>
+                  }
+                </div>
+              </div>
+
+              <div class="an-panel">
+                <div class="an-panel-head">{{ i18n.t('ann_content') }}
+                  <span class="an-lang">
+                    <button type="button" [attr.data-active]="lang() === 'de' ? '1' : '0'" (click)="setLang('de')">DE @if (!localeOk('de')) { <span class="an-lang-dot"></span> }</button>
+                    <button type="button" [attr.data-active]="lang() === 'en' ? '1' : '0'" (click)="setLang('en')">EN @if (!localeOk('en')) { <span class="an-lang-dot"></span> }</button>
+                  </span>
+                </div>
+                <div class="an-panel-body">
+                  @if (lang() === 'de') {
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_title') }} (DE)</label><input class="an-input" type="text" data-testid="admin-ann-title-de" [value]="draft().titleDe" (input)="patchInput('titleDe', $event)" /></div>
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_body') }} (DE)</label><textarea class="an-textarea" rows="3" [value]="draft().bodyDe" (input)="patchInput('bodyDe', $event)"></textarea></div>
+                    <div class="an-grid2">
+                      <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_cta') }} (DE)</label><input class="an-input" type="text" [value]="draft().ctaLabelDe" (input)="patchInput('ctaLabelDe', $event)" /></div>
+                      <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_cta_url') }}</label><input class="an-input" type="url" [value]="draft().ctaUrl" (input)="patchInput('ctaUrl', $event)" placeholder="https://" /></div>
+                    </div>
+                  } @else {
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_title') }} (EN)</label><input class="an-input" type="text" data-testid="admin-ann-title-en" [value]="draft().titleEn" (input)="patchInput('titleEn', $event)" /></div>
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_body') }} (EN)</label><textarea class="an-textarea" rows="3" [value]="draft().bodyEn" (input)="patchInput('bodyEn', $event)"></textarea></div>
+                    <div class="an-grid2">
+                      <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_cta') }} (EN)</label><input class="an-input" type="text" [value]="draft().ctaLabelEn" (input)="patchInput('ctaLabelEn', $event)" /></div>
+                      <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_cta_url') }}</label><input class="an-input" type="url" [value]="draft().ctaUrl" (input)="patchInput('ctaUrl', $event)" placeholder="https://" /></div>
+                    </div>
+                  }
+                  @if (!canPublish()) { <div class="an-hint an-hint--warn">{{ i18n.t('ann_publish_needs_both') }}</div> }
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: targeting + schedule -->
+            <div class="an-col">
+              <div class="an-panel">
+                <div class="an-panel-head">{{ i18n.t('ann_targeting') }}</div>
+                <div class="an-panel-body">
+                  <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_type') }}</label>
+                    <div class="an-seg">@for (t of types; track t) { <button type="button" [attr.data-active]="draft().type === t ? '1' : '0'" (click)="setType(t)">{{ typeLabel(t) }}</button> }</div>
+                  </div>
+                  <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_placement') }}</label>
+                    <div class="an-seg">@for (p of placements; track p) { <button type="button" [attr.data-active]="draft().placement === p ? '1' : '0'" (click)="setPlacement(p)">{{ placementLabel(p) }}</button> }</div>
+                  </div>
+                  <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_audience') }}</label>
+                    <div class="an-seg">@for (a of audiences; track a) { <button type="button" [attr.data-active]="draft().audience === a ? '1' : '0'" (click)="setAudience(a)">{{ audienceLabel(a) }}</button> }</div>
+                  </div>
+                  @if (draft().audience === 'PLAN') {
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_plans') }}</label>
+                      <div class="an-plans">@for (p of planOptions; track p) { <button type="button" class="an-plan" [attr.data-on]="hasPlan(p) ? '1' : '0'" (click)="togglePlan(p)">{{ p }}</button> }</div>
+                    </div>
+                  }
+                  @if (draft().audience === 'ORG') {
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_org') }}</label>
+                      <div class="an-search" style="max-width:none"><app-icon name="building" /><input type="text" [placeholder]="selectedOrgName() || i18n.t('ann_org_search')" [value]="orgQuery()" (input)="onOrgSearch($event)" /></div>
+                      @if (orgPickerOpen() && orgResults().length) {
+                        <div class="an-menu" style="position:static;box-shadow:none;border-color:var(--border)">@for (o of orgResults(); track o.id) { <button type="button" class="an-menu-item" (click)="selectOrg(o)"><app-icon name="building" /><span>{{ o.name }}</span></button> }</div>
+                      }
+                    </div>
+                  }
+                  <div class="an-toggle-row"><span class="an-field-label" style="text-transform:none;font-size:12.5px;color:var(--fg)">{{ i18n.t('ann_f_dismissible') }}</span><button type="button" class="an-toggle" [attr.data-on]="draft().dismissible ? '1' : '0'" (click)="toggleDismissible()" [attr.aria-pressed]="draft().dismissible"></button></div>
+                  <div class="an-grid2">
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_starts') }}</label><input class="an-input" type="datetime-local" [value]="dateInputValue(draft().startsAt)" (input)="onDateInput('startsAt', $event)" /></div>
+                    <div class="an-field"><label class="an-field-label">{{ i18n.t('ann_f_ends') }}</label><input class="an-input" type="datetime-local" [value]="dateInputValue(draft().endsAt)" (input)="onDateInput('endsAt', $event)" /></div>
+                  </div>
+                  <div class="an-status-preview"><app-icon name="clock" /><span>{{ draftStatusPreview() }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <div class="an-panel">
+            <div class="an-panel-head">{{ i18n.t('ann_tab_history') }}</div>
+            @if (history().length === 0) {
+              <div class="an-empty" style="border:0;padding:28px"><app-icon name="clock" /><div class="an-empty-title">{{ i18n.t('ann_no_history') }}</div></div>
+            } @else {
+              <div class="an-timeline">@for (h of history(); track $index) { <div class="an-tl"><span class="an-tl-dot" [attr.data-first]="$index === 0 ? '1' : '0'"></span><div><div class="an-tl-label">{{ h.label }}</div><div class="an-tl-meta">{{ h.actor === 'system' ? i18n.t('ann_automated') : h.actor }} · {{ relative(h.at) }}</div></div></div> }</div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</app-page-content>

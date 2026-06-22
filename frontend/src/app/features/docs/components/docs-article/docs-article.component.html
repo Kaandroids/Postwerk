@@ -1,0 +1,96 @@
+<div class="art">
+  <main class="art-main" (click)="onContentClick($event)">
+    <!-- Breadcrumb -->
+    <nav class="art-crumb">
+      <a routerLink="/docs">{{ i18n.t('doc_tag') }}</a>
+      @if (section(); as sec) {
+        <app-icon name="chevronRight" />
+        <a [routerLink]="link(sec.items[0].slug)">{{ sec.title[i18n.lang()] }}</a>
+      }
+      @if (ref(); as r) {
+        <app-icon name="chevronRight" />
+        <span>{{ refTitle(r) }}</span>
+      }
+    </nav>
+
+    @if (audienceLabel(); as al) {
+      <span class="art-badge"><span class="art-pip"></span>{{ al }}</span>
+    }
+
+    <!-- Node-reference page -->
+    @if (nodeType(); as nt) {
+      <app-node-reference [type]="nt" />
+    }
+
+    <!-- Node overview grid -->
+    @else if (isOverview()) {
+      <h1 class="art-title">{{ i18n.t('doc_nodes_overview_title') }}</h1>
+      <p class="art-intro">{{ i18n.t('doc_nodes_overview_lead') }}</p>
+      <div class="node-grid">
+        @for (t of nodeGrid; track t) {
+          <button class="node-mini" [style.--nc]="nodeColor(t)" (click)="goNode(t)">
+            <span class="node-mini-g"><app-icon [name]="nodeIcon(t)" /></span>
+            <span class="node-mini-tx">
+              <span class="node-mini-n">{{ nodeTitle(t) }}</span>
+              <span class="node-mini-s">{{ nodeSummary(t) }}</span>
+            </span>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Markdown article -->
+    @else {
+      @if (article(); as a) {
+        <div class="md" [innerHTML]="a.html"></div>
+      } @else {
+        <div class="md-skeleton">
+          <span></span><span></span><span></span>
+        </div>
+      }
+    }
+
+    <!-- Footer: feedback + prev/next -->
+    <footer class="art-foot">
+      <div class="feedback">
+        @if (feedback() === 'none') {
+          <span class="fb-q">{{ i18n.t('doc_feedback_q') }}</span>
+          <button class="fb-btn" (click)="feedback.set('yes')">{{ i18n.t('doc_feedback_yes') }}</button>
+          <button class="fb-btn" (click)="feedback.set('no')">{{ i18n.t('doc_feedback_no') }}</button>
+        } @else {
+          <span class="fb-thanks"><app-icon name="check" />{{ i18n.t('doc_feedback_thanks') }}</span>
+        }
+      </div>
+
+      <div class="prevnext">
+        @if (prevNext().prev; as p) {
+          <a class="pn" [routerLink]="link(p.slug)">
+            <span class="pn-dir"><app-icon name="arrowLeft" />{{ i18n.t('doc_prev') }}</span>
+            <span class="pn-t">{{ refTitle(p) }}</span>
+          </a>
+        } @else { <span class="pn pn-empty"></span> }
+        @if (prevNext().next; as n) {
+          <a class="pn pn-next" [routerLink]="link(n.slug)">
+            <span class="pn-dir">{{ i18n.t('doc_next') }}<app-icon name="arrowRight" /></span>
+            <span class="pn-t">{{ refTitle(n) }}</span>
+          </a>
+        } @else { <span class="pn pn-empty"></span> }
+      </div>
+    </footer>
+  </main>
+
+  <!-- On this page -->
+  @if (toc().length > 1) {
+    <aside class="art-toc">
+      <div class="art-toc-h">{{ i18n.t('doc_on_this_page') }}</div>
+      <ul>
+        @for (h of toc(); track h.id) {
+          <li [class.sub]="h.level === 3">
+            <a [href]="'#' + h.id" [class.is-on]="activeHeading() === h.id"
+              (click)="scrollTo(h.id, $event)">{{ h.text }}</a>
+          </li>
+        }
+      </ul>
+    </aside>
+  }
+</div>

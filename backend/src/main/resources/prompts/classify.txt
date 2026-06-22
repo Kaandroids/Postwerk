@@ -1,0 +1,15 @@
+You are a strict email classifier. Classify the following email into exactly ONE of the given categories.
+
+IMPORTANT RULES:
+- Only classify an email if it CLEARLY and DIRECTLY matches the category description.
+- Do NOT guess or assume intent. Base your decision strictly on the actual email content.
+- If the email is only loosely related, tangentially relevant, or ambiguous, return 'uncategorized' with confidence 0.
+- Pay close attention to the negative examples — if the email resembles a negative example, it does NOT belong in that category.
+- A high confidence (80+) should only be given when the email is an obvious, unambiguous match.
+- Marketing emails, newsletters, promotional content, and general announcements should NOT be classified as purchase/order/invoice unless they contain an actual order confirmation or invoice.
+
+=== EMAIL ===
+{{emailText}}
+
+=== CATEGORIES ===
+{{categories}}

@@ -1,0 +1,445 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('settings_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('nav_settings') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('settings_subtitle') }}</div>
+    </div>
+  </div>
+
+  <div class="set-stream">
+    <!-- ═══ Profile ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="user" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('settings_profile') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('settings_profile_desc') }}</p>
+        </div>
+      </header>
+
+      <div class="set-profile-card">
+        <div class="set-profile-id">
+          <div class="set-avatar">
+            <span>{{ initials(profileName()) }}</span>
+            <button class="set-avatar-edit" aria-label="Change avatar"><app-icon name="plus" /></button>
+          </div>
+          <div>
+            <div class="set-profile-name">{{ profileName() }}</div>
+            <div class="set-profile-mail">{{ profileEmail() }}</div>
+            @if (lastLoginAt()) {
+              <div class="set-profile-meta">
+                <span class="set-status-dot"></span>
+                {{ i18n.t('settings_last_login') }} {{ lastLoginAt() }}
+                @if (lastLoginIp()) { · {{ lastLoginIp() }} }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="set-grid">
+          <div class="set-field">
+            <label>{{ i18n.t('settings_fullName') }}</label>
+            <input data-testid="set-fullname" [value]="profileName()" (input)="profileName.set(v($event))" />
+          </div>
+          <div class="set-field">
+            <label>
+              {{ i18n.t('settings_email') }}
+              <span class="set-field-tag">{{ i18n.t('set_verified') }}</span>
+            </label>
+            <input data-testid="set-email" [value]="profileEmail()" disabled />
+          </div>
+          <div class="set-field">
+            <label>{{ i18n.t('settings_company') }} <span class="set-field-hint">{{ i18n.t('optional') }}</span></label>
+            <input data-testid="set-company" [value]="profileCompany()" (input)="profileCompany.set(v($event))" />
+          </div>
+          <div class="set-field">
+            <label>{{ i18n.t('settings_phone') }} <span class="set-field-hint">{{ i18n.t('optional') }}</span></label>
+            <input data-testid="set-phone" [value]="profilePhone()" (input)="profilePhone.set(v($event))" />
+          </div>
+        </div>
+
+        <div class="set-card-foot">
+          <span class="set-card-foot-note">{{ i18n.t('set_changes_save') }}</span>
+          <button class="set-btn-primary" data-testid="set-profile-save" [disabled]="savingProfile()" (click)="saveProfile()">
+            {{ savingProfile() ? i18n.t('loading') : profileSaved() ? i18n.t('settings_saved') : i18n.t('settings_save') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Password ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="lock" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('settings_password') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('settings_password_desc') }}</p>
+        </div>
+      </header>
+
+      <div class="set-card">
+        @if (pwError()) { <app-error-banner [message]="pwError()" /> }
+
+        <div class="set-grid">
+          <div class="set-field">
+            <label>{{ i18n.t('settings_current_password') }}</label>
+            <div class="set-pass-wrap">
+              <input [type]="showPw()['cur'] ? 'text' : 'password'" placeholder="••••••••"
+                autocomplete="new-password" data-testid="set-current-pw" readonly onfocus="this.removeAttribute('readonly')" [value]="currentPw()" (input)="currentPw.set(v($event))" />
+              <button type="button" class="set-pass-toggle" (click)="toggleShowPw('cur')">
+                <app-icon [name]="showPw()['cur'] ? 'eyeOff' : 'eye'" />
+              </button>
+            </div>
+          </div>
+          <div class="set-field">
+            <label>{{ i18n.t('settings_new_password') }}</label>
+            <div class="set-pass-wrap">
+              <input [type]="showPw()['new'] ? 'text' : 'password'" placeholder="••••••••"
+                autocomplete="new-password" data-testid="set-new-pw" [value]="newPw()" (input)="newPw.set(v($event))" />
+              <button type="button" class="set-pass-toggle" (click)="toggleShowPw('new')">
+                <app-icon [name]="showPw()['new'] ? 'eyeOff' : 'eye'" />
+              </button>
+            </div>
+          </div>
+          <div class="set-field">
+            <label>{{ i18n.t('settings_new_password_confirm') }}</label>
+            <div class="set-pass-wrap">
+              <input [type]="showPw()['conf'] ? 'text' : 'password'" placeholder="••••••••"
+                autocomplete="new-password" data-testid="set-confirm-pw" [value]="confirmPw()" (input)="confirmPw.set(v($event))" />
+              <button type="button" class="set-pass-toggle" (click)="toggleShowPw('conf')">
+                <app-icon [name]="showPw()['conf'] ? 'eyeOff' : 'eye'" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        @if (newPw()) {
+          <div class="set-pass-meter">
+            <div class="set-pass-bars">
+              @for (i of [0,1,2,3]; track i) {
+                <span class="set-pass-bar" [attr.data-on]="i < pwScore() ? '1' : '0'" [attr.data-level]="pwScore()"></span>
+              }
+            </div>
+            <span class="set-pass-label">{{ pwScoreLabel() }}</span>
+          </div>
+        }
+
+        <div class="set-card-foot">
+          <span class="set-card-foot-note">{{ i18n.t('set_pw_note') }}</span>
+          <button class="set-btn-primary" data-testid="set-pw-save" [disabled]="changingPw() || !currentPw() || !newPw() || newPw() !== confirmPw()" (click)="changePassword()">
+            {{ changingPw() ? i18n.t('loading') : i18n.t('settings_password_btn') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Payment Methods ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="creditCard" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('set_payment_title') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('set_payment_sub') }}</p>
+        </div>
+        <button class="set-btn-secondary" (click)="openCardModal()">
+          <app-icon name="plus" />
+          {{ i18n.t('set_add_card') }}
+        </button>
+      </header>
+
+      <div class="set-card set-card-padless">
+        @if (cards().length === 0) {
+          <div class="set-empty">
+            <div class="set-empty-glyph"><app-icon name="creditCard" /></div>
+            <div class="set-empty-title">{{ i18n.t('set_no_card') }}</div>
+            <div class="set-empty-sub">{{ i18n.t('set_no_card_sub') }}</div>
+          </div>
+        }
+        @for (c of cards(); track c.id) {
+          <div class="set-pay-row">
+            <span [class]="brandClass(c.brand)">{{ brandLabel(c.brand) }}</span>
+            <div class="set-pay-text">
+              <div class="set-pay-num">
+                <span class="set-pay-mask">•••• •••• ••••</span>
+                <span class="set-pay-last">{{ c.last4 }}</span>
+                @if (c.default) {
+                  <span class="set-pay-default">
+                    <app-icon name="starFilled" />
+                    {{ i18n.t('set_default') }}
+                  </span>
+                }
+              </div>
+              <div class="set-pay-meta">{{ c.name }} · {{ i18n.t('set_expires') }} {{ c.exp }}</div>
+            </div>
+            <div class="set-pay-actions">
+              @if (!c.default) {
+                <button class="set-link-btn" (click)="makeCardDefault(c.id)">{{ i18n.t('set_make_default') }}</button>
+              }
+              <button class="set-icon-btn set-icon-btn-danger" (click)="removeCard(c.id)" [title]="i18n.t('set_remove')">
+                <app-icon name="trash" />
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ═══ Billing Address ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="receipt" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('set_billing_title') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('set_billing_sub') }}</p>
+        </div>
+      </header>
+
+      <div class="set-card">
+        <div class="set-segment" role="tablist">
+          <button class="set-segment-btn" [attr.data-active]="billingKind() === 'person' ? '1' : '0'" (click)="billingKind.set('person')" role="tab">
+            <app-icon name="user" />
+            {{ i18n.t('set_billing_person') }}
+          </button>
+          <button class="set-segment-btn" [attr.data-active]="billingKind() === 'company' ? '1' : '0'" (click)="billingKind.set('company')" role="tab">
+            <app-icon name="building" />
+            {{ i18n.t('set_billing_company') }}
+          </button>
+        </div>
+
+        <div class="set-grid">
+          @if (billingKind() === 'company') {
+            <div class="set-field set-field-full">
+              <label>{{ i18n.t('set_company_name') }}</label>
+              <input [value]="billingCompany()" (input)="billingCompany.set(v($event))" />
+            </div>
+            <div class="set-field">
+              <label>{{ i18n.t('set_vat_id') }} <span class="set-field-hint">{{ i18n.t('optional') }}</span></label>
+              <input [value]="billingVat()" (input)="billingVat.set(v($event))" placeholder="DE 123 456 789" />
+            </div>
+            <div class="set-field">
+              <label>{{ i18n.t('set_attention') }}</label>
+              <input [value]="billingName()" (input)="billingName.set(v($event))" />
+            </div>
+          } @else {
+            <div class="set-field set-field-full">
+              <label>{{ i18n.t('settings_fullName') }}</label>
+              <input [value]="billingName()" (input)="billingName.set(v($event))" />
+            </div>
+          }
+
+          <div class="set-field set-field-full">
+            <label>{{ i18n.t('set_street') }}</label>
+            <input [value]="billingLine1()" (input)="billingLine1.set(v($event))" />
+          </div>
+          <div class="set-field set-field-full">
+            <label>{{ i18n.t('set_address2') }} <span class="set-field-hint">{{ i18n.t('optional') }}</span></label>
+            <input [value]="billingLine2()" (input)="billingLine2.set(v($event))" [placeholder]="i18n.t('set_address2_ph')" />
+          </div>
+          <div class="set-field set-field-zip">
+            <label>{{ i18n.t('set_zip') }}</label>
+            <input [value]="billingZip()" (input)="billingZip.set(v($event))" />
+          </div>
+          <div class="set-field set-field-city">
+            <label>{{ i18n.t('set_city') }}</label>
+            <input [value]="billingCity()" (input)="billingCity.set(v($event))" />
+          </div>
+          <div class="set-field set-field-full">
+            <label>{{ i18n.t('set_country') }}</label>
+            <select [value]="billingCountry()" (change)="billingCountry.set(v($event))">
+              @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ i18n.lang() === 'de' ? c.de : c.en }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="set-card-foot">
+          <span class="set-card-foot-note">{{ i18n.t(billingKind() === 'company' ? 'set_billing_note_company' : 'set_billing_note_person') }}</span>
+          <button class="set-btn-primary">{{ i18n.t('set_save_address') }}</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Language ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="globe" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('settings_language') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('settings_language_desc') }}</p>
+        </div>
+      </header>
+
+      <div class="set-lang-grid">
+        @for (l of langs; track l.code) {
+          <button class="set-lang-card" [attr.data-active]="i18n.lang() === l.code ? '1' : '0'" (click)="i18n.setLang(l.code)">
+            <span class="set-lang-flag">{{ l.flag }}</span>
+            <span class="set-lang-text">
+              <span class="set-lang-name">{{ l.name }}</span>
+              <span class="set-lang-sub">{{ l.sub }}</span>
+            </span>
+            @if (i18n.lang() === l.code) {
+              <span class="set-lang-check"><app-icon name="check" /></span>
+            }
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- ═══ Privacy ══�� -->
+    <!-- Notifications -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="bell" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('notif_pref_title') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('notif_pref_desc') }}</p>
+        </div>
+      </header>
+
+      <div class="set-card set-card-padless">
+        <div class="set-notif-head">
+          <span></span>
+          <span class="set-notif-col">{{ i18n.t('notif_pref_inapp') }}</span>
+          <span class="set-notif-col">{{ i18n.t('notif_pref_email') }}</span>
+        </div>
+        @for (pref of notifPrefs(); track pref.category) {
+          <div class="set-notif-row">
+            <div class="set-toggle-title">{{ categoryLabel(pref.category) }}</div>
+            <button class="set-switch" [attr.data-on]="pref.inApp ? '1' : '0'" [attr.aria-pressed]="pref.inApp"
+                    [attr.data-testid]="'notif-pref-' + pref.category + '-inapp'" (click)="toggleNotifPref(pref.category, 'inApp')">
+              <span class="set-switch-knob"></span>
+            </button>
+            <button class="set-switch" [attr.data-on]="pref.email ? '1' : '0'" [attr.aria-pressed]="pref.email"
+                    [attr.data-testid]="'notif-pref-' + pref.category + '-email'" (click)="toggleNotifPref(pref.category, 'email')">
+              <span class="set-switch-knob"></span>
+            </button>
+          </div>
+        }
+        <div class="set-notif-note">{{ i18n.t('notif_pref_critical_note') }}</div>
+      </div>
+    </section>
+
+    <!-- ═══ Privacy ═══ -->
+    <section class="set-section">
+      <header class="set-section-head">
+        <div class="set-section-icon"><app-icon name="shield" /></div>
+        <div>
+          <h2 class="set-section-title">{{ i18n.t('settings_privacy') }}</h2>
+          <p class="set-section-sub">{{ i18n.t('settings_privacy_desc') }}</p>
+        </div>
+      </header>
+
+      <div class="set-card set-card-padless">
+        <div class="set-toggle-row">
+          <div>
+            <div class="set-toggle-title">{{ i18n.t('settings_marketing_label') }}</div>
+            <div class="set-toggle-sub">{{ i18n.t('settings_marketing_desc') }}</div>
+          </div>
+          <button class="set-switch" data-testid="set-marketing-toggle" [attr.data-on]="marketingOptIn() ? '1' : '0'" (click)="toggleMarketing()" [attr.aria-pressed]="marketingOptIn()">
+            <span class="set-switch-knob"></span>
+          </button>
+        </div>
+        <div class="set-toggle-row">
+          <div>
+            <div class="set-toggle-title">{{ i18n.t('set_usage_title') }}</div>
+            <div class="set-toggle-sub">{{ i18n.t('set_usage_sub') }}</div>
+          </div>
+          <button class="set-switch" data-testid="set-analytics-toggle" [attr.data-on]="usageAnalytics() ? '1' : '0'" (click)="toggleUsage()" [attr.aria-pressed]="usageAnalytics()">
+            <span class="set-switch-knob"></span>
+          </button>
+        </div>
+        <div class="set-toggle-row">
+          <div>
+            <div class="set-toggle-title">{{ i18n.t('settings_cookie_label') }}</div>
+            <div class="set-toggle-sub">{{ i18n.t('settings_cookie_desc') }}</div>
+          </div>
+          <button class="set-btn-ghost set-btn-ghost-bordered" (click)="resetCookieConsent()">
+            {{ i18n.t('settings_cookie_reset') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="set-danger">
+        <button class="set-link-btn" [disabled]="exporting()" (click)="exportData()">
+          <app-icon name="download" />
+          {{ exporting() ? i18n.t('loading') : i18n.t('settings_export_btn') }}
+        </button>
+        <button class="set-link-btn set-link-btn-danger" (click)="confirmDelete.set(true)">
+          <app-icon name="trash" />
+          {{ i18n.t('settings_delete_btn') }}
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ Add Card Modal ═══ -->
+  @if (cardModalOpen()) {
+    <div class="set-modal-back" (click)="cardModalOpen.set(false)">
+      <div class="set-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+        <div class="set-modal-head">
+          <div>
+            <div class="set-modal-eyebrow">{{ i18n.t('set_payment_title') }}</div>
+            <div class="set-modal-title">{{ i18n.t('set_add_card') }}</div>
+          </div>
+          <button class="set-modal-close" (click)="cardModalOpen.set(false)" aria-label="Close">
+            <app-icon name="close" />
+          </button>
+        </div>
+
+        <!-- Live card preview -->
+        <div class="set-card-preview" [attr.data-brand]="cardBrand()">
+          <div class="set-card-preview-top">
+            <span class="set-card-preview-brand">{{ cardBrand() === 'card' ? 'CARD' : cardBrand().toUpperCase() }}</span>
+            <span class="set-card-preview-chip"></span>
+          </div>
+          <div class="set-card-preview-num">{{ cardNum() || '•••• •••• •••• ••••' }}</div>
+          <div class="set-card-preview-row">
+            <div>
+              <div class="set-card-preview-lbl">{{ i18n.t('set_cardholder') }}</div>
+              <div class="set-card-preview-val">{{ cardName() || i18n.t('settings_fullName') }}</div>
+            </div>
+            <div>
+              <div class="set-card-preview-lbl">{{ i18n.t('set_valid_thru') }}</div>
+              <div class="set-card-preview-val">{{ cardExp() || 'MM/JJ' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="set-modal-form">
+          <div class="set-field set-field-full">
+            <label>{{ i18n.t('set_card_number') }}</label>
+            <input inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456"
+              [value]="cardNum()" (input)="formatCardNum($event)" />
+          </div>
+          <div class="set-field set-field-full">
+            <label>{{ i18n.t('set_cardholder') }}</label>
+            <input autocomplete="cc-name" [placeholder]="i18n.t('settings_fullName')"
+              [value]="cardName()" (input)="cardName.set(v($event))" />
+          </div>
+          <div class="set-field">
+            <label>{{ i18n.t('set_expiry') }}</label>
+            <input inputmode="numeric" autocomplete="cc-exp" placeholder="MM/JJ"
+              [value]="cardExp()" (input)="formatCardExp($event)" />
+          </div>
+          <div class="set-field">
+            <label>CVC</label>
+            <input inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4"
+              [value]="cardCvc()" (input)="cardCvc.set(v($event))" />
+          </div>
+          <label class="set-modal-check">
+            <input type="checkbox" [checked]="cardMakeDefault()" (change)="cardMakeDefault.set(!cardMakeDefault())" />
+            <span>{{ i18n.t('set_make_default_card') }}</span>
+          </label>
+          <div class="set-modal-foot">
+            <button class="set-btn-ghost" (click)="cardModalOpen.set(false)">{{ i18n.t('ea_cancel') }}</button>
+            <button class="set-btn-primary" (click)="saveCard()">{{ i18n.t('set_add_card') }}</button>
+          </div>
+        </div>
+
+        <div class="set-modal-note">{{ i18n.t('set_stripe_note') }}</div>
+      </div>
+    </div>
+  }
+</app-page-content>

@@ -1,0 +1,92 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">
+        {{ i18n.t('ov_eyebrow') }} · {{ workspace.activeAccount()?.email || '' }}
+      </div>
+      <h1 class="dash-title">{{ i18n.t('dash_overview') }}</h1>
+      <div class="dash-subtitle">{{ monthLabel() }} · {{ automationPct() }}% {{ i18n.t('ov_auto_handled') }}</div>
+    </div>
+  </div>
+
+  @if (!hasAccount()) {
+    <div class="onboarding-card">
+      <div class="onboarding-glyph" aria-hidden="true">
+        <span [style.background]="'#3b82f6'"></span>
+        <span [style.background]="'#10b981'"></span>
+        <span [style.background]="'#6366f1'"></span>
+      </div>
+      <div class="onboarding-title">{{ i18n.t('onboarding_title') }}</div>
+      <div class="onboarding-sub">{{ i18n.t('onboarding_sub') }}</div>
+      <div class="onboarding-steps">
+        <div class="onboarding-step">
+          <span class="onboarding-step-num">1</span>
+          <span>{{ i18n.t('onboarding_step1') }}</span>
+        </div>
+        <div class="onboarding-step">
+          <span class="onboarding-step-num">2</span>
+          <span>{{ i18n.t('onboarding_step2') }}</span>
+        </div>
+        <div class="onboarding-step">
+          <span class="onboarding-step-num">3</span>
+          <span>{{ i18n.t('onboarding_step3') }}</span>
+        </div>
+      </div>
+      <button class="onboarding-cta" (click)="goToAddAccount()">
+        <app-icon name="plus" />
+        {{ i18n.t('onboarding_cta') }}
+      </button>
+    </div>
+  } @else {
+    <!-- Metric tiles -->
+    <div class="ov-tiles">
+      <div class="ov-tile ov-tile-neutral">
+        <div class="ov-tile-head">
+          <span class="ov-tile-label">{{ i18n.t('ov_received') }}</span>
+        </div>
+        <div class="ov-tile-value">{{ received() | number }}</div>
+        <div class="ov-tile-sub">{{ i18n.t('ov_this_month') }}</div>
+      </div>
+
+      <div class="ov-tile ov-tile-success">
+        <div class="ov-tile-head">
+          <span class="ov-tile-icon"><app-icon name="reply" /></span>
+          <span class="ov-tile-label">{{ i18n.t('ov_replied') }}</span>
+        </div>
+        <div class="ov-tile-value">{{ replied() | number }}</div>
+        <div class="ov-tile-sub">{{ repliedPct() }}% {{ i18n.t('ov_of_incoming') }}</div>
+      </div>
+
+      <div class="ov-tile ov-tile-violet">
+        <div class="ov-tile-head">
+          <span class="ov-tile-icon"><app-icon name="forward" /></span>
+          <span class="ov-tile-label">{{ i18n.t('ov_forwarded') }}</span>
+        </div>
+        <div class="ov-tile-value">{{ forwarded() | number }}</div>
+        <div class="ov-tile-sub">{{ forwardedPct() }}% {{ i18n.t('ov_of_incoming') }}</div>
+      </div>
+
+      <div class="ov-tile ov-tile-warning">
+        <div class="ov-tile-head">
+          <span class="ov-tile-icon"><app-icon name="alertTriangle" /></span>
+          <span class="ov-tile-label">{{ i18n.t('ov_review') }}</span>
+        </div>
+        <div class="ov-tile-value">{{ review() }}</div>
+        <div class="ov-tile-sub">{{ i18n.t('ov_review_sub') }}</div>
+      </div>
+    </div>
+
+    <!-- Review queue (shown when there are items to review) -->
+    @if (review() > 0) {
+      <div class="ov-card">
+        <div class="ov-card-head">
+          <div>
+            <div class="ov-card-title">{{ i18n.t('ov_queue_title') }}</div>
+            <div class="ov-card-sub">{{ review() }} {{ i18n.t('ov_queue_sub') }}</div>
+          </div>
+          <button class="ov-card-link" (click)="goToInbox()">{{ i18n.t('ov_view_all') }} →</button>
+        </div>
+      </div>
+    }
+  }
+</app-page-content>

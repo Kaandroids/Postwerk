@@ -1,0 +1,84 @@
+package com.postwerk.service.executor;
+
+import com.postwerk.TestFixtures;
+import com.postwerk.model.Email;
+import com.postwerk.model.EmailAccount;
+import com.postwerk.repository.TemplateRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit tests for {@link ForwardActionExecutor}. The real SMTP send is delegated to
+ * {@link MailSendingSupport} (mocked), so these verify the recipient guard and that a forward is
+ * composed with the resolved note + dispatched with the resolved recipient/subject — without sending.
+ */
+@ExtendWith(MockitoExtension.class)
+class ForwardActionExecutorTest {
+
+    @Mock private MailSendingSupport mailSendingSupport;
+    @Mock private TemplateRepository templateRepository;
+    @Mock private VariableResolver variableResolver;
+
+    private ForwardActionExecutor executor;
+    private final ObjectMapper mapper = new ObjectMapper();
+    private Email email;
+    private EmailAccount account;
+    private ExecutionContext ctx;
+
+    @BeforeEach
+    void setUp() {
+        executor = new ForwardActionExecutor(mailSendingSupport, templateRepository, variableResolver);
+        account = TestFixtures.createEmailAccount(UUID.randomUUID());
+        email = TestFixtures.createEmail(UUID.randomUUID());
+        ctx = new ExecutionContext(email, account);
+    }
+
+    private JsonNode cfg(String json) throws Exception {
+        return mapper.readTree(json);
+    }
+
+    @Test
+    void getActionType_isForward() {
+        assertThat(executor.getActionType()).isEqualTo("FORWARD");
+    }
+
+    @Test
+    void missingToAddress_throws_andSendsNothing() throws Exception {
+        assertThatThrownBy(() -> executor.execute(email, account, cfg("{}"), ctx))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(mailSendingSupport, never()).send(any(), any());
+    }
+
+    @Test
+    void forwards_withResolvedNote_toResolvedRecipient() throws Exception {
+        when(variableResolver.resolve(anyString(), any())).thenAnswer(i -> i.getArgument(0));
+        var config = cfg("{\"toAddress\":\"team@x.com\",\"contentSource\":\"MANUAL\","
+                + "\"subject\":\"Note subj\",\"body\":\"Note body\"}");
+
+        executor.execute(email, account, config, ctx);
+
+        ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
+        verify(mailSendingSupport).send(eq(account), captor.capture());
+        assertThat(captor.getValue().to()).isEqualTo("team@x.com");
+        assertThat(captor.getValue().subject()).isEqualTo("Note subj");
+        assertThat(captor.getValue().html()).isFalse(); // forward is plain text
+    }
+}

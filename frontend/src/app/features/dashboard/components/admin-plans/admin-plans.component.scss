@@ -1,0 +1,276 @@
+$card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 40px -12px rgba(0, 0, 0, 0.08);
+
+.admin-loading { text-align: center; padding: 60px 0; color: var(--fg-muted); }
+
+.create-btn {
+  appearance: none;
+  border: 0.5px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  height: 36px;
+  padding: 0 15px;
+  border-radius: 9px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: opacity 0.12s;
+  &:hover { opacity: 0.9; }
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.plan-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: $card-shadow;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.12s, transform 0.12s;
+
+  &:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+}
+
+.plan-name {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+
+.plan-price {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-period {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+
+.plan-limits {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px 0;
+  border-top: 0.5px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
+}
+
+.plan-limit {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+
+  span:last-child { font-variant-numeric: tabular-nums; font-weight: 500; }
+}
+
+.limit-label { color: var(--fg-muted); font-weight: 400; }
+
+.plan-users {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.plan-action-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  color: var(--fg-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  &:hover { background: var(--bg-2); color: var(--fg); border-color: var(--border-strong); }
+  &--danger:hover {
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 36%, var(--border));
+    background: color-mix(in srgb, var(--danger) 8%, var(--bg));
+  }
+}
+
+.plans-empty {
+  text-align: center;
+  padding: 54px 24px;
+  color: var(--fg-subtle);
+  border: 0.5px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  grid-column: 1 / -1;
+
+  app-icon { color: var(--fg-subtle); }
+  p { margin: 0; font-size: 13px; color: var(--fg-muted); }
+}
+
+// Form
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 28px;
+  align-items: start;
+}
+
+.form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.field-hint {
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+
+.input {
+  height: 44px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--fg);
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.save-btn {
+  appearance: none;
+  border: 0.5px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 22px;
+  height: 42px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  &:hover { opacity: 0.9; }
+  &:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.cancel-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 22px;
+  height: 42px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  &:hover { background: var(--bg-2); border-color: var(--border-strong); }
+}
+
+.info-col {
+  position: sticky;
+  top: 40px;
+}
+
+.info-card {
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: $card-shadow;
+
+  &--blue {
+    background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 4%, var(--bg)));
+    border: 0.5px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+    color: var(--accent);
+  }
+
+  app-icon { color: var(--accent); }
+  .info-card-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--fg); }
+  h4 { margin: 0; font-size: 14px; font-weight: 600; color: var(--fg); }
+  p { margin: 0; font-size: 13px; color: var(--fg-muted); line-height: 1.55; }
+}
+
+@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Checkbox field (API webhook toggle) ──────────────────────────────── */
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+
+  input[type='checkbox'] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+}
+
+/* ── Permission gating affordance ─────────────────────────────────────── */
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  &:hover { opacity: 0.5; }
+}

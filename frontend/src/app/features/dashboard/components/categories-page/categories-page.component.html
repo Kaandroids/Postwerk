@@ -1,0 +1,303 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <!-- ── LIST VIEW ────────────────────────────────────────────── -->
+    <div class="cat-page">
+      <div class="dash-page-head cat-page-head cat-page-head-list">
+        <div>
+          <div class="dash-eyebrow">{{ i18n.t('cat_pretitle') }}</div>
+          <h1 class="dash-title">{{ i18n.t('cat_list_title') }}</h1>
+          <div class="dash-subtitle">{{ i18n.t('cat_list_subtitle') }}</div>
+        </div>
+        <div class="cat-head-actions">
+          <button class="cat-action-btn" (click)="exportData()" [title]="i18n.t('cat_export')">
+            <app-icon name="download" />
+          </button>
+          <button class="cat-action-btn" (click)="fileInput.click()" [title]="i18n.t('cat_import')">
+            <app-icon name="upload" />
+          </button>
+          <input #fileInput type="file" accept=".json" hidden (change)="importData($event)" />
+          <button class="cat-add-btn" (click)="showAddForm()">
+            <app-icon name="plus" />
+            <span>{{ i18n.t('cat_list_add') }}</span>
+          </button>
+        </div>
+      </div>
+
+      @if (categories().length === 0) {
+        <app-empty-state
+          [title]="i18n.t('cat_list_empty_title')"
+          [sub]="i18n.t('cat_list_empty_sub')"
+          [ctaLabel]="i18n.t('cat_list_empty_cta')"
+          (cta)="showAddForm()" />
+      } @else {
+        <div class="cat-list">
+          @for (cat of categories(); track cat.id) {
+            <div class="cat-card" [style.--cat-color]="cat.color">
+              <div class="cat-card-main">
+                <div class="cat-card-head">
+                  <span class="cat-card-name">{{ cat.name }}</span>
+                </div>
+                @if (cat.description) {
+                  <div class="cat-card-desc">{{ cat.description }}</div>
+                }
+                @if (cat.positiveExample || cat.negativeExample) {
+                  <div class="cat-card-examples">
+                    @if (cat.positiveExample) {
+                      <div class="cat-card-example cat-card-example-pos">
+                        <span class="cat-card-example-mark"><app-icon name="check" /></span>
+                        <span>{{ cat.positiveExample }}</span>
+                      </div>
+                    }
+                    @if (cat.negativeExample) {
+                      <div class="cat-card-example cat-card-example-neg">
+                        <span class="cat-card-example-mark"><app-icon name="x" /></span>
+                        <span>{{ cat.negativeExample }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="cat-card-actions">
+                <button class="cat-icon-btn lock-btn"
+                  [class.locked]="cat.locked"
+                  [attr.data-testid]="'category-lock-' + cat.id"
+                  (click)="toggleLock(cat)">
+                  <app-icon [name]="cat.locked ? 'lock' : 'unlock'" />
+                </button>
+                <button class="cat-icon-btn" data-testid="cat-edit-btn"
+                  [attr.aria-label]="i18n.t('cat_edit')"
+                  [title]="i18n.t('cat_edit')"
+                  (click)="editCategory(cat)">
+                  <app-icon name="edit" />
+                </button>
+                <button class="cat-icon-btn cat-icon-btn-danger"
+                  [attr.aria-label]="i18n.t('cat_delete')"
+                  [title]="i18n.t('cat_delete')"
+                  (click)="deleteCategory(cat.id)">
+                  <app-icon name="trash" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- ── FORM / EDITOR VIEW ───────────────────────────────────── -->
+    <div class="cat-page">
+      <div class="dash-page-head cat-page-head">
+        <div>
+          <button class="dash-back" data-testid="cat-back-btn" (click)="cancel()">
+            <app-icon name="arrowLeft" />
+            <span>{{ i18n.t('cat_back') }}</span>
+          </button>
+          <h1 class="dash-title">{{ editId() ? i18n.t('cat_edit_title') : i18n.t('cat_title') }}</h1>
+          <div class="dash-subtitle">{{ editId() ? i18n.t('cat_edit_subtitle') : i18n.t('cat_subtitle') }}</div>
+        </div>
+      </div>
+
+      <div class="cat-editor">
+        <app-error-banner [message]="error()" />
+
+        <div class="cat-editor-grid">
+          <!-- ── Left: Form ──────────────────────────── -->
+          <div class="cat-form">
+            <div class="cat-field">
+              <label class="cat-field-label" for="cat-name">{{ i18n.t('cat_name') }}</label>
+              <input id="cat-name" class="cat-input" type="text"
+                [placeholder]="i18n.t('cat_name_placeholder')"
+                [attr.data-error]="hasErr('name') ? '1' : '0'"
+                [value]="name()"
+                (input)="name.set(v($event))"
+                maxlength="64" />
+            </div>
+
+            <div class="cat-field">
+              <label class="cat-field-label">{{ i18n.t('cat_color') }}</label>
+              <app-color-picker
+                [value]="color()"
+                [presets]="colors"
+                [ariaLabel]="i18n.t('cat_color')"
+                (valueChange)="color.set($event)" />
+            </div>
+
+            <div class="cat-field">
+              <label class="cat-field-label" for="cat-desc">
+                <span>{{ i18n.t('cat_description') }}</span>
+                <span class="cat-field-aux"
+                  [attr.data-state]="description().length >= 30 ? 'ok' : 'todo'">
+                  @if (description().length >= 30) {
+                    {{ description().length }} {{ i18n.t('cat_description_hint') }}
+                  } @else {
+                    {{ i18n.t('cat_char_count', { count: '' + description().length }) }}
+                  }
+                </span>
+              </label>
+              <textarea id="cat-desc" class="cat-textarea" rows="4"
+                [placeholder]="i18n.t('cat_description_placeholder')"
+                [attr.data-error]="hasErr('description') ? '1' : '0'"
+                [value]="description()"
+                (input)="description.set(v($event))"
+                (focus)="focused.set('description')"
+                (blur)="focused.set(null)"></textarea>
+            </div>
+
+            <div class="cat-field">
+              <label class="cat-field-label" for="cat-pos">
+                <span>{{ i18n.t('cat_positive') }}</span>
+                <span class="cat-field-aux">{{ i18n.t('cat_optional') }}</span>
+              </label>
+              <textarea id="cat-pos" class="cat-textarea" rows="2"
+                [placeholder]="i18n.t('cat_positive_placeholder')"
+                [value]="positiveExample()"
+                (input)="positiveExample.set(v($event))"
+                (focus)="focused.set('positive')"
+                (blur)="focused.set(null)"></textarea>
+            </div>
+
+            <div class="cat-field">
+              <label class="cat-field-label" for="cat-neg">
+                <span>{{ i18n.t('cat_negative') }}</span>
+                <span class="cat-field-aux">{{ i18n.t('cat_optional') }}</span>
+              </label>
+              <textarea id="cat-neg" class="cat-textarea" rows="2"
+                [placeholder]="i18n.t('cat_negative_placeholder')"
+                [value]="negativeExample()"
+                (input)="negativeExample.set(v($event))"
+                (focus)="focused.set('negative')"
+                (blur)="focused.set(null)"></textarea>
+            </div>
+          </div>
+
+          <!-- ── Right: Insight panel ────────────────── -->
+          <div class="cat-insight-col">
+            <div class="cat-insight">
+              <!-- Accuracy card -->
+              <div class="cat-ins-card cat-ins-accuracy">
+                <div class="cat-ins-card-head">
+                  <span class="cat-ins-icon cat-ins-icon-green"><app-icon name="target" /></span>
+                  <span class="cat-ins-title">{{ i18n.t('cat_info_accuracy') }}</span>
+                </div>
+
+                <div class="cat-acc-total">
+                  <div class="cat-acc-total-num-wrap">
+                    <span class="cat-acc-total-num"
+                      [class.cat-acc-total-warn]="accuracyTone() === 'warn'"
+                      [class.cat-acc-total-mid]="accuracyTone() === 'mid'"
+                      [class.cat-acc-total-ok]="accuracyTone() === 'ok'">{{ animatedAccuracy() }}</span>
+                    <span class="cat-acc-total-pct">%</span>
+                  </div>
+                  <div class="cat-acc-total-side">
+                    <div class="cat-acc-total-label">{{ i18n.t('cat_estimated_accuracy') }}</div>
+                    <div class="cat-acc-chips">
+                      <span class="cat-acc-chip cat-acc-chip-base">
+                        <span class="cat-acc-chip-dot"></span>
+                        {{ i18n.t('cat_info_accuracy_desc') }}
+                        <span class="cat-acc-chip-val">+{{ descScore() }}</span>
+                      </span>
+                      <span class="cat-acc-chip cat-acc-chip-pos"
+                        [attr.data-on]="posBoost() > 0 ? '1' : '0'">
+                        <span class="cat-acc-chip-dot"></span>
+                        {{ i18n.t('cat_info_accuracy_pos') }}
+                        <span class="cat-acc-chip-val">+{{ posBoost() }}</span>
+                      </span>
+                      <span class="cat-acc-chip cat-acc-chip-neg"
+                        [attr.data-on]="negBoost() > 0 ? '1' : '0'">
+                        <span class="cat-acc-chip-dot"></span>
+                        {{ i18n.t('cat_info_accuracy_neg') }}
+                        <span class="cat-acc-chip-val">+{{ negBoost() }}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cat-acc-rows">
+                  <!-- Description bar -->
+                  <div class="acc-row" [class.acc-row-active]="focused() === 'description'">
+                    <span class="acc-row-label">{{ i18n.t('cat_info_accuracy_desc') }}</span>
+                    <div class="acc-track">
+                      <div class="acc-fill acc-fill-base" [style.width.%]="descScore()"></div>
+                    </div>
+                    <span class="acc-row-value">{{ descScore() }}%</span>
+                  </div>
+                  <!-- + Positive bar -->
+                  <div class="acc-row" [class.acc-row-active]="focused() === 'positive'">
+                    <span class="acc-row-label">{{ i18n.t('cat_info_accuracy_pos') }}</span>
+                    <div class="acc-track">
+                      <div class="acc-fill acc-fill-base" [style.width.%]="descScore()"></div>
+                      <div class="acc-fill acc-fill-plus acc-fill-pos"
+                        [style.left.%]="descScore()"
+                        [style.width.%]="posBoost()"></div>
+                    </div>
+                    <span class="acc-row-value">{{ descScore() + posBoost() }}%</span>
+                  </div>
+                  <!-- + Negative bar -->
+                  <div class="acc-row" [class.acc-row-active]="focused() === 'negative'">
+                    <span class="acc-row-label">{{ i18n.t('cat_info_accuracy_neg') }}</span>
+                    <div class="acc-track">
+                      <div class="acc-fill acc-fill-base" [style.width.%]="descScore() + posBoost()"></div>
+                      <div class="acc-fill acc-fill-plus acc-fill-neg"
+                        [style.left.%]="descScore() + posBoost()"
+                        [style.width.%]="negBoost()"></div>
+                    </div>
+                    <span class="acc-row-value">{{ accuracy() }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Info card: Description -->
+              <div class="cat-ins-card cat-ins-info"
+                data-tone="violet"
+                [class.cat-ins-active]="focused() === 'description'">
+                <span class="cat-ins-icon cat-ins-icon-violet"><app-icon name="target" /></span>
+                <div class="cat-ins-body">
+                  <div class="cat-ins-info-title">{{ i18n.t('cat_info_desc_title') }}</div>
+                  <div class="cat-ins-info-text">{{ i18n.t('cat_info_desc_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Info card: Positive -->
+              <div class="cat-ins-card cat-ins-info"
+                data-tone="green"
+                [class.cat-ins-active]="focused() === 'positive'">
+                <span class="cat-ins-icon cat-ins-icon-green"><app-icon name="check" /></span>
+                <div class="cat-ins-body">
+                  <div class="cat-ins-info-title">{{ i18n.t('cat_info_pos_title') }}</div>
+                  <div class="cat-ins-info-text">{{ i18n.t('cat_info_pos_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Info card: Negative -->
+              <div class="cat-ins-card cat-ins-info"
+                data-tone="red"
+                [class.cat-ins-active]="focused() === 'negative'">
+                <span class="cat-ins-icon cat-ins-icon-red"><app-icon name="filter" /></span>
+                <div class="cat-ins-body">
+                  <div class="cat-ins-info-title">{{ i18n.t('cat_info_neg_title') }}</div>
+                  <div class="cat-ins-info-text">{{ i18n.t('cat_info_neg_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Tip card -->
+              <div class="cat-ins-card cat-ins-tip">
+                <span class="cat-ins-icon-inline"><app-icon name="zap" /></span>
+                <span>{{ i18n.t('cat_info_tip') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="cat-editor-foot">
+          <app-button variant="ghost" type="button" data-testid="cat-cancel-btn" (click)="cancel()">
+            {{ i18n.t('cat_cancel') }}
+          </app-button>
+          <app-button variant="primary" type="submit" data-testid="cat-save-btn" [disabled]="loading() || !canSave()" (click)="submit($event)">
+            {{ loading() ? i18n.t('loading') : (editId() ? i18n.t('cat_edit_submit') : i18n.t('cat_submit')) }}
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

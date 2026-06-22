@@ -1,0 +1,1480 @@
+/* Config panel, per-node config sections & compose modal — split from automation-editor.component.scss for per-file style budget. */
+
+/* ── Config panel ─────────────────────────────────────────── */
+/* Host wrapper collapses so .ae-panel becomes a direct flex child of .ae-main
+   and is stretched to full height — this is what activates its overflow-y scroll. */
+app-node-config-panel { display: contents; }
+
+.ae-panel {
+  width: 320px;
+  border-left: 0.5px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  animation: ae-panel-in 0.25s ease-out;
+}
+
+@keyframes ae-panel-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Studio banner header (node-color tinted) ────────────── */
+.ae-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px 16px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pc) 16%, var(--bg)),
+    color-mix(in srgb, var(--pc) 7%, var(--bg)));
+  border-bottom: 0.5px solid color-mix(in srgb, var(--pc) 22%, var(--border));
+}
+
+.ae-panel-head-icon {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--pc);
+  box-shadow: 0 4px 12px -3px color-mix(in srgb, var(--pc) 55%, transparent),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+
+  app-icon { width: 19px; height: 19px; }
+}
+
+.ae-panel-head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.ae-panel-head-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pc) 70%, var(--fg));
+}
+
+.ae-panel-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  line-height: 1.12;
+  letter-spacing: -0.005em;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ae-panel-head-actions {
+  margin-left: auto;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ae-panel-close,
+.ae-panel-help {
+  flex: 0 0 auto;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  opacity: 0.55;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+
+.ae-panel-close:hover,
+.ae-panel-help:hover { opacity: 1; background: var(--bg-2); color: var(--fg); }
+.ae-panel-help:hover { color: var(--pc); }
+
+.ae-panel-desc {
+  margin: 14px 16px 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+
+.ae-panel-body {
+  padding: 14px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Studio: each top-level field/section lifts into a soft card.
+   Child combinator keeps nested fields flat (no card-in-card). */
+.ae-panel-body > .ae-panel-field,
+.ae-panel-body > .ae-panel-section {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.04);
+}
+
+.ae-panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ae-panel-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.ae-panel-label::before {
+  content: "";
+  flex-shrink: 0;
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--pc, var(--fg-muted));
+}
+
+.ae-panel-input {
+  appearance: none;
+  width: 100%;
+  height: 36px;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-2);
+  color: var(--fg);
+  font: inherit;
+  font-size: 13.5px;
+  padding: 0 11px;
+  box-sizing: border-box;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+
+.ae-panel-input:focus {
+  outline: none;
+  border-color: var(--pc);
+  background: var(--bg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc) 14%, transparent);
+}
+
+.ae-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ae-panel-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.ae-panel-section-title::before {
+  content: "";
+  flex-shrink: 0;
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--pc, var(--fg-muted));
+}
+
+/* ── Source variable chips ───────────────────────────────── */
+.ae-source-var-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--fg);
+
+  app-icon { color: var(--pc); }
+}
+
+.ae-source-var-chip--dangling {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg));
+  color: var(--danger);
+
+  span { text-decoration: line-through; opacity: 0.85; }
+  app-icon { color: var(--danger); }
+}
+
+.ae-source-var-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 0.5px solid var(--warning);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--bg));
+}
+
+/* ── Filter check collapsible cards ──────────────────────── */
+.ae-check-card {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  &:not(:last-child) { margin-bottom: 8px; }
+}
+
+.ae-check-card-toggle {
+  appearance: none;
+  border: none;
+  background: var(--bg-2);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+
+  app-icon { width: 14px; height: 14px; color: var(--fg-muted); }
+}
+
+.ae-check-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ae-check-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 0.5px solid var(--border);
+}
+
+/* ── Filter condition builder ─────────────────────────────── */
+.ae-cond-group {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ae-cond-group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ae-check-label-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  outline: none;
+
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+.ae-cond-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.ae-cond-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.ae-cond-segment {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ae-cond-micro-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-subtle);
+}
+
+.ae-cond-select, .ae-cond-input {
+  appearance: none;
+  width: 100%;
+  height: 30px;
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-2);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+
+.ae-cond-select:focus, .ae-cond-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.ae-cond-remove-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 24px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.ae-cond-remove-btn:hover {
+  color: oklch(0.55 0.20 25);
+}
+
+/* Selected-category chips (CATEGORIZE node) — compact removable pills */
+.ae-cat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.ae-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 4px 4px 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.ae-cat-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ae-cat-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ae-cat-chip-remove {
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  border-radius: 50%;
+  flex: none;
+}
+
+.ae-cat-chip-remove:hover {
+  background: color-mix(in srgb, var(--danger) 14%, var(--bg-2));
+  color: var(--danger);
+}
+
+.ae-cat-chip-remove app-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.ae-or-badge {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: oklch(0.55 0.16 70);
+  background: oklch(0.72 0.16 70 / 0.12);
+  border-radius: 999px;
+  padding: 2px 10px;
+  align-self: center;
+}
+
+.ae-and-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  text-transform: uppercase;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.ae-cond-add-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.ae-cond-add-btn:hover { text-decoration: underline; }
+
+.ae-cond-add-group {
+  color: oklch(0.55 0.16 70);
+}
+
+/* ── Schedule ─────────────────────────────────────── */
+.ae-schedule-days {
+  display: flex;
+  gap: 4px;
+}
+
+.ae-schedule-day-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ae-schedule-day-btn:hover {
+  background: var(--bg-2);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+
+.ae-schedule-day-active {
+  background: color-mix(in srgb, var(--pc) 12%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--pc) 55%, var(--border));
+  color: var(--pc);
+  font-weight: 600;
+}
+
+.ae-schedule-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+
+  app-icon { color: var(--pc); flex-shrink: 0; }
+}
+
+/* ── Trigger Mode Tabs ─────────────────────────────────── */
+.ae-trigger-mode-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  margin-bottom: 12px;
+}
+
+.ae-trigger-mode-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+
+  app-icon { width: 13px; height: 13px; }
+
+  &:hover { color: var(--fg); }
+  &.active {
+    background: var(--bg);
+    color: var(--pc, var(--fg));
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(34, 28, 18, 0.08);
+  }
+}
+
+/* ── Supervised execution-mode hint ───────────────────────── */
+.ae-exec-hint {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fg-muted);
+}
+
+.ae-exec-threshold {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+
+  .ae-exec-threshold-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .ae-exec-threshold-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  input[type="range"] { width: 100%; margin: 6px 0 0; accent-color: var(--accent); }
+}
+
+/* ── Trigger account rows (EMAIL/WEBHOOK mode) ────────────── */
+.ae-trigger-empty {
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  font-style: italic;
+}
+
+.ae-trigger-account-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--success);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+.ae-trigger-account-row:hover {
+  border-color: var(--border-strong);
+}
+
+.ae-trigger-account-row-active {
+  border-color: color-mix(in srgb, var(--success) 45%, transparent);
+  background: color-mix(in srgb, var(--success) 6%, var(--bg));
+}
+
+.ae-trigger-account-color {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ae-trigger-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ae-trigger-account-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ae-trigger-account-email {
+  font-size: 11px;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Available Variables Card ─────────────────────────────── */
+.ae-vars-block {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ae-vars-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.ae-vars-title::before {
+  content: "";
+  flex-shrink: 0;
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--pc, var(--fg-muted));
+}
+
+.ae-vars-section {
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+  transition: border-color 0.15s;
+
+  &.open { border-color: var(--border-strong); }
+}
+
+.ae-vars-section-header {
+  appearance: none;
+  border: none;
+  background: var(--bg-2);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ae-vars-section-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--vc);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--vc) 40%, transparent);
+
+  app-icon { width: 15px; height: 15px; }
+}
+
+.ae-vars-section-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ae-vars-section-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  min-width: 20px;
+  text-align: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.ae-vars-section-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+
+.ae-vars-section-body {
+  padding: 2px 10px;
+}
+
+.ae-vars-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+
+  &:not(:last-child) { border-bottom: 0.5px solid var(--border); }
+}
+
+.ae-vars-key {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+  border: 0.5px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--accent);
+  white-space: nowrap;
+  width: fit-content;
+  font-weight: 500;
+}
+
+.ae-vars-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.ae-vars-desc {
+  font-size: 10.5px;
+  color: var(--fg-subtle);
+  line-height: 1.4;
+}
+
+.ae-vars-empty {
+  font-size: 11px;
+  color: var(--fg-subtle);
+  font-style: italic;
+  padding: 4px 8px;
+}
+
+/* ── Label node preview ──────────────────────────────────── */
+.ae-label-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--fg);
+  align-self: flex-start;
+}
+
+/* ── Status bar ───────────────────────────────────────────── */
+.ae-mini-status {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.05);
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+
+  .grp {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+
+    app-icon {
+      width: 14px;
+      height: 14px;
+      color: var(--fg-subtle);
+      display: inline-flex;
+    }
+  }
+
+  .sep {
+    width: 0.5px;
+    height: 14px;
+    background: var(--border);
+  }
+}
+
+.ae-mini-status-btn {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+
+  .grp {
+    transition: color 0.15s;
+
+    &::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: currentColor;
+    }
+
+    &.active {
+      color: oklch(0.55 0.14 150);
+      &::before { animation: ae-pulse 2s ease-in-out infinite; }
+    }
+
+    &.paused {
+      color: var(--warning);
+    }
+  }
+}
+
+.ae-status-menu-wrap {
+  position: relative;
+  z-index: 1000;
+}
+
+.ae-status-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.15);
+  z-index: 1000;
+  min-width: 130px;
+  padding: 4px;
+}
+
+.ae-status-opt {
+  appearance: none;
+  border: none;
+  background: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--fg);
+  border-radius: 5px;
+  cursor: pointer;
+  &:hover { background: var(--bg-2); }
+  &[data-active="true"] { font-weight: 600; color: var(--accent); }
+}
+
+.ae-btn-testmode {
+  gap: 4px;
+  &.active { color: var(--warning); }
+}
+
+@keyframes ae-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; box-shadow: 0 0 0 3px oklch(0.55 0.14 150 / 0.2); }
+}
+
+/* ── Webhook Collapsible Sections ────────────────── */
+.ae-wh-section {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ae-wh-section-toggle {
+  appearance: none;
+  border: 0;
+  background: var(--bg-2);
+  width: 100%;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+
+  app-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--fg-muted);
+    transition: transform 0.2s;
+  }
+}
+
+.ae-wh-section-open .ae-wh-section-toggle app-icon {
+  transform: rotate(180deg);
+}
+
+.ae-wh-section-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 0.5px solid var(--border);
+}
+
+.ae-var-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-subtle);
+  padding: 8px 0 4px;
+}
+
+.ae-var-ref-item {
+  font-size: 12px;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+
+  code {
+    font-size: 11px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+}
+
+/* ── Expected Response Fields ────────────────────── */
+.ae-panel-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+/* Smaller, more subdued variant (e.g. method hint under the URL) */
+.ae-panel-hint-sm {
+  font-size: 11px;
+  color: var(--fg-subtle);
+  line-height: 1.45;
+}
+
+/* "· optional" suffix on a section title */
+.ae-panel-opt {
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+
+/* ── Secret status pill (set / not set) ──────────────────── */
+.ae-secret-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+
+.ae-secret-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fg-subtle);
+}
+
+.ae-secret-status-set {
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--success) 22%, var(--border));
+  color: var(--fg);
+
+  .ae-secret-dot {
+    background: var(--success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 18%, transparent);
+  }
+}
+
+.ae-resp-schema-row {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ae-resp-schema-fields {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+/* Pinned "unmatched" row: a single full-width vertical stack (name → hint → parameter set),
+   visually set apart from the editable branch rows. */
+.ae-resp-schema-unmatched {
+  background: color-mix(in srgb, var(--fg) 3%, var(--bg-2));
+}
+
+.ae-resp-schema-unmatched .ae-cond-segment {
+  flex: none;
+}
+
+.ae-resp-unmatched-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ae-resp-unmatched-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--fg-subtle);
+}
+
+.ae-schema-add-btn {
+  appearance: none;
+  border: 1px dashed var(--border-strong);
+  background: var(--bg);
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+
+  app-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
+    border-color: var(--accent);
+  }
+}
+
+/* ── Checkbox Group (Retry) ──────────────────────── */
+.ae-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ae-checkbox-label {
+  font-size: 12px;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+}
+
+/* ── Content source toggle (Vorlage / Manuell) ────────────── */
+.ae-src-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+
+.ae-src-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+
+  app-icon { width: 14px; height: 14px; }
+
+  &:hover { color: var(--fg); }
+
+  &.active {
+    background: var(--bg);
+    color: var(--pc);
+    box-shadow: 0 1px 2px rgba(34, 28, 18, 0.08);
+  }
+}
+
+/* ── Manual content preview card ──────────────────────────── */
+.ae-manual-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  background: color-mix(in srgb, var(--pc) 5%, var(--bg-2));
+  border: 0.5px solid color-mix(in srgb, var(--pc) 22%, var(--border));
+  border-radius: 10px;
+}
+
+.ae-manual-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ae-manual-subj {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ae-manual-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 9px;
+  border: 0.5px solid color-mix(in srgb, var(--pc) 32%, var(--border));
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--pc);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+
+  app-icon { width: 13px; height: 13px; }
+
+  &:hover { background: color-mix(in srgb, var(--pc) 8%, var(--bg)); }
+}
+
+.ae-manual-snippet {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ae-manual-empty {
+  font-style: italic;
+  color: var(--fg-subtle);
+}
+
+/* ── Compose modal ────────────────────────────────────────── */
+.ae-compose-back {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(20, 16, 10, 0.42);
+  backdrop-filter: blur(2px);
+  animation: ae-fade-in 0.14s ease-out;
+}
+
+.ae-compose {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 91;
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(20, 16, 10, 0.26), 0 2px 8px rgba(20, 16, 10, 0.1);
+  animation: ae-compose-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.ae-compose-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.ae-compose-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--pc) 16%, var(--bg-2));
+  color: var(--pc);
+
+  app-icon { width: 18px; height: 18px; }
+}
+
+.ae-compose-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ae-compose-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-subtle);
+}
+
+.ae-compose-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.ae-compose-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  app-icon { width: 16px; height: 16px; }
+
+  &:hover { background: var(--bg-2); color: var(--fg); border-color: var(--border-strong); }
+}
+
+.ae-compose-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  overflow-y: auto;
+}
+
+.ae-compose-textarea {
+  height: auto;
+  min-height: 140px;
+  padding: 10px 11px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.ae-varbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+}
+
+.ae-varbar-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg-subtle);
+}
+
+.ae-varbar-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ae-varchip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border: 0.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-2);
+  color: var(--fg-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s, transform 0.08s;
+
+  &:hover {
+    border-color: var(--border-strong);
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  &:active { transform: scale(0.96); }
+}
+
+.ae-compose-hint {
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+
+.ae-compose-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-top: 0.5px solid var(--border);
+}
+
+.ae-compose-foot-sp {
+  flex: 1;
+}
+
+.ae-btn-ghost,
+.ae-btn-primary {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.ae-btn-ghost {
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  color: var(--fg-muted);
+
+  &:hover { border-color: var(--border-strong); color: var(--fg); }
+}
+
+.ae-btn-primary {
+  border: none;
+  background: var(--fg);
+  color: var(--bg);
+
+  &:hover { opacity: 0.88; }
+}
+
+@keyframes ae-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ae-compose-in {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+

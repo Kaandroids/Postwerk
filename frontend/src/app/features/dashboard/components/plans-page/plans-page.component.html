@@ -1,0 +1,223 @@
+<app-page-content>
+  <!-- Page header -->
+  <div class="dash-page-head pl-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('plans_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('plans_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('plans_subtitle') }}</div>
+    </div>
+    <div class="pl-cycle" [attr.data-cycle]="cycle()" data-testid="pl-cycle-switch">
+      <button (click)="toggleCycle('monthly')" [attr.data-active]="cycle() === 'monthly' ? '1' : '0'" data-testid="pl-cycle-monthly">
+        {{ i18n.t('plans_cycle_monthly') }}
+      </button>
+      <button (click)="toggleCycle('yearly')" [attr.data-active]="cycle() === 'yearly' ? '1' : '0'" data-testid="pl-cycle-yearly">
+        {{ i18n.t('plans_cycle_yearly') }}
+        <span class="pl-cycle-save">{{ i18n.t('plans_cycle_save') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Current plan banner -->
+  <section class="pl-banner" data-testid="pl-banner">
+    <div class="pl-banner-left">
+      <div class="pl-banner-eyebrow">
+        <span class="pl-active-dot"></span>
+        {{ i18n.t('plans_active_plan') }}
+      </div>
+      <div class="pl-banner-name" data-testid="pl-banner-name">{{ currentPlan()?.name }}</div>
+      <div class="pl-banner-price">
+        <span class="pl-banner-price-num">{{ fmtPrice(planPrice(currentPlan()!)!) }}</span>
+        <span class="pl-banner-price-unit">{{ bannerPriceUnit() }}</span>
+      </div>
+      <div class="pl-banner-meta">
+        {{ i18n.t('plans_active_since') }} <strong>{{ fmtDate(current.startedAt) }}</strong>
+        · {{ i18n.t('plans_renews_on') }} <strong>{{ fmtDate(current.renewsAt) }}</strong>
+        @if (daysLeft() > 0) {
+          ({{ i18n.t('plans_days_left', { days: '' + daysLeft() }) }})
+        }
+      </div>
+      <div class="pl-banner-actions">
+        <button class="pl-btn pl-btn-primary" data-testid="pl-banner-upgrade">
+          <app-icon name="arrowUpLine" />
+          {{ i18n.t('plans_upgrade') }}
+        </button>
+        <button class="pl-btn pl-btn-secondary">
+          <app-icon name="card" />
+          {{ i18n.t('plans_payment_method') }}
+          <span class="pl-pm-chip">
+            <span class="pl-pm-brand">{{ current.paymentMethod.brand }}</span>
+            <span class="pl-pm-last">··· {{ current.paymentMethod.last4 }}</span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <div class="pl-banner-right">
+      <div class="pl-banner-right-label">{{ i18n.t('plans_usage_title') }}</div>
+      <div class="pl-usage-list">
+        @for (u of usageItems(); track u.key) {
+          <div class="pl-usage" [attr.data-warn]="u.of > 0 && isWarn(u.used, u.of) ? '1' : '0'" data-testid="pl-usage-bar">
+            <div class="pl-usage-row">
+              <span class="pl-usage-label">{{ i18n.t(u.labelKey) }}</span>
+              <span class="pl-usage-nums">
+                @if (u.of === -1) {
+                  <span class="pl-usage-used">{{ fmtNum(u.used) }}</span>
+                  <span class="pl-usage-of"> / {{ i18n.t('plans_unlimited_label') }}</span>
+                } @else if (u.of === 0) {
+                  <span class="pl-usage-used">{{ i18n.t('plans_disabled_label') }}</span>
+                } @else {
+                  <span class="pl-usage-used">{{ fmtNum(u.used) }}</span>
+                  <span class="pl-usage-of"> / {{ fmtNum(u.of) }}</span>
+                }
+              </span>
+            </div>
+            <div class="pl-usage-track" role="progressbar" [attr.aria-valuenow]="u.used" [attr.aria-valuemin]="0" [attr.aria-valuemax]="u.of" [attr.aria-label]="i18n.t(u.labelKey)">
+              <div class="pl-usage-fill" [style.width.%]="usageBarWidths()[u.key]"></div>
+            </div>
+          </div>
+        }
+      </div>
+      <div class="pl-banner-right-foot">
+        <app-icon name="info" />
+        <span>{{ i18n.t('plans_usage_reset') }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plans section -->
+  <section class="pl-plans">
+    <header class="pl-section-head">
+      <div>
+        <div class="pl-section-eyebrow">{{ i18n.t('plans_all_plans') }}</div>
+        <h2 class="pl-section-title">{{ i18n.t('plans_pick_plan') }}</h2>
+      </div>
+      <button class="pl-link-btn">
+        {{ i18n.t('plans_compare') }} <app-icon name="chevronRight" />
+      </button>
+    </header>
+
+    <div class="pl-plan-grid">
+      @for (plan of plans; track plan.id; let i = $index) {
+        <article
+          class="pl-card"
+          [attr.data-current]="plan.id === currentPlanId() ? '1' : '0'"
+          [attr.data-recommended]="plan.recommended ? '1' : '0'"
+          [attr.data-tone]="plan.tone"
+          [style.--enter-delay]="i * 60 + 'ms'"
+          data-testid="plan-card">
+
+          @if (plan.recommended && plan.id !== currentPlanId()) {
+            <div class="pl-card-badge pl-card-badge-recommended" data-testid="plan-card-badge">
+              <app-icon name="spark" />
+              {{ i18n.t('plans_recommended') }}
+            </div>
+          }
+          @if (plan.id === currentPlanId()) {
+            <div class="pl-card-badge pl-card-badge-current" data-testid="plan-card-badge">
+              <span class="pl-active-dot pl-active-dot-on-fg"></span>
+              {{ i18n.t('plans_active') }}
+            </div>
+          }
+
+          <div class="pl-card-head">
+            <span class="pl-card-icon">
+              <span class="pl-card-icon-glow"></span>
+              <app-icon [name]="plan.icon" />
+            </span>
+            <div class="pl-card-name">{{ plan.name }}</div>
+          </div>
+          <div class="pl-card-tagline">{{ i18n.t(plan.taglineKey) }}</div>
+
+          <div class="pl-card-price">
+            <span class="pl-card-price-num">{{ fmtPrice(planPrice(plan)) }}</span>
+            @if (priceUnit(planPrice(plan)); as unit) {
+              <span class="pl-card-price-unit">{{ unit }}</span>
+            }
+          </div>
+
+          <button [class]="ctaClass(plan)" [disabled]="plan.id === currentPlanId()" data-testid="plan-card-cta">
+            @if (ctaIcon(plan); as iconName) {
+              <app-icon [name]="iconName" />
+            }
+            {{ ctaLabel(plan) }}
+          </button>
+
+          <ul class="pl-card-features">
+            @for (fKey of plan.featureKeys; track fKey) {
+              <li>
+                <span class="pl-tick"><app-icon name="check" /></span>
+                <span>{{ i18n.t(fKey) }}</span>
+              </li>
+            }
+          </ul>
+        </article>
+      }
+    </div>
+  </section>
+
+  <!-- Add-ons section -->
+  <section class="pl-addons">
+    <header class="pl-section-head">
+      <div>
+        <div class="pl-section-eyebrow">{{ i18n.t('plans_addons_eyebrow') }}</div>
+        <h2 class="pl-section-title">{{ i18n.t('plans_addons_title') }}</h2>
+      </div>
+    </header>
+
+    <div class="pl-addon-grid">
+      @for (addon of addons; track addon.id; let i = $index) {
+        <div class="pl-addon" [style.--enter-delay]="i * 50 + 'ms'" data-testid="pl-addon-card">
+          <div class="pl-addon-head">
+            <div class="pl-addon-title">{{ i18n.t(addon.titleKey) }}</div>
+            <div class="pl-addon-price">
+              <span class="pl-addon-price-num">{{ fmtPrice(addon.price) }}</span>
+              <span class="pl-addon-price-unit">{{ i18n.t(addon.unitKey) }}</span>
+            </div>
+          </div>
+          <p class="pl-addon-desc">{{ i18n.t(addon.descKey) }}</p>
+          <button class="pl-btn pl-btn-ghost pl-btn-block">
+            <app-icon name="plusSm" />
+            {{ i18n.t('plans_addon_add') }}
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Invoice table -->
+  <section class="pl-invoices">
+    <header class="pl-section-head">
+      <div>
+        <div class="pl-section-eyebrow">{{ i18n.t('plans_invoices_eyebrow') }}</div>
+        <h2 class="pl-section-title">{{ i18n.t('plans_invoices_title') }}</h2>
+      </div>
+      <button class="pl-link-btn">
+        {{ i18n.t('plans_invoices_view_all') }} <app-icon name="chevronRight" />
+      </button>
+    </header>
+
+    <div class="pl-invoice-list">
+      <div class="pl-invoice pl-invoice-head">
+        <span>{{ i18n.t('plans_invoice_col_invoice') }}</span>
+        <span>{{ i18n.t('plans_invoice_col_date') }}</span>
+        <span>{{ i18n.t('plans_invoice_col_plan') }}</span>
+        <span>{{ i18n.t('plans_invoice_col_amount') }}</span>
+        <span></span>
+      </div>
+      @for (inv of invoices; track inv.id; let i = $index) {
+        <div class="pl-invoice" [style.--enter-delay]="i * 30 + 'ms'" data-testid="pl-invoice-row">
+          <span class="pl-invoice-id">{{ inv.id }}</span>
+          <span class="pl-invoice-date">{{ fmtDate(inv.date) }}</span>
+          <span class="pl-invoice-plan">{{ inv.plan }}</span>
+          <span class="pl-invoice-amount">{{ fmtPrice(inv.amount) }}</span>
+          <span class="pl-invoice-actions">
+            <span class="pl-status">{{ i18n.t('plans_invoice_paid') }}</span>
+            <button class="pl-icon-btn" [title]="i18n.t('plans_invoice_download')">
+              <app-icon name="download" />
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+</app-page-content>

@@ -1,0 +1,50 @@
+<div class="dhome">
+  <p class="dhome-eyebrow">{{ i18n.t('brandName') }} · {{ i18n.t('doc_tag') }}</p>
+  <h1 class="dhome-title">{{ i18n.t('doc_home_title') }}</h1>
+  <p class="dhome-lead">{{ i18n.t('doc_home_lead') }}</p>
+
+  <button class="dhome-search" (click)="openSearch()">
+    <app-icon name="search" />
+    <span>{{ i18n.t('doc_search_placeholder') }}</span>
+    <kbd>⌘K</kbd>
+  </button>
+
+  <div class="dhome-aud">
+    <button class="aud-chip" [class.is-on]="aud() === null" (click)="aud.set(null)">
+      {{ i18n.t('doc_aud_all') }}
+    </button>
+    @for (a of audiences; track a.id) {
+      <button class="aud-chip" [class.is-on]="aud() === a.id" (click)="aud.set(a.id)">
+        <span class="aud-pip"></span>{{ tr(a.label) }}
+      </button>
+    }
+  </div>
+
+  <section class="dhome-sec">
+    <div class="cat-grid">
+      @for (c of categories(); track c.id) {
+        <button class="cat-card" (click)="go(c.to)">
+          <span class="cat-ic"><app-icon [name]="c.icon" /></span>
+          <h3 class="cat-t">{{ tr(c.title) }}</h3>
+          <p class="cat-b">{{ tr(c.blurb) }}</p>
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="dhome-sec">
+    <h2 class="dhome-sec-h">{{ i18n.t('doc_home_popular') }}</h2>
+    <div class="pop-grid">
+      @for (p of popular; track p.to; let i = $index) {
+        <button class="pop-item" (click)="go(p.to)">
+          <span class="pop-n">{{ (i + 1).toString().padStart(2, '0') }}</span>
+          <span class="pop-tx">
+            <span class="pop-t">{{ tr(p.label) }}</span>
+            <span class="pop-c">{{ tr(p.cat) }}</span>
+          </span>
+          <app-icon name="arrowRight" class="pop-arr" />
+        </button>
+      }
+    </div>
+  </section>
+</div>

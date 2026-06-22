@@ -1,0 +1,22 @@
+<div class="app">
+  <header class="topbar">
+    <app-brand />
+    <div class="topbar-controls">
+      <app-lang-switcher />
+      <app-theme-toggle />
+    </div>
+  </header>
+
+  <div class="shell">
+    <router-outlet />
+  </div>
+
+  <footer class="footer">
+    <div>{{ i18n.t('footer_copy') }}</div>
+    <div class="footer-links">
+      <a routerLink="/legal/datenschutz">{{ i18n.t('legal_privacy') }}</a>
+      <a routerLink="/legal/impressum">{{ i18n.t('legal_imprint') }}</a>
+      <a routerLink="/legal/agb">{{ i18n.t('legal_terms') }}</a>
+    </div>
+  </footer>
+</div>

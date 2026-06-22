@@ -1,0 +1,441 @@
+<div class="tp-shell" data-testid="test-panel">
+
+  <!-- ── Left rail: saved test cases ──────────────────── -->
+  <aside class="tp-rail" data-testid="test-list">
+    <button class="tp-rail-new" (click)="showCreateForm()" [disabled]="testCases().length >= 20"
+      data-testid="test-create-btn">
+      <app-icon name="plus" />
+      {{ i18n.t('auto_test_new') }}
+    </button>
+
+    @if (error()) {
+      <div class="tp-error" role="alert" aria-live="polite" data-testid="test-error-message">{{ error() }}</div>
+    }
+
+    @if (testCases().length === 0 && !loading()) {
+      <div class="tp-rail-empty">
+        <app-icon name="beaker" />
+        <span class="tp-rail-empty-title">{{ i18n.t('auto_test_empty') }}</span>
+        <span class="tp-rail-empty-text">{{ i18n.t('auto_test_empty_text') }}</span>
+      </div>
+    }
+
+    <div class="tp-rail-list">
+      @for (tc of testCases(); track tc.id) {
+        <button class="tp-card" data-testid="test-card"
+          [attr.data-grade]="cardGrade(tc)"
+          [class.tp-card-active]="selectedTest()?.id === tc.id"
+          (click)="openTest(tc)">
+          <span class="tp-card-name">{{ tc.name }}</span>
+          <span class="tp-card-snippet">{{ tc.emailInput.subject || '—' }}</span>
+          <span class="tp-card-result" [attr.data-grade]="cardGrade(tc)"
+            [attr.data-testid]="tc.lastResult ? 'test-result-status-badge' : null">
+            <span class="tp-card-pip"></span>{{ cardResultLine(tc) }}
+          </span>
+          <span class="tp-card-meta">{{ cardMeta(tc) }}</span>
+          <span class="tp-card-actions">
+            <span class="tp-icon-btn" role="button" tabindex="0" (click)="runSingleTest(tc); $event.stopPropagation()"
+              data-testid="test-run-btn" [title]="i18n.t('auto_test_run')" [attr.aria-label]="i18n.t('auto_test_run')">
+              <app-icon name="play" />
+            </span>
+            <span class="tp-icon-btn tp-icon-btn-danger" role="button" tabindex="0"
+              (click)="deleteTest(tc); $event.stopPropagation()"
+              data-testid="test-delete-btn" [title]="i18n.t('auto_test_delete')" [attr.aria-label]="i18n.t('auto_test_delete')">
+              <app-icon name="trash" />
+            </span>
+          </span>
+        </button>
+      }
+    </div>
+
+    <div class="tp-rail-foot">
+      <button class="tp-btn tp-btn-primary" (click)="runAll()" [disabled]="runningAll() || testCases().length === 0"
+        data-testid="test-run-all-btn">
+        <app-icon name="play" />
+        {{ runningAll() ? i18n.t('auto_test_running') : i18n.t('auto_test_run_all') }}
+      </button>
+      @if (runAllSummary(); as ra) {
+        <div class="tp-runall" [attr.data-grade]="ra.passed === ra.total ? 'ok' : 'bad'">
+          <span class="tp-runall-label">{{ i18n.t('auto_test_n_passed', { passed: '' + ra.passed, total: '' + ra.total }) }}</span>
+          <span class="tp-runall-bar"><i [style.width.%]="ra.total ? (ra.passed / ra.total) * 100 : 0"></i></span>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- ── Main column ──────────────────────────────────── -->
+  <section class="tp-main">
+    @if (!hasActive()) {
+      <div class="tp-main-empty">
+        <app-icon name="beaker" />
+        <span>{{ i18n.t('auto_test_pick') }}</span>
+      </div>
+    } @else {
+      <!-- Header: editable name + mode segment + actions -->
+      <div class="tp-main-head">
+        <div class="tp-main-title">
+          <span class="tp-eyebrow">{{ i18n.t('auto_test_case') }}</span>
+          <input class="tp-title-input" type="text" [value]="formName()" (input)="formName.set(v($event))"
+            [placeholder]="i18n.t('auto_test_name')" data-testid="test-name-input" />
+        </div>
+        <div class="tp-main-actions">
+          <div class="tp-mode-seg">
+            <button class="tp-mode-btn" [class.on]="testMode() === 'setup'" (click)="setTestMode('setup')">
+              {{ i18n.t('auto_test_setup') }}
+            </button>
+            <button class="tp-mode-btn" [class.on]="testMode() === 'result'" (click)="setTestMode('result')">
+              @if (selectedTest()?.lastResult; as lr) {
+                <i class="tp-mode-dot" [style.background]="lr.status === 'PASSED' ? 'var(--success)' : 'var(--danger)'"></i>
+              }
+              {{ i18n.t('auto_test_result') }}
+            </button>
+          </div>
+          @if (testMode() === 'setup') {
+            <button class="tp-btn" (click)="saveTest()" data-testid="test-save-btn">{{ i18n.t('auto_save') }}</button>
+            <button class="tp-btn tp-btn-ghost" (click)="cancelForm()" data-testid="test-cancel-btn">{{ i18n.t('auto_cancel') }}</button>
+          }
+          <button class="tp-btn tp-btn-primary" (click)="runActive()" [disabled]="running() || creating()"
+            [title]="i18n.t('auto_test_run')">
+            <app-icon name="play" />
+            {{ running() ? i18n.t('auto_test_running') : i18n.t('auto_test_run') }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Einrichten (setup) ─────────────────────────── -->
+      @if (testMode() === 'setup') {
+        <div class="tp-main-body" data-testid="test-form">
+
+          @if (isIntegration()) {
+            <!-- Integration: seeded INPUT values -->
+            <div class="tp-pane">
+              <div class="tp-pane-head">
+                <span class="tp-pane-glyph" [style.--nc]="getNodeColor('INPUT')"><app-icon name="signin" /></span>
+                <span class="tp-pane-title">{{ i18n.t('auto_test_input_values') }}</span>
+                <span class="tp-pane-sub">{{ inputFieldNames().length }} {{ i18n.t('auto_test_fields') }}</span>
+              </div>
+              <div class="tp-pane-body tp-form-grid">
+                @for (f of inputFieldNames(); track f) {
+                  <label class="tp-ffield tp-full">
+                    <span class="tp-flabel tp-mono">{{ f }}</span>
+                    <input class="tp-finput tp-mono" [value]="formInputFields()[f] || ''"
+                      (input)="updateInputField(f, v($event))" />
+                  </label>
+                }
+                @if (inputFieldNames().length === 0) {
+                  <div class="tp-pane-note">{{ i18n.t('auto_test_no_input_fields') }}</div>
+                }
+              </div>
+            </div>
+          } @else if (isWebhook()) {
+            <!-- Webhook trigger: JSON payload (trigger.*) -->
+            <div class="tp-pane">
+              <div class="tp-pane-head">
+                <span class="tp-pane-glyph" [style.--nc]="getNodeColor('TRIGGER')"><app-icon name="globe" /></span>
+                <span class="tp-pane-title">{{ i18n.t('auto_test_webhook_payload') }}</span>
+                <span class="tp-pane-sub">{{ formTriggerPayload().length }} {{ i18n.t('auto_test_fields') }}</span>
+              </div>
+              <div class="tp-pane-body">
+                <p class="tp-pane-note">{{ i18n.t('auto_test_webhook_payload_hint') }}</p>
+                @for (row of formTriggerPayload(); track $index; let i = $index) {
+                  <div class="tp-pl-row" data-testid="test-payload-row">
+                    <input class="tp-finput tp-mono" [value]="row.key" (input)="updatePayloadKey(i, v($event))"
+                      [placeholder]="i18n.t('auto_test_webhook_key')" data-testid="test-payload-key" />
+                    <span class="tp-as-eq">=</span>
+                    <input class="tp-finput tp-mono" [value]="row.value" (input)="updatePayloadValue(i, v($event))"
+                      [placeholder]="i18n.t('auto_test_webhook_value')" data-testid="test-payload-value" />
+                    <button class="tp-icon-btn tp-icon-btn-danger" (click)="removePayloadRow(i)"
+                      [attr.aria-label]="i18n.t('auto_cancel')"><app-icon name="x" /></button>
+                  </div>
+                }
+                @if (formTriggerPayload().length === 0) {
+                  <div class="tp-pane-note">{{ i18n.t('auto_test_webhook_payload_empty') }}</div>
+                }
+                <button class="tp-add-btn" (click)="addPayloadRow()" data-testid="test-add-payload-btn">
+                  <app-icon name="plus" />{{ i18n.t('auto_test_webhook_add_field') }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <!-- Automation: mock email -->
+            <div class="tp-pane">
+              <div class="tp-pane-head">
+                <span class="tp-pane-glyph"><app-icon name="mail" /></span>
+                <span class="tp-pane-title">{{ i18n.t('auto_test_email_input') }}</span>
+                <span class="tp-pane-sub">{{ i18n.t('auto_test_dry_run_note') }}</span>
+              </div>
+              <div class="tp-pane-body tp-form-grid">
+                <label class="tp-ffield">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_from') }}</span>
+                  <input class="tp-finput tp-mono" type="email" [value]="formFrom()" (input)="formFrom.set(v($event))"
+                    data-testid="test-email-from" placeholder="sender@example.com" />
+                </label>
+                <label class="tp-ffield">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_to') }}</span>
+                  <input class="tp-finput tp-mono" type="email" [value]="formTo()" (input)="formTo.set(v($event))"
+                    data-testid="test-email-to" placeholder="recipient@example.com" />
+                </label>
+                <label class="tp-ffield tp-full">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_subject') }}</span>
+                  <input class="tp-finput" type="text" [value]="formSubject()" (input)="formSubject.set(v($event))"
+                    data-testid="test-email-subject" />
+                </label>
+                <label class="tp-ffield tp-full">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_body') }}</span>
+                  <textarea class="tp-finput tp-farea tp-mono" [value]="formBody()" (input)="formBody.set(v($event))"
+                    data-testid="test-email-body" rows="4"></textarea>
+                </label>
+                <label class="tp-ffield tp-full">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_in_reply_to') }}</span>
+                  <input class="tp-finput tp-mono" type="text" [value]="formInReplyTo()" (input)="formInReplyTo.set(v($event))"
+                    data-testid="test-email-in-reply-to" placeholder="<message-id@example.com>" />
+                </label>
+              </div>
+              @if (allCategories().length > 0) {
+                <div class="tp-pane-body tp-pane-cats">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_categories') }}</span>
+                  <div class="tp-category-chips" data-testid="test-email-categories">
+                    @for (cat of allCategories(); track cat.id) {
+                      <button class="tp-chip" [class.tp-chip-active]="formCategoryIds().includes(cat.id)"
+                        [style.--chip-color]="cat.color" (click)="toggleCategoryId(cat.id)" type="button">
+                        <span class="tp-chip-dot" [style.background]="cat.color"></span>{{ cat.name }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Assertions -->
+          <div class="tp-pane">
+            <div class="tp-pane-head">
+              <span class="tp-pane-glyph"><app-icon name="checkCircle" /></span>
+              <span class="tp-pane-title">{{ i18n.t('auto_test_assertions') }}</span>
+              <span class="tp-pane-sub">{{ formAssertions().length }}</span>
+            </div>
+            <div class="tp-pane-body">
+              @if (formAssertions().length === 0) {
+                <div class="tp-as-empty">{{ i18n.t('auto_test_assertions_empty') }}</div>
+              }
+              @for (assertion of formAssertions(); track $index; let i = $index) {
+                <div class="tp-as-row" data-testid="test-assertion-row">
+                  <div class="tp-as-line">
+                    <span class="tp-sel-wrap" [style.--pip]="getNodeColor(getNodeType(assertion.nodeId))">
+                      <span class="tp-pip"></span>
+                      <select class="tp-select" [value]="assertion.nodeId"
+                        (change)="updateAssertionNode(i, v($event))" data-testid="test-assertion-node">
+                        @for (opt of nodeOptions(); track opt.id) {
+                          <option [value]="opt.id" [selected]="opt.id === assertion.nodeId">{{ opt.label }}</option>
+                        }
+                      </select>
+                    </span>
+                    <app-icon name="arrowRight" />
+                    <span class="tp-sel-wrap tp-mono">
+                      <select class="tp-select" [value]="assertion.expectedStatus"
+                        (change)="updateAssertionStatus(i, v($event))" data-testid="test-assertion-status">
+                        @for (s of getStatusOptions(assertion.nodeId); track s) {
+                          <option [value]="s" [selected]="s === assertion.expectedStatus">{{ s }}</option>
+                        }
+                      </select>
+                    </span>
+                    <button class="tp-icon-btn tp-icon-btn-danger tp-as-del" (click)="removeAssertion(i)"
+                      [attr.aria-label]="i18n.t('auto_cancel')">
+                      <app-icon name="x" />
+                    </button>
+                  </div>
+
+                  <!-- EXTRACT: ParamSet → Parameter → Value -->
+                  @if (getNodeType(assertion.nodeId) === 'EXTRACT' && getParamSets(assertion.nodeId).length > 0) {
+                    <div class="tp-as-line tp-as-sub">
+                      <span class="tp-micro-label">{{ i18n.t('auto_test_param_set') }}</span>
+                      <select class="tp-select tp-select-sm" [value]="formAssertionParamSetIds()[i] || ''"
+                        (change)="updateAssertionParamSet(i, v($event))">
+                        <option value="">—</option>
+                        @for (ps of getParamSets(assertion.nodeId); track ps.id) {
+                          <option [value]="ps.id" [selected]="ps.id === formAssertionParamSetIds()[i]">{{ ps.name }}</option>
+                        }
+                      </select>
+                      @if (formAssertionParamSetIds()[i]) {
+                        <select class="tp-select tp-select-sm" [value]="assertion.field || ''"
+                          (change)="updateAssertionField(i, v($event))">
+                          <option value="">—</option>
+                          @for (p of getParamNames(assertion.nodeId, formAssertionParamSetIds()[i]!); track p) {
+                            <option [value]="p" [selected]="p === assertion.field">{{ p }}</option>
+                          }
+                        </select>
+                      }
+                      @if (assertion.field) {
+                        <span class="tp-as-eq">=</span>
+                        <input class="tp-finput tp-input-sm" type="text" [value]="assertion.expectedValue || ''"
+                          (input)="updateAssertionValue(i, v($event))" [placeholder]="i18n.t('auto_test_expected_value')" />
+                      }
+                    </div>
+                  }
+
+                  <!-- CATEGORIZE: Category dropdown -->
+                  @if (getNodeType(assertion.nodeId) === 'CATEGORIZE' && getCategoryNames(assertion.nodeId).length > 0) {
+                    <div class="tp-as-line tp-as-sub">
+                      <span class="tp-micro-label">categoryName</span><span class="tp-as-eq">=</span>
+                      <select class="tp-select tp-select-sm" [value]="assertion.expectedValue || ''"
+                        (change)="updateAssertionCategory(i, v($event))">
+                        <option value="">—</option>
+                        @for (c of getCategoryNames(assertion.nodeId); track c) {
+                          <option [value]="c" [selected]="c === assertion.expectedValue">{{ c }}</option>
+                        }
+                      </select>
+                    </div>
+                  }
+
+                  <!-- INPUT/OUTPUT/INTEGRATION_CALL: field = value -->
+                  @if (getNodeFields(assertion.nodeId).length > 0) {
+                    <div class="tp-as-line tp-as-sub">
+                      <select class="tp-select tp-select-sm" [value]="assertion.field || ''"
+                        (change)="updateAssertionField(i, v($event))">
+                        <option value="">— {{ i18n.t('auto_test_field') }} —</option>
+                        @for (f of getNodeFields(assertion.nodeId); track f) {
+                          <option [value]="f" [selected]="f === assertion.field">{{ f }}</option>
+                        }
+                      </select>
+                      @if (assertion.field) {
+                        <span class="tp-as-eq">=</span>
+                        <input class="tp-finput tp-input-sm" type="text" [value]="assertion.expectedValue || ''"
+                          (input)="updateAssertionValue(i, v($event))" [placeholder]="i18n.t('auto_test_expected_value')" />
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <button class="tp-add-btn" (click)="addAssertion()" data-testid="test-add-assertion-btn">
+                <app-icon name="plus" />{{ i18n.t('auto_test_add_assertion') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Ergebnis (result) ──────────────────────────── -->
+      @if (testMode() === 'result') {
+        <div class="tp-main-body">
+          @if (testResult(); as result) {
+            @if (result.errorMessage) {
+              <div class="tp-error">{{ result.errorMessage }}</div>
+            }
+
+            <!-- Letzter Lauf -->
+            <div class="tp-pane">
+              <div class="tp-pane-head">
+                <span class="tp-pane-glyph"><app-icon name="checkCircle" /></span>
+                <span class="tp-pane-title">{{ i18n.t('auto_test_last_run') }}</span>
+                <span class="tp-pane-sub">{{ formatTimestamp(result.executedAt) }} · {{ (result.durationMs / 1000).toFixed(2) }} s · {{ i18n.t('auto_test_dry_run_label') }}</span>
+              </div>
+              <div class="tp-pane-body">
+                <div class="tp-score">
+                  <span class="tp-score-big">{{ resultPassedCount(result) }}<small>/{{ result.assertionResults.length }}</small></span>
+                  <div class="tp-score-text">
+                    <span class="tp-score-label" data-testid="test-result-status-badge"
+                      [class.tp-pass]="result.status === 'PASSED'" [class.tp-fail]="result.status !== 'PASSED'">
+                      {{ getStatusSummary(result) }}
+                    </span>
+                    <span class="tp-ticks">
+                      @for (ar of result.assertionResults; track ar.assertionIndex) {
+                        <i [class.f]="!ar.passed"></i>
+                      }
+                    </span>
+                  </div>
+                  <span class="tp-chip" [attr.data-kind]="result.status === 'PASSED' ? 'ok' : 'bad'">{{ result.status }}</span>
+                </div>
+
+                @if (result.assertionResults.length > 0) {
+                  <div class="tp-ar-grid" data-testid="test-assertion-summary">
+                    @for (ar of result.assertionResults; track ar.assertionIndex) {
+                      <div class="tp-ar-row" [class.pass]="ar.passed" [class.fail]="!ar.passed">
+                        <span class="tp-ar-ico">@if (ar.passed) { &#10003; } @else { &#10007; }</span>
+                        <span class="tp-ar-body">
+                          <span class="tp-ar-node">{{ getAssertionNodeLabel(ar.assertionIndex) }}</span>
+                          <span class="tp-ar-exp">{{ i18n.t('auto_test_col_expected') }} <b>{{ ar.expected }}</b> · {{ i18n.t('auto_test_col_actual') }} <b [class.bad]="!ar.passed">{{ ar.actual }}</b></span>
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Ausführungs-Trace -->
+            <div class="tp-pane">
+              <div class="tp-pane-head">
+                <span class="tp-pane-glyph"><app-icon name="zap" /></span>
+                <span class="tp-pane-title">{{ i18n.t('auto_test_trace') }}</span>
+                <span class="tp-pane-sub">{{ result.nodeResults.length }}</span>
+              </div>
+              <div class="tp-pane-body">
+                <div class="tp-trace" data-testid="test-result-trace">
+                  @for (node of result.nodeResults; track node.nodeId; let idx = $index) {
+                    <div class="tp-step" data-testid="test-result-node"
+                      [class.tp-step-enter]="staggerOn()" [style.--d.ms]="idx * 80" [style.--nc]="getNodeColor(node.nodeType)"
+                      [attr.data-open]="isStepOpen(node.nodeId) ? '1' : null">
+                      <span class="tp-step-bullet"><app-icon [name]="getNodeIcon(node.nodeType)" /></span>
+                      <button class="tp-step-head" [class.tp-step-static]="!stepHasDetail(node)"
+                        (click)="stepHasDetail(node) && toggleStep(node.nodeId)">
+                        <span class="tp-step-label">{{ node.nodeLabel }}</span>
+                        <span class="tp-chip" [attr.data-kind]="statusKind(node.resultStatus)">{{ node.resultStatus }}</span>
+                        @if (stepHasDetail(node)) {
+                          <app-icon name="chevronDown" />
+                        }
+                      </button>
+
+                      @if (isStepOpen(node.nodeId)) {
+                        <div class="tp-step-detail">
+                          <div class="tp-detail-card">
+                            <!-- INTEGRATION_CALL nested -->
+                            @if (getIntegrationInfo(node); as info) {
+                              <div class="tp-int-head">
+                                <span class="tp-step-bullet" [style.--nc]="getNodeColor('INTEGRATION_CALL')"><app-icon name="cube" /></span>
+                                <span class="tp-int-name">{{ info.name }}</span>
+                                <span class="tp-int-io">{{ i18n.t('auto_test_int_io', { in: '' + info.inputCount, out: '' + info.outputCount }) }}</span>
+                              </div>
+                              @for (kv of info.outputs; track kv.key) {
+                                <div class="tp-kv"><span class="tp-k">{{ kv.key }} →</span><span class="tp-val">{{ kv.value }}</span></div>
+                              }
+                              @if (info.mocked) { <div class="tp-dry">◌ {{ i18n.t('auto_test_mocked') }}</div> }
+                              @if (info.error) { <div class="tp-dry tp-err">⚠ {{ info.error }}</div> }
+                            } @else {
+                              @for (d of formatNodeDetails(node); track $index) {
+                                <div class="tp-kv">
+                                  @if (d.label) { <span class="tp-k">{{ d.label }}</span> }
+                                  <span class="tp-val">{{ d.value }}</span>
+                                </div>
+                              }
+                              @if (node.nodeType === 'OUTPUT') {
+                                <div class="tp-dry" [style.color]="getNodeColor('OUTPUT')">↩ {{ i18n.t('auto_test_returned_note') }}</div>
+                              }
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+          } @else if (loading()) {
+            <div class="tp-main-empty"><span>{{ i18n.t('loading') }}</span></div>
+          } @else {
+            <!-- Never run -->
+            <div class="tp-res-empty">
+              <app-icon name="beaker" />
+              <span class="tp-res-empty-title">{{ i18n.t('auto_test_no_run') }}</span>
+              <span class="tp-res-empty-text">{{ i18n.t('auto_test_no_run_text') }}</span>
+              <button class="tp-btn tp-btn-primary" (click)="runActive()" [disabled]="running() || creating()">
+                <app-icon name="play" />{{ i18n.t('auto_test_run') }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+    }
+  </section>
+</div>

@@ -1,0 +1,160 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <div class="auto-page">
+      <div class="dash-page-head auto-page-head">
+        <div>
+          <div class="dash-eyebrow">{{ i18n.t('intg_pretitle') }}</div>
+          <h1 class="dash-title">{{ i18n.t('intg_list_title') }}</h1>
+          <div class="dash-subtitle">
+            {{ i18n.t('intg_list_subtitle', { total: '' + integrations().length }) }}
+          </div>
+        </div>
+        <div class="auto-head-actions">
+          <button class="auto-add-btn" data-testid="intg-add-btn" (click)="showAddForm()">
+            <app-icon name="plus" />
+            <span>{{ i18n.t('intg_list_add') }}</span>
+          </button>
+        </div>
+      </div>
+
+      @if (integrations().length === 0) {
+        <app-empty-state
+          [title]="i18n.t('intg_empty_title')"
+          [sub]="i18n.t('intg_empty_sub')"
+          [ctaLabel]="i18n.t('intg_empty_cta')"
+          [glyphColors]="['#a855f7', '#10b981', '#f59e0b']"
+          (cta)="showAddForm()" />
+      } @else {
+        <div class="auto-filterbar">
+          <div class="auto-search">
+            <app-icon name="search" />
+            <input type="text" class="auto-search-input"
+              [placeholder]="i18n.t('auto_search_placeholder')"
+              [value]="searchQuery()"
+              (input)="searchQuery.set(v($event))" />
+          </div>
+        </div>
+
+        @if (filtered().length === 0) {
+          <div class="auto-no-results">
+            <app-icon name="search" />
+            <span>{{ i18n.t('auto_search_empty') }}</span>
+          </div>
+        }
+
+        <div class="auto-list">
+          @for (a of filtered(); track a.id) {
+            <div class="auto-card" [style.--ac]="a.color" [attr.data-testid]="'intg-card-' + a.id">
+              <div class="auto-card-body">
+                <div class="auto-card-head">
+                  <span class="auto-card-name">{{ a.name }}</span>
+                </div>
+
+                @if (a.description) {
+                  <div class="auto-card-desc">{{ a.description }}</div>
+                }
+
+                <div class="auto-card-footer">
+                  <div class="auto-card-meta">
+                    <span class="auto-meta-item">
+                      <app-icon name="cube" />
+                      {{ a.nodeCount }} {{ i18n.t('auto_stat_nodes') }}
+                    </span>
+                  </div>
+                  <div class="auto-card-actions">
+                    <button class="auto-icon-btn" [title]="i18n.t('auto_open_editor')" (click)="openEditor(a)">
+                      <app-icon name="edit" />
+                    </button>
+                    <button class="auto-icon-btn auto-icon-btn-danger" [title]="i18n.t('auto_delete')" (click)="deleteIntegration(a.id)">
+                      <app-icon name="trash" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="auto-page">
+      <div class="dash-page-head auto-page-head">
+        <div>
+          <button class="dash-back" data-testid="intg-back-btn" (click)="cancel()">
+            <app-icon name="arrowLeft" />
+            <span>{{ i18n.t('auto_back') }}</span>
+          </button>
+          <h1 class="dash-title">{{ i18n.t('intg_create_title') }}</h1>
+          <div class="dash-subtitle">{{ i18n.t('intg_create_subtitle') }}</div>
+        </div>
+      </div>
+
+      <div class="auto-editor">
+        <app-error-banner [message]="error()" />
+
+        <div class="auto-editor-grid">
+          <div class="auto-form">
+            <div class="auto-field">
+              <label class="auto-field-label" for="intg-name">{{ i18n.t('auto_name') }}</label>
+              <input id="intg-name" class="auto-input" type="text"
+                [placeholder]="i18n.t('intg_name_placeholder')"
+                [attr.data-error]="hasErr('name') ? '1' : '0'"
+                [value]="name()"
+                (input)="name.set(v($event))"
+                maxlength="255" />
+            </div>
+
+            <div class="auto-field">
+              <label class="auto-field-label" for="intg-desc">
+                <span>{{ i18n.t('auto_description') }}</span>
+                <span class="auto-field-aux">{{ i18n.t('auto_optional') }}</span>
+              </label>
+              <textarea id="intg-desc" class="auto-textarea" rows="3"
+                [placeholder]="i18n.t('intg_description_placeholder')"
+                [value]="description()"
+                (input)="description.set(v($event))"></textarea>
+            </div>
+
+            <div class="auto-field">
+              <label class="auto-field-label">{{ i18n.t('auto_color') }}</label>
+              <app-color-picker
+                [value]="color()"
+                [presets]="colors"
+                [ariaLabel]="i18n.t('auto_color')"
+                (valueChange)="color.set($event)" />
+            </div>
+          </div>
+
+          <div class="auto-insight-col">
+            <div class="auto-insight">
+              <div class="auto-ins-card" data-tone="purple">
+                <span class="auto-ins-icon"><app-icon name="cube" /></span>
+                <div class="auto-ins-body">
+                  <div class="auto-ins-title">{{ i18n.t('intg_info_what_title') }}</div>
+                  <div class="auto-ins-text">{{ i18n.t('intg_info_what_text') }}</div>
+                </div>
+              </div>
+
+              <div class="auto-ins-card" data-tone="green">
+                <span class="auto-ins-icon"><app-icon name="signin" /></span>
+                <div class="auto-ins-body">
+                  <div class="auto-ins-title">{{ i18n.t('intg_info_io_title') }}</div>
+                  <div class="auto-ins-text">{{ i18n.t('intg_info_io_text') }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="auto-editor-foot">
+          <app-button variant="ghost" type="button" data-testid="intg-cancel-btn" (click)="cancel()">
+            {{ i18n.t('auto_cancel') }}
+          </app-button>
+          <app-button variant="primary" type="submit" data-testid="intg-save-btn" [disabled]="loading()" (click)="submit($event)">
+            {{ loading() ? i18n.t('loading') : i18n.t('intg_submit') }}
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

@@ -1,0 +1,359 @@
+POSTWERK NODE CONFIG REFERENCE
+
+Shared, authoritative reference for how automation flow nodes are configured. Loaded by BOTH the
+post-login AI assistant and the public onboarding wizard so the two surfaces describe nodes
+identically. This describes the universal "physics" of nodes — it does NOT assume a logged-in user.
+Surface-specific context (real vs. placeholder email-account IDs, real vs. temporary resource IDs)
+is supplied by each surface's own system prompt.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VARIABLES INJECTED BY NODE TYPE (available to downstream nodes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- TRIGGER (EMAIL): email.from, email.fromName, email.to, email.cc, email.subject, email.body, email.hasAttachments, email.isRead, email.folder, email.receivedAt, email.isReply
+- TRIGGER (WEBHOOK): trigger.<fieldName> (mapped from parameterSetId, or all top-level JSON keys), trigger.body, trigger.receivedAt
+- EXTRACT: extraction_0.<fieldName>, extraction_1.<fieldName>, ... (one namespace per linked parameter set, fields from its parameters)
+- CATEGORIZE: category.id, category.name, category.color, category.confidence
+- WEBHOOK (action): http_<nodeId>.statusCode, http_<nodeId>.body, http_<nodeId>.<jsonField>
+- VECTOR_SEARCH: vectorsearch_<nodeId>.match.<fieldName> (fields from the matched KB entry's parameter set), vectorsearch_<nodeId>.confidence, vectorsearch_<nodeId>.reason
+- NOTIFY: notify_<nodeId>.sent (true when delivered), notify_<nodeId>.recipientCount
+- Template / placeholder syntax: {{email.from}}, {{extraction_0.amount}}, {{category.name}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5a. NODE TYPES — Configuration Reference
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each node in update_automation_flow requires: id, nodeType, label, positionX, positionY, config (JSON string).
+
+#### TRIGGER
+Purpose: Unified entry point with 3 switchable modes (EMAIL, WEBHOOK, CRON).
+Every automation must have exactly 1 TRIGGER node.
+
+EMAIL mode (default) — monitors email accounts for incoming emails:
+  Config: {"triggerMode": "EMAIL", "accountIds": ["email-account-uuid-1"]}
+  Output handles: "new-email" (new incoming), "reply" (replies to threads)
+
+WEBHOOK mode — INBOUND webhook receiver (external systems POST to a generated URL to trigger the automation):
+  Config: {"triggerMode": "WEBHOOK", "accountIds": ["email-account-uuid-1"], "parameterSetId": "<optional UUID>"}
+  A unique public URL (/api/v1/hooks/{token}) is auto-generated on save and shown in the editor; the user pastes it into their external system.
+  Auth modes (configured via the management endpoint): NONE (URL token only), API_KEY (header, default X-API-Key), HMAC (X-Postwerk-Signature = HMAC-SHA256 of body).
+  Output handle: "output"
+  Injects trigger.<fieldName> (mapped from parameterSetId, or all top-level JSON keys), trigger.body, trigger.receivedAt
+  NOTE: For OUTBOUND HTTP calls, use the separate WEBHOOK action node instead.
+
+CRON mode — time-based trigger (passthrough):
+  Config: {"triggerMode": "CRON", "scheduleType": "INTERVAL", "intervalMinutes": 60, "preset": "hourly"}
+  Output handle: "output"
+
+Test status: PASSED (EMAIL/CRON), SIMULATED (WEBHOOK dry-run)
+
+#### FILTER
+Purpose: Routes emails based on variable conditions using a multi-check system.
+Each check defines a named branch with its own DNF conditions evaluated against upstream variables.
+The first matching check wins (evaluated top-to-bottom). Unmatched emails go to the fallback output.
+
+Config: {"checks": [{"label": "High value invoices", "groups": [{"conditions": [{"field": "extraction_0.amount", "operator": "GREATER_THAN", "value": "1000"}]}]}, {"label": "From partner", "groups": [{"conditions": [{"field": "email.from", "operator": "CONTAINS", "value": "@partner.com"}]}]}]}
+  - checks: Array of named checks. Each check has:
+    - label (STRING): Human-readable name for this check (displayed in UI)
+    - groups (ARRAY): DNF structure — groups are OR, conditions within a group are AND
+      - conditions: Array of {field, operator, value}
+        - field: Variable key from upstream nodes (see Variable System section)
+          Email variables: email.from, email.fromName, email.to, email.cc, email.subject,
+            email.body, email.hasAttachments, email.isRead, email.folder, email.receivedAt
+          Extraction variables: extraction_0.fieldName, extraction_1.fieldName, ...
+          Category variables: category.name, category.id, category.confidence
+          Webhook variables: http_<nodeId>.fieldName, http_<nodeId>.statusCode
+        - operator: EQUALS, NOT_EQUALS, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH,
+          IS_TRUE, IS_FALSE, GREATER_THAN, LESS_THAN
+        - value: Comparison value (empty string for IS_TRUE/IS_FALSE)
+  - First matching check wins (top-to-bottom evaluation order)
+  - No external filter dependency needed — conditions are defined inline
+
+Output handles: "check_0", "check_1", ... (by index) and "fallback"
+  - check_N: the Nth check matched
+  - fallback: no check matched (always present as the last output)
+Test status: MATCHED (a check matched) or NOT_MATCHED (no check matched → fallback)
+
+Examples:
+  - Route by sender: field="email.from", operator=CONTAINS, value="@partner.com"
+  - Route by extracted boolean: field="extraction_0.isReservation", operator=IS_TRUE
+  - Route by extracted amount: field="extraction_0.amount", operator=GREATER_THAN, value="500"
+  - Route by category: field="category.name", operator=EQUALS, value="Reservierung"
+  - Combined: Check with 2 groups (OR): group1=[from contains @vip.com] OR group2=[amount > 1000]
+
+#### EXTRACT
+Purpose: Uses AI to extract structured data from email content into named fields.
+This is one of the most powerful nodes — it enables AI-powered understanding of email content.
+
+Config: {"sourceVariables": ["email.body"], "extractions": [{"parameterSetId": "param-set-uuid", "label": "Invoice Data"}]}
+  - sourceVariables (ALWAYS SET THIS): which variable(s) the AI reads as input. Use ["email.body"]
+    for the triggering email — this is the default case. For CHAINED extraction or non-email sources,
+    reference upstream variables instead, e.g. ["extraction_0.summary"], ["trigger.payload"], or
+    ["input.text"] (integrations). If omitted it falls back to email.body, but you MUST set it
+    explicitly so the editor shows the configured input (an empty value displays a "no input" warning).
+  - Each extraction references a ParameterSet (create with create_parameter_set first)
+  - label: display name in the UI
+  - The AI reads the source variable(s) and fills in each parameter defined in the parameter set
+
+When to use EXTRACT (vs FILTER):
+  - EXTRACT: When you need to UNDERSTAND email content semantically (meaning, intent, context)
+    Examples: "Is this a reservation?", "What is the invoice amount?", "Is this for June?"
+  - FILTER: When you need to match STATIC TEXT PATTERNS in email headers/body
+    Examples: "From address contains @example.com", "Subject starts with 'RE:'"
+
+IMPORTANT: Never use FILTER nodes for semantic/content-based decisions!
+  A FILTER with email.subject CONTAINS "Juni" is WRONG for checking if an email is about June —
+  it only does exact text matching and will miss "June", "06/2024", "im Juni", etc.
+  Instead, use EXTRACT with a BOOLEAN parameter like:
+    isForJune (BOOLEAN): "Is this email about a reservation or request for the month of June?"
+  Then use FILTER with extraction_0.isForJune IS_TRUE for conditional routing.
+  The AI understands synonyms, context, and different phrasings.
+
+Extracted values are available downstream:
+  - In EMAIL_ACTION (REPLY/FORWARD) templates: {{fieldName}} (when template links the same parameterSetId)
+  - In WEBHOOK body/url: {{extraction_0.fieldName}}, {{extraction_1.fieldName}}
+  - In FILTER nodes: conditions evaluate against extracted field values for conditional routing
+
+Output handles: "extraction_0", "extraction_1", ... (by index order)
+Test status: EXTRACTED
+
+#### CATEGORIZE
+Purpose: Uses AI embeddings to classify an email into one of several categories.
+Config: {"sourceVariables": ["email.body"], "categoryIds": ["category-uuid-1", "category-uuid-2"], "threshold": 70}
+  - sourceVariables (ALWAYS SET THIS): the text the AI classifies. Use ["email.body"] for the
+    triggering email (default). Reference upstream variables (e.g. ["extraction_0.summary"],
+    ["trigger.payload"], ["input.text"]) when classifying API/webhook/integration text. If omitted it
+    falls back to email.body; set it explicitly so the editor does not show a "no input" warning.
+  - categoryIds: list of category UUIDs to classify into (use IDs from create_category)
+  - threshold: minimum confidence score (0-100, default 70)
+IMPORTANT: CATEGORIZE already does TWO things automatically:
+  1) Assigns the matched category as a label on the email
+  2) Routes to per-category output handles
+  → Do NOT add LABEL nodes with category names after CATEGORIZE (already labeled!)
+  → This holds EVEN IF the user explicitly asks to "mark"/"label"/"markieren"/"kennzeichnen"/"taggen" the
+    email as that category — the CATEGORIZE step IS that marking. Skip the redundant LABEL node and briefly
+    note in your plan that categorizing already marks the email. (LABEL is ONLY for a tag UNRELATED to the
+    categories, e.g. "Processed"/"Urgent"/"VIP".)
+  → Do NOT add FILTER after CATEGORIZE just to check category — CATEGORIZE already branches per category!
+
+Output handles: "category_0", "category_1", ... (by categoryIds order) and "uncategorized"
+  The "uncategorized" output is a BUILT-IN fallback — it catches ALL emails that don't match
+  any category with sufficient confidence. You do NOT need to create a separate category for this.
+
+CRITICAL — DO NOT CREATE FALLBACK/MISC CATEGORIES:
+  ✗ Do NOT create categories like "Sonstiges", "Miscellaneous", "Other", "Allgemein", "Rest"
+  ✗ These are REDUNDANT because the built-in "uncategorized" output already serves this purpose
+  ✗ Creating a fallback category wastes AI classification resources and confuses the flow
+  → Instead, connect the "uncategorized" output handle directly to whatever action you want
+    for unmatched emails (e.g. EMAIL_ACTION with MOVE_FOLDER mode, LABEL, or simply leave unconnected to ignore them)
+  → Only create categories for MEANINGFUL groups the user specifically asked for
+
+Example — User says "sort into reservations, complaints, and newsletters":
+  ✓ Create 3 categories: Reservierung, Beschwerde, Newsletter
+  ✓ Use "uncategorized" output for emails that don't fit any of these 3
+  ✗ Do NOT create a 4th "Sonstiges" category — "uncategorized" already handles this!
+
+Test status: CATEGORIZED (matched a category) or NOT_MATCHED (below threshold → uncategorized)
+
+#### VECTOR_SEARCH
+Purpose: Semantic match against a knowledge base — retrieves the closest entries, lets AI pick the
+best match, and routes by a confidence threshold. Use it to map a free-text value (e.g. an extracted
+order position) to a known reference entry (e.g. the right SKR account number). REQUIRES an existing
+knowledge base (the user creates these in the Knowledge Base section).
+Config: {"knowledgeBaseId": "kb-uuid", "queryVariable": "{{extraction_0.position}}", "topK": 5, "confidenceThreshold": 90}
+  - knowledgeBaseId: UUID of an existing knowledge base (use an id from USER'S CURRENT RESOURCES → knowledgeBases). REQUIRED.
+  - queryVariable: the text to match — free text with {{variable}} tokens, e.g. {{extraction_0.position}} or {{email.subject}}. REQUIRED.
+  - topK: how many candidate entries to shortlist for the AI judge (1-10, default 5).
+  - confidenceThreshold: minimum match confidence (0-100, default 90) to take the "success" branch.
+Injects downstream:
+  - vectorsearch_<nodeId>.match.<field> — the matched entry's fields (from the KB's parameter set)
+  - vectorsearch_<nodeId>.confidence — match confidence (0-100)
+  - vectorsearch_<nodeId>.reason — short rationale for the match
+Output handles: "success" (matched at/above threshold) and "fail" (no match, below threshold, or error)
+Test status: MATCHED (success) or NOT_MATCHED (fail); ERROR on failure
+
+#### NOTIFY
+Purpose: Sends an in-app/email notification to a member of THIS automation's organization. Use it to
+alert a colleague when something needs a human (e.g. an extracted complaint is urgent → notify the
+support lead). The recipient must be an active member of the org the automation runs in.
+Config: {"recipientType": "USER", "recipientUserId": "user-uuid", "title": "New urgent complaint", "message": "{{email.subject}} from {{email.from}}", "severity": "WARNING", "category": "SYSTEM", "linkUrl": "/dashboard/emails"}
+  - recipientType: "USER" (a specific member — set recipientUserId), "OWNER" (the org's owner), or "ADMINS" (all owners+admins). Default "USER".
+  - recipientUserId: UUID of an org member — REQUIRED when recipientType=USER. Use an id of an actual member of the org. (No logged-in user in the wizard → use placeholder.)
+  - title: short headline. Supports {{variable}} tokens.
+  - message: body text. Supports {{variable}} tokens.
+  - templateId: ALTERNATIVE to title/message — UUID of a saved template (create_template); its subject becomes the title and its body (flattened to text) the message. At least ONE content source is REQUIRED: either title/message OR templateId.
+  - severity: "INFO", "WARNING", or "CRITICAL" (CRITICAL is always shown in-app regardless of the recipient's mute settings). Default "INFO".
+  - category: notification category (AUTOMATION|APPROVAL|QUOTA|MAILBOX|TEAM|MARKETPLACE|SYSTEM). Default "SYSTEM".
+  - linkUrl: optional deep link the recipient opens on click (e.g. "/dashboard/emails").
+Injects downstream:
+  - notify_<nodeId>.sent — true when the notification was delivered
+  - notify_<nodeId>.recipientCount — number of recipients notified
+Output handles: "success" (sent) and "fail" (no valid recipient / no message)
+Test status: SIMULATED (success) or ERROR (fail)
+
+#### DELAY
+Purpose: Pauses automation execution for a specified duration.
+Config: {"delayMinutes": 30}
+Output handle: "output"
+Test status: SIMULATED
+
+#### LABEL
+Purpose: Assigns a category to the email as a tag/label.
+Config: {"categoryId": "category-uuid"}
+  - categoryId: UUID of an existing category (create with create_category first)
+  - Only use for labels UNRELATED to categories (e.g. "Processed", "Urgent")
+  - Do NOT use after CATEGORIZE — it already labels the email!
+Output handle: "output"
+Test status: SIMULATED
+
+#### EMAIL_ACTION
+Purpose: Unified email action node with 3 modes: REPLY, FORWARD, MOVE_FOLDER.
+The `actionMode` field selects the behavior.
+
+REPLY mode — Sends an automated reply to the original sender. Content comes from either a
+saved template (Vorlage) or manually written subject/body:
+Config (template): {"actionMode": "REPLY", "contentSource": "VORLAGE", "templateId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}
+Config (manual):   {"actionMode": "REPLY", "contentSource": "MANUAL", "subject": "Re: {{email.subject}}", "body": "<p>Hi {{email.fromName}}</p>"}
+  - actionMode: "REPLY" (required discriminator)
+  - contentSource: "VORLAGE" (use a template) or "MANUAL" (inline subject/body). Defaults to VORLAGE.
+  - templateId: required when contentSource=VORLAGE — create a template with create_template, then use the returned ID
+  - subject / body: required when contentSource=MANUAL. body is HTML. Both support {{variableKey}} placeholders.
+  - To send a brand-new email (with custom sender, recipients, cc/bcc) use SEND_EMAIL instead.
+
+FORWARD mode — Forwards the email to another address, optionally with a prepended note:
+Config (template): {"actionMode": "FORWARD", "toAddress": "target@example.com", "contentSource": "VORLAGE", "templateId": "optional-template-uuid"}
+Config (manual):   {"actionMode": "FORWARD", "toAddress": "target@example.com", "contentSource": "MANUAL", "subject": "FYI", "body": "Bitte ansehen"}
+  - actionMode: "FORWARD" (required discriminator)
+  - toAddress: REQUIRED — destination email address
+  - contentSource: "VORLAGE" or "MANUAL". When set, a note is prepended above the forwarded
+    message and a custom subject overrides the default "Fwd:" prefix.
+  - templateId: used when contentSource=VORLAGE — template subject/body form the note.
+  - subject / body: used when contentSource=MANUAL. Both support {{variableKey}} placeholders.
+  - If neither is set, a plain "Fwd:" with the original content is sent.
+
+MOVE_FOLDER mode — Moves the email to a specific IMAP folder:
+Config: {"actionMode": "MOVE_FOLDER", "folder": "Archive/Invoices"}
+  - actionMode: "MOVE_FOLDER" (required discriminator)
+  - folder: target IMAP folder name. Use "__TRASH__" to move to trash.
+  - IMPORTANT: Check if folder exists with list_folders first. If not, create it with create_folder!
+    The automation will fail at runtime if the target folder doesn't exist on the IMAP server.
+  - Nested folders use "/" separator (e.g. "Buchhaltung/Bestellungen")
+
+Input handle: "input"
+Output handle: "output"
+Test status: SIMULATED
+
+#### SEND_EMAIL
+Purpose: Composes and sends a brand-new email via SMTP (not a reply to the trigger email).
+Unlike EMAIL_ACTION, this does NOT require an email trigger — it works in webhook-triggered
+automations too, as long as a sender account is selected.
+Config: {"senderAccountId": "account-uuid", "to": "recipient@example.com", "cc": "", "bcc": "", "contentSource": "MANUAL", "subject": "Hello {{trigger.name}}", "body": "<p>...</p>"}
+  - senderAccountId: the email account used as the sender. REQUIRED when the automation has no
+    email trigger (e.g. webhook). If omitted, the trigger email's account is used.
+  - to: REQUIRED — recipient address. Supports {{variableKey}} placeholders.
+  - cc / bcc: optional additional recipients.
+  - contentSource: "VORLAGE" (use a template) or "MANUAL" (inline subject/body). Defaults to VORLAGE.
+  - templateId: used when contentSource=VORLAGE — the template's subject and body are sent.
+    Create a template with create_template first, then use its ID.
+  - subject / body: used when contentSource=MANUAL (or no templateId). body is HTML. Supports {{variableKey}}.
+Input handle: "input"
+Output handle: "output"
+Test status: SIMULATED
+
+#### REMOVE_LABEL
+Purpose: Removes a category label from the email (opposite of LABEL).
+Config: {"categoryId": "category-uuid"}
+Output handle: "output"
+Test status: SIMULATED
+
+#### WEBHOOK
+Purpose: Makes an OUTBOUND HTTP request to an external API endpoint (e.g. Slack, a CRM).
+(For an INBOUND webhook that STARTS an automation, use TRIGGER in WEBHOOK mode instead.)
+Config: {"url": "https://api.example.com/endpoint", "method": "POST", "headers": [{"key": "Content-Type", "value": "application/json"}], "body": "{\"text\": \"{{email.subject}}\"}", "authType": "NONE", "timeout": 30, "retryCount": 0, "retryDelayMs": 3000, "retryOn": ["5xx", "429", "network_error"]}
+  - url (required): Target endpoint URL (HTTPS). Supports {{variable}} placeholders (URL-encoded).
+  - method: GET, POST, PUT, PATCH, DELETE (body is only sent for POST/PUT/PATCH)
+  - headers: Optional array of {key, value} pairs for custom HTTP headers (values support {{variable}})
+  - body: Request body for POST/PUT/PATCH (supports {{variable}} placeholders)
+  - Variable placeholders available:
+    - Email fields: {{email.from}}, {{email.subject}}, {{email.to}}, {{email.fromName}} (legacy {{fromAddress}}, {{subject}} also work)
+    - From EXTRACT nodes: {{extraction_N.fieldName}}
+    - From CATEGORIZE: {{category.name}}, {{category.id}}
+    - From upstream WEBHOOK nodes: {{http_<nodeId>.statusCode}}, {{http_<nodeId>.body}}, {{http_<nodeId>.<jsonField>}}
+  - authType: NONE, BEARER, BASIC, API_KEY
+    - NONE: No authentication (default)
+    - BEARER: Requires authToken (sent as "Authorization: Bearer <token>")
+    - BASIC: Requires authUsername + authPassword (sent as "Authorization: Basic <base64>")
+    - API_KEY: Requires authToken, sent in a custom header named by authHeaderName (default "X-API-Key")
+  - authToken: Token string for BEARER/API_KEY auth (encrypted at rest)
+  - authHeaderName: Custom header name for API_KEY auth (default "X-API-Key")
+  - authUsername/authPassword: Credentials for BASIC auth (encrypted at rest)
+  - authSecretId: UUID of a secret from the Secret Vault (alternative to inline credentials).
+    When set, the secret's decrypted value is used instead of inline authToken/authPassword.
+    Always prefer Secret Vault over inline tokens for better security!
+  - timeout: Request timeout in seconds (1-60, default 30)
+  - retryCount: Number of retries on failure (0-3, default 0)
+  - retryDelayMs: Base delay between retries in ms (1000-30000, default 3000). Uses exponential backoff.
+  - retryOn: Array of conditions to retry on: "5xx" (server errors), "429" (rate limit), "network_error"
+  - responseSchemas (define the OUTPUT BRANCHES + optional response parsing): Array where EACH entry is an output
+    branch of this node. Entry shape: {"name": "...", "condition": "<status pattern>", "parameterSetId": "<optional uuid>"}.
+    - condition: status pattern — "2xx", "201", "21x", "4xx", "5xx", or "*". The most specific match wins.
+      The special condition "unmatched" marks the pinned catch-all branch (always present — see Output handles).
+    - parameterSetId (optional): a ParameterSet whose parameters ARE the JSON response fields to extract from the body
+      for that branch → they become {{http_<nodeId>.<fieldName>}} variables. Omit it to just branch on status.
+    - Default for a new node: [{"name":"Success","condition":"2xx","parameterSetId":""},{"name":"Unmatched","condition":"unmatched","parameterSetId":""}].
+      Keep the "unmatched" entry; add more branches (e.g. a "4xx" error branch) only if you need them.
+Response handling & routing:
+  - http_<nodeId>.statusCode and http_<nodeId>.body are ALWAYS available (even on errors — use them on the unmatched branch to report a failed call).
+  - http_<nodeId>.<fieldName> (parsed JSON response fields) are produced ONLY when the matched branch has a parameterSetId.
+  - The response routes to the FIRST (most specific) responseSchemas entry whose condition matches the actual status →
+    its "resp_<i>" handle (i = that entry's index in the array). If none match → the "unmatched" handle.
+  - So if a downstream node uses the webhook's RESPONSE data: first create_parameter_set describing the expected
+    response fields, then set that branch's parameterSetId on this WEBHOOK node.
+Input handle: "input"
+Output handles: "resp_0", "resp_1", ... (one per non-"unmatched" responseSchemas entry, by array index) and "unmatched"
+  (the always-present catch-all for any status no branch matched — incl. 4xx/5xx, network error, exhausted retries).
+NOTE: Requires plan with apiWebhookEnabled=true. Private IPs blocked (SSRF protection).
+Test status: SIMULATED (dry-run never calls the real endpoint; routes status 200 through the matching branch, e.g. "resp_0")
+
+#### WEBHOOK Best Practices
+- Slack notifications: POST to webhook URL with body {"text": "{{email.subject}} from {{email.from}}"}
+- CRM integration: Extract data first (EXTRACT node), then POST extracted fields
+- Branch on outcome: wire the "resp_<i>" branch(es) and the "unmatched" branch to different follow-up actions
+  (e.g. unmatched → an EMAIL_ACTION that reports {{http_<nodeId>.statusCode}})
+- Chained webhooks: feed one webhook's parsed response into the next via {{http_<nodeId>.fieldName}}
+- Security: Always recommend Secret Vault (authSecretId) over inline tokens
+- Resilience: For critical integrations, set retryCount=2 with retryOn=["5xx", "network_error"]
+- Variables work in url, body, AND header values
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5b. EDGE STRUCTURE — Connecting Nodes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each edge has: id, sourceNodeId, sourceHandle, targetNodeId, targetHandle.
+
+Source handles (per node type):
+  - TRIGGER (EMAIL mode): "new-email", "reply"
+  - TRIGGER (WEBHOOK/CRON mode): "output"
+  - FILTER: "check_0", "check_1", ..., "fallback"
+  - CATEGORIZE: "category_0", "category_1", ..., "uncategorized"
+  - EXTRACT: "extraction_0", "extraction_1", ...
+  - WEBHOOK: "resp_0", "resp_1", ..., "unmatched" (one per responseSchemas entry by index, + the catch-all "unmatched")
+  - VECTOR_SEARCH: "success", "fail"
+  - NOTIFY: "success", "fail"
+  - EMAIL_ACTION, LABEL, REMOVE_LABEL, DELAY, SEND_EMAIL: "output"
+
+Target handle: always "input" (every node's input)
+
+Node type selection:
+  - For replying → use EMAIL_ACTION node with actionMode=REPLY, contentSource (VORLAGE+templateId or MANUAL+subject/body)
+  - For forwarding → use EMAIL_ACTION node with actionMode=FORWARD, toAddress
+  - For moving to folder → use EMAIL_ACTION node with actionMode=MOVE_FOLDER, folder ("__TRASH__" for trash)
+  - For conditional routing (any variable) → use FILTER node with checks
+  - For removing a label → use REMOVE_LABEL node
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5c. NODE POSITIONING — Layout Guidelines
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Left-to-right flow: TRIGGER(100,300) → FILTER(400,300) → EXTRACT(700,300) → EMAIL_ACTION(1000,300)
+For branching: upper branch positionY=200, lower branch positionY=400 (250px vertical spacing)
+Node width is ~232px, height varies by content.

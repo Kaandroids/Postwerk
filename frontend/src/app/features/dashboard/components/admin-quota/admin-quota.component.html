@@ -1,0 +1,490 @@
+<app-page-content>
+  <div class="dash-page-head qov-head">
+    <div>
+      <div class="dash-eyebrow qov-eyebrow-mono">{{ i18n.t('qov_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('qov_title') }}</h1>
+      <div class="dash-subtitle">
+        {{ i18n.t('qov_subtitle', { active: (kpis()?.activeCount ?? 0) + '', soon: (kpis()?.expiringIn7Count ?? 0) + '' }) }}
+      </div>
+    </div>
+    <div class="qov-head-controls">
+      <button
+        type="button"
+        class="qov-btn qov-btn--solid"
+        data-testid="admin-quota-new-btn"
+        [disabled]="!identity.has('QUOTA_OVERRIDE')"
+        [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+        (click)="openCreate()">
+        @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="plusSm" /> }
+        {{ i18n.t('qov_new') }}
+      </button>
+    </div>
+  </div>
+
+  @if (flash()) {
+    <div class="qov-flash" role="status" data-testid="admin-quota-flash">
+      <app-icon name="check" />
+      <span>{{ flash() }}</span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="qov-error" role="alert">
+      <app-icon name="alertTriangle" />
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <!-- KPI strip -->
+  <div class="qov-kpis" data-testid="admin-quota-kpis">
+    <div class="qov-kpi">
+      <div class="qov-kpi-label">{{ i18n.t('qov_kpi_active') }}</div>
+      <div class="qov-kpi-value">{{ kpis()?.activeCount ?? 0 }}</div>
+      <div class="qov-kpi-foot"><span class="qov-kpi-note">{{ i18n.t('qov_kpi_active_note') }}</span></div>
+    </div>
+    <div class="qov-kpi">
+      <div class="qov-kpi-label">{{ i18n.t('qov_kpi_credit') }}</div>
+      <div class="qov-kpi-value">{{ euro(kpis()?.creditGrantedThisMonthCents ?? 0) }}</div>
+      <div class="qov-kpi-foot">
+        <span class="qov-kpi-chip" data-tone="green">€</span>
+        <span class="qov-kpi-note">{{ i18n.t('qov_kpi_credit_note') }}</span>
+      </div>
+    </div>
+    <div class="qov-kpi">
+      <div class="qov-kpi-label">{{ i18n.t('qov_kpi_over80') }}</div>
+      <div class="qov-kpi-value">{{ kpis()?.over80Count ?? 0 }}</div>
+      <div class="qov-kpi-foot">
+        <span class="qov-kpi-chip" [attr.data-tone]="(kpis()?.over80Count ?? 0) > 0 ? 'amber' : 'green'">
+          {{ (kpis()?.over80Count ?? 0) > 0 ? i18n.t('qov_kpi_watch') : i18n.t('qov_kpi_ok') }}
+        </span>
+        <span class="qov-kpi-note">{{ i18n.t('qov_kpi_over80_note') }}</span>
+      </div>
+    </div>
+    <div class="qov-kpi">
+      <div class="qov-kpi-label">{{ i18n.t('qov_kpi_expiring') }}</div>
+      <div class="qov-kpi-value">{{ kpis()?.expiringIn7Count ?? 0 }}</div>
+      <div class="qov-kpi-foot">
+        <span class="qov-kpi-chip" [attr.data-tone]="(kpis()?.expiringIn7Count ?? 0) > 0 ? 'amber' : 'slate'">
+          <app-icon name="clock" />
+        </span>
+        <span class="qov-kpi-note">{{ i18n.t('qov_kpi_expiring_note') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="qov-toolbar">
+    <div class="qov-search">
+      <app-icon name="search" />
+      <input
+        type="text"
+        data-testid="admin-quota-search"
+        [attr.aria-label]="i18n.t('qov_search')"
+        [placeholder]="i18n.t('qov_search')"
+        [value]="search()"
+        (input)="onSearch($event)" />
+    </div>
+    <div class="qov-filters">
+      <div class="qov-filter">
+        <label for="qov-f-target">{{ i18n.t('qov_filter_target') }}</label>
+        <select id="qov-f-target" data-testid="admin-quota-filter-target" (change)="onTargetType($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="USER">{{ i18n.t('qov_filter_users') }}</option>
+          <option value="ORG">{{ i18n.t('qov_filter_orgs') }}</option>
+        </select>
+      </div>
+      <div class="qov-filter">
+        <label for="qov-f-kind">{{ i18n.t('qov_filter_type') }}</label>
+        <select id="qov-f-kind" data-testid="admin-quota-filter-kind" (change)="onKind($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="CREDIT">{{ i18n.t('qov_kind_credit') }}</option>
+          <option value="CAP">{{ i18n.t('qov_kind_cap') }}</option>
+          <option value="UNLIMITED">{{ i18n.t('qov_kind_unlimited') }}</option>
+        </select>
+      </div>
+      <div class="qov-filter">
+        <label for="qov-f-status">{{ i18n.t('qov_filter_status') }}</label>
+        <select id="qov-f-status" data-testid="admin-quota-filter-status" (change)="onStatus($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="active">{{ i18n.t('admin_org_status_active') }}</option>
+          <option value="expired">{{ i18n.t('qov_status_expired') }}</option>
+        </select>
+      </div>
+      <div class="qov-filter">
+        <label for="qov-f-expiry">{{ i18n.t('qov_filter_expiry') }}</label>
+        <select id="qov-f-expiry" data-testid="admin-quota-filter-expiry" (change)="onExpiry($event)">
+          <option value="">{{ i18n.t('qov_expiry_any') }}</option>
+          <option value="next7">{{ i18n.t('qov_expiry_next7') }}</option>
+          <option value="next30">{{ i18n.t('qov_expiry_next30') }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table / states -->
+  @if (loading()) {
+    <div class="qov-card" data-testid="admin-quota-skeleton" aria-hidden="true">
+      <div class="qov-skel-head"></div>
+      @for (row of [1,2,3,4,5,6,7,8]; track row) {
+        <div class="qov-skel-row"></div>
+      }
+    </div>
+  } @else if (rows().length === 0 && !hasActiveFilters()) {
+    <div class="qov-empty" data-testid="admin-quota-empty">
+      <app-icon name="sliders" />
+      <div class="qov-empty-title">{{ i18n.t('qov_empty_title') }}</div>
+      <div class="qov-empty-sub">{{ i18n.t('qov_empty_sub') }}</div>
+      <button type="button" class="qov-btn qov-btn--solid"
+        [disabled]="!identity.has('QUOTA_OVERRIDE')"
+        [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+        (click)="openCreate()">
+        <app-icon name="plusSm" /> {{ i18n.t('qov_new') }}
+      </button>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="qov-empty" data-testid="admin-quota-empty-filtered">
+      <app-icon name="search" />
+      <div class="qov-empty-title">{{ i18n.t('qov_empty_filtered_title') }}</div>
+      <div class="qov-empty-sub">{{ i18n.t('qov_empty_filtered_sub') }}</div>
+      <button type="button" class="qov-btn" (click)="clearFilters()">{{ i18n.t('qov_clear_filters') }}</button>
+    </div>
+  } @else {
+    <div class="qov-card">
+      <div class="qov-scroll">
+        <table class="dtable" data-testid="admin-quota-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ i18n.t('qov_col_target') }}</th>
+              <th scope="col">{{ i18n.t('qov_col_base_plan') }}</th>
+              <th scope="col">{{ i18n.t('qov_col_override') }}</th>
+              <th scope="col" class="qov-col-cap">{{ i18n.t('qov_col_eff_cap') }}</th>
+              <th scope="col">{{ i18n.t('qov_col_granted_by') }}</th>
+              <th scope="col">{{ i18n.t('qov_col_expires') }}</th>
+              <th scope="col">{{ i18n.t('admin_col_created') }}</th>
+              <th scope="col">{{ i18n.t('qov_col_status') }}</th>
+              <th scope="col" class="qov-col-menu"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr class="qov-row" data-testid="admin-quota-row" tabindex="0" (click)="openView(r)" (keydown.enter)="openView(r)" (keydown.space)="openView(r); $event.preventDefault()">
+                <td>
+                  <div class="qov-cell-target">
+                    <span class="qov-avatar" aria-hidden="true"
+                      [class.qov-avatar--round]="r.targetType === 'USER'"
+                      [style.--av-hue]="avatarHue(r.targetName)">{{ initial(r.targetName) }}</span>
+                    <span class="qov-cell-target-text">
+                      <span class="qov-cell-name">
+                        {{ r.targetName }}
+                        <span class="qov-badge" [attr.data-tone]="r.targetType === 'ORG' ? 'violet' : 'slate'">
+                          <app-icon [name]="r.targetType === 'ORG' ? 'building' : 'user'" />
+                          {{ r.targetType === 'ORG' ? i18n.t('qov_badge_org') : i18n.t('qov_badge_user') }}
+                        </span>
+                      </span>
+                      <span class="qov-cell-sub mono">{{ r.targetEmailOrSlug }}</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="qov-badge qov-badge--plan">{{ r.basePlan }}</span></td>
+                <td>
+                  <div class="qov-ov">
+                    @switch (r.kind) {
+                      @case ('CREDIT') {
+                        <div class="qov-ov-main">+{{ euro(r.amountCents) }} {{ i18n.t('qov_ov_credit') }}</div>
+                        <div class="qov-ov-sub">{{ i18n.t('qov_ov_credit_sub', { base: euro(r.baseCapCents) }) }}</div>
+                      }
+                      @case ('CAP') {
+                        <div class="qov-ov-main">{{ euro(r.baseCapCents) }} <span class="qov-arrow">→</span> {{ euro(r.effectiveCapCents) }}</div>
+                        <div class="qov-ov-sub">{{ capRaised(r) ? i18n.t('qov_ov_cap_raised') : i18n.t('qov_ov_cap_lowered') }}</div>
+                      }
+                      @default {
+                        <div class="qov-ov-main"><span class="qov-inf">∞</span> {{ i18n.t('qov_kind_unlimited') }}</div>
+                        <div class="qov-ov-sub">{{ r.expiresAt ? i18n.t('qov_ov_until', { date: fmt.date(r.expiresAt) }) : i18n.t('qov_ov_no_expiry') }}</div>
+                      }
+                    }
+                  </div>
+                </td>
+                <td class="qov-col-cap">
+                  <div class="qov-cap" [attr.title]="r.effectiveCapCents == null ? i18n.t('qov_cap_unlimited_title') : null">
+                    <div class="qov-cap-track">
+                      <div class="qov-cap-fill" [attr.data-tone]="capTone(r)" [style.width.%]="capFillPct(r)"></div>
+                    </div>
+                    @if (r.effectiveCapCents == null) {
+                      <span class="qov-cap-fig">{{ euro(r.currentSpendCents) }} <span class="qov-cap-sub">· <span class="qov-inf">∞</span> {{ i18n.t('qov_cap_no_cap') }}</span></span>
+                    } @else {
+                      <span class="qov-cap-fig">{{ euro(r.currentSpendCents) }} <span class="qov-cap-sub">/ {{ euro(r.effectiveCapCents) }}</span></span>
+                    }
+                  </div>
+                </td>
+                <td class="qov-muted">{{ r.grantedByName || '—' }}</td>
+                <td class="qov-muted">{{ r.expiresAt ? fmt.date(r.expiresAt) : '—' }}</td>
+                <td class="qov-muted">{{ fmt.date(r.createdAt) }}</td>
+                <td>
+                  @if (r.status === 'active') {
+                    <span class="qov-badge" data-tone="green"><span class="qov-dot"></span>{{ i18n.t('admin_org_status_active') }}</span>
+                  } @else {
+                    <span class="qov-badge" data-tone="slate"><span class="qov-dot"></span>{{ i18n.t('qov_status_expired') }}</span>
+                  }
+                </td>
+                <td class="qov-col-menu" (click)="$event.stopPropagation()">
+                  <div class="qov-menu-wrap">
+                    <button type="button" class="qov-icon-btn" [attr.data-testid]="'admin-quota-menu-' + r.id"
+                      [attr.aria-label]="i18n.t('qov_row_menu')" (click)="toggleMenu(r.id, $event)">
+                      <app-icon name="list" />
+                    </button>
+                    @if (openMenuId() === r.id) {
+                      <div class="qov-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="qov-menu-item" role="menuitem" (click)="openView(r); openMenuId.set(null)">
+                          <app-icon name="link" /><span>{{ i18n.t('qov_menu_view') }}</span>
+                        </button>
+                        <button type="button" class="qov-menu-item" role="menuitem"
+                          [attr.data-testid]="'admin-quota-edit-' + r.id"
+                          [disabled]="!identity.has('QUOTA_OVERRIDE')"
+                          [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+                          (click)="openEdit(r); openMenuId.set(null)">
+                          @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }
+                          <span>{{ i18n.t('qov_menu_edit') }}</span>
+                        </button>
+                        <button type="button" class="qov-menu-item qov-menu-item--danger" role="menuitem"
+                          [attr.data-testid]="'admin-quota-revoke-' + r.id"
+                          [disabled]="!identity.has('QUOTA_OVERRIDE')"
+                          [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+                          (click)="revoke(r, $event); openMenuId.set(null)">
+                          @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="trash" /> }
+                          <span>{{ i18n.t('qov_menu_revoke') }}</span>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages() > 1) {
+        <div class="qov-pager">
+          <span class="qov-pager-info">{{ totalElements() }} {{ i18n.t('qov_total') }}</span>
+          <div class="qov-pager-ctrls">
+            <button class="qov-pager-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)" [attr.aria-label]="i18n.t('admin_org_prev_page')">
+              <app-icon name="chevronLeft" />
+            </button>
+            <span class="qov-pager-pages">{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+            <button class="qov-pager-btn" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)" [attr.aria-label]="i18n.t('admin_org_next_page')">
+              <app-icon name="chevronRight" />
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Modal -->
+  @if (modalOpen()) {
+    <div class="qov-scrim" (click)="closeModal()"></div>
+    <div class="qov-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="quota-modal"
+      [attr.aria-label]="i18n.t(modalMode() === 'create' ? 'qov_modal_create' : modalMode() === 'edit' ? 'qov_modal_edit' : 'qov_modal_view')"
+      (click)="$event.stopPropagation()">
+      <div class="qov-modal-head">
+        <div>
+          <div class="qov-modal-eyebrow">{{ i18n.t('qov_eyebrow') }}</div>
+          <h2 class="qov-modal-title">
+            {{ i18n.t(modalMode() === 'create' ? 'qov_modal_create' : modalMode() === 'edit' ? 'qov_modal_edit' : 'qov_modal_view') }}
+          </h2>
+          <div class="qov-modal-sub">
+            @if (modalMode() === 'create') {
+              {{ i18n.t('qov_modal_create_sub') }}
+            } @else if (editing(); as e) {
+              <span class="mono">{{ e.id }}</span>
+            }
+          </div>
+        </div>
+        <button class="qov-modal-close" type="button" (click)="closeModal()" data-testid="quota-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')">
+          <app-icon name="close" />
+        </button>
+      </div>
+
+      <div class="qov-modal-body">
+        @if (modalError()) {
+          <div class="qov-error" role="alert"><app-icon name="alertTriangle" /><span>{{ modalError() }}</span></div>
+        }
+
+        <!-- Target -->
+        <div class="qov-field">
+          <span class="qov-label">{{ i18n.t('qov_f_target') }} @if (!isView()) { <span class="qov-req">*</span> }</span>
+          @if (target(); as t) {
+            <div class="qov-target" data-testid="quota-target-selected">
+              <span class="qov-avatar" aria-hidden="true" [class.qov-avatar--round]="t.type === 'USER'" [style.--av-hue]="avatarHue(t.name)">{{ initial(t.name) }}</span>
+              <div class="qov-target-text">
+                <span class="qov-target-name">
+                  {{ t.name }}
+                  <span class="qov-badge" [attr.data-tone]="t.type === 'ORG' ? 'violet' : 'slate'">{{ t.type === 'ORG' ? i18n.t('qov_badge_org') : i18n.t('qov_badge_user') }}</span>
+                  @if (t.plan) { <span class="qov-badge qov-badge--plan">{{ t.plan }}</span> }
+                </span>
+                <span class="qov-target-slug mono">{{ t.slug }}</span>
+              </div>
+              @if (!targetLocked()) {
+                <button type="button" class="qov-target-clear" (click)="clearTarget()" [attr.aria-label]="i18n.t('qov_target_clear')" data-testid="quota-target-clear">
+                  <app-icon name="close" />
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="qov-combo" data-testid="quota-target-picker">
+              <input
+                class="qov-input"
+                type="text"
+                data-testid="quota-target-search"
+                [placeholder]="i18n.t('qov_target_search')"
+                [value]="pickerQuery()"
+                [disabled]="targetLocked()"
+                (input)="onPickerInput($event)"
+                (focus)="focusPicker()"
+                (click)="$event.stopPropagation()" />
+              @if (pickerOpen() && !targetLocked()) {
+                <div class="qov-combo-menu" role="listbox" (click)="$event.stopPropagation()">
+                  @if (pickerLoading()) {
+                    <div class="qov-combo-empty">{{ i18n.t('loading') }}</div>
+                  } @else if (pickerResults().length === 0) {
+                    <div class="qov-combo-empty">{{ i18n.t('qov_target_empty') }}</div>
+                  } @else {
+                    @for (c of pickerResults(); track c.type + c.id) {
+                      <button type="button" class="qov-combo-item" role="option"
+                        [attr.data-testid]="'quota-target-opt-' + c.id" (click)="pickTarget(c)">
+                        <span class="qov-avatar qov-avatar--sm" aria-hidden="true" [class.qov-avatar--round]="c.type === 'USER'" [style.--av-hue]="avatarHue(c.name)">{{ initial(c.name) }}</span>
+                        <span class="qov-combo-item-text">
+                          <span class="qov-combo-item-name">{{ c.name }}</span>
+                          <span class="qov-combo-item-slug mono">{{ c.slug }}</span>
+                        </span>
+                        <span class="qov-badge" [attr.data-tone]="c.type === 'ORG' ? 'violet' : 'slate'">{{ c.type === 'ORG' ? i18n.t('qov_badge_org') : i18n.t('qov_badge_user') }}</span>
+                        @if (c.plan) { <span class="qov-badge qov-badge--plan">{{ c.plan }}</span> }
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (targetLocked() && !isView()) {
+            <span class="qov-hint">{{ i18n.t('qov_target_locked_hint') }}</span>
+          }
+          @if (attempted() && targetMissing()) {
+            <span class="qov-hint qov-hint--error">{{ i18n.t('qov_err_target') }}</span>
+          }
+        </div>
+
+        <!-- Override type -->
+        <div class="qov-field">
+          <span class="qov-label">{{ i18n.t('qov_f_type') }}</span>
+          <div class="qov-seg" role="group" data-testid="quota-kind-seg" [attr.aria-label]="i18n.t('qov_f_type')">
+            @for (s of kindSegments; track s.kind) {
+              <button type="button" [attr.data-active]="formKind() === s.kind ? '1' : '0'" [disabled]="isView()"
+                [attr.data-testid]="'quota-kind-' + s.kind" (click)="setKind(s.kind)">
+                <span class="qov-seg-ic"><app-icon [name]="s.icon" /></span>{{ i18n.t(s.labelKey) }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Amount + Expiry -->
+        <div class="qov-row">
+          <div class="qov-field">
+            @if (needsAmount()) {
+              <span class="qov-label">{{ formKind() === 'CREDIT' ? i18n.t('qov_f_amount_credit') : i18n.t('qov_f_amount_cap') }} @if (!isView()) { <span class="qov-req">*</span> }</span>
+              <div class="qov-money">
+                <span class="qov-money-prefix">€</span>
+                <input class="qov-input qov-money-input" type="number" min="0" step="1" inputmode="numeric"
+                  data-testid="quota-amount-input"
+                  [placeholder]="formKind() === 'CREDIT' ? '50' : '200'"
+                  [value]="amount()" [disabled]="isView()" (input)="onAmount($event)" />
+              </div>
+              <span class="qov-hint">{{ formKind() === 'CREDIT' ? i18n.t('qov_f_amount_credit_hint') : i18n.t('qov_f_amount_cap_hint') }}</span>
+              @if (attempted() && amountMissing()) {
+                <span class="qov-hint qov-hint--error">{{ i18n.t('qov_err_amount') }}</span>
+              }
+            } @else {
+              <span class="qov-label">{{ i18n.t('qov_f_amount') }}</span>
+              <input class="qov-input" [value]="i18n.t('qov_f_amount_na')" disabled data-testid="quota-amount-na" />
+              <span class="qov-hint">{{ i18n.t('qov_f_unlimited_hint') }}</span>
+            }
+          </div>
+
+          <div class="qov-field">
+            <span class="qov-label">{{ i18n.t('qov_f_expiry') }} <span class="qov-opt">· {{ i18n.t('qov_optional') }}</span></span>
+            <input class="qov-input qov-date" type="date" data-testid="quota-expiry-input"
+              [value]="expiryDate()" [min]="todayIso" [disabled]="isView() || noExpiry()" (input)="onExpiryDate($event)" />
+            <label class="qov-check">
+              <input type="checkbox" data-testid="quota-no-expiry" [checked]="noExpiry()" [disabled]="isView()" (change)="toggleNoExpiry($event)" />
+              <span class="qov-check-box"><app-icon name="check" /></span>
+              {{ i18n.t('qov_f_no_expiry') }}
+            </label>
+          </div>
+        </div>
+
+        <!-- Effective cap preview -->
+        @if (target()) {
+          <div class="qov-preview" data-testid="quota-preview">
+            <div class="qov-preview-head"><app-icon name="sliders" /> {{ i18n.t('qov_preview_head') }}</div>
+            <div class="qov-preview-row">
+              <span class="qov-preview-label">
+                @switch (formKind()) {
+                  @case ('CREDIT') { {{ i18n.t('qov_preview_credit', { base: euro(baseCapCents()), credit: euro(amountCents()) }) }} }
+                  @case ('CAP') { {{ i18n.t('qov_preview_cap', { base: euro(baseCapCents()) }) }} }
+                  @default { {{ i18n.t('qov_preview_unlimited') }} }
+                }
+              </span>
+              <span class="qov-preview-val">
+                @if (previewEffectiveCents() == null) {
+                  <span class="qov-inf">∞</span> {{ i18n.t('qov_kind_unlimited') }}
+                } @else {
+                  {{ euro(previewEffectiveCents()) }}
+                }
+              </span>
+            </div>
+          </div>
+        }
+
+        <!-- Reason -->
+        <div class="qov-field">
+          <span class="qov-label">{{ i18n.t('qov_f_reason') }} @if (!isView()) { <span class="qov-req">*</span> }</span>
+          <textarea class="qov-input qov-textarea" rows="3" data-testid="quota-reason-input"
+            [placeholder]="i18n.t('qov_f_reason_ph')" [value]="reason()" [disabled]="isView()" (input)="onReason($event)"></textarea>
+          @if (isView() && editing(); as e) {
+            <span class="qov-hint">{{ i18n.t('qov_f_reason_view', { name: e.grantedByName, date: fmt.date(e.createdAt) }) }}</span>
+          } @else if (attempted() && reasonMissing()) {
+            <span class="qov-hint qov-hint--error">{{ i18n.t('qov_err_reason') }}</span>
+          } @else {
+            <span class="qov-hint">{{ i18n.t('qov_f_reason_hint') }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="qov-modal-foot">
+        <span class="qov-hint qov-foot-hint">{{ isView() ? i18n.t('qov_foot_view') : i18n.t('qov_foot_gating') }}</span>
+        <div class="qov-foot-right">
+          <button class="qov-btn" type="button" (click)="closeModal()" data-testid="quota-cancel-btn">
+            {{ isView() ? i18n.t('qov_close') : i18n.t('confirm_cancel') }}
+          </button>
+          @if (isView()) {
+            <button class="qov-btn qov-btn--solid" type="button" data-testid="quota-enter-edit-btn"
+              [disabled]="!identity.has('QUOTA_OVERRIDE')"
+              [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+              (click)="enterEdit()">
+              @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }
+              {{ i18n.t('qov_edit_action') }}
+            </button>
+          } @else {
+            <button class="qov-btn qov-btn--solid" type="button" data-testid="quota-save-btn"
+              [disabled]="!identity.has('QUOTA_OVERRIDE') || saving()"
+              [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+              (click)="save()">
+              @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> }
+              {{ modalMode() === 'create' ? i18n.t('qov_create_action') : i18n.t('qov_save_action') }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

@@ -1,0 +1,110 @@
+<div class="gcd-scrim" (click)="onScrim()"></div>
+<div class="gcd-modal" role="dialog" aria-modal="true" data-testid="grant-credit-dialog"
+  [attr.aria-label]="i18n.t('gcd_title')" (click)="$event.stopPropagation()">
+
+  <div class="gcd-head">
+    <div class="gcd-head-main">
+      <span class="gcd-head-ic" aria-hidden="true"><app-icon name="creditCard" /></span>
+      <div>
+        <div class="gcd-eyebrow">{{ i18n.t('gcd_eyebrow') }}</div>
+        <h2 class="gcd-title">{{ i18n.t('gcd_title') }}</h2>
+      </div>
+    </div>
+    <button class="gcd-close" type="button" (click)="close.emit()" data-testid="grant-credit-close"
+      [attr.aria-label]="i18n.t('confirm_cancel')">
+      <app-icon name="close" />
+    </button>
+  </div>
+
+  <div class="gcd-body">
+    @if (error()) {
+      <div class="gcd-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div>
+    }
+
+    <!-- Pre-bound target (read-only) -->
+    <div class="gcd-target" data-testid="grant-credit-target">
+      <span class="gcd-avatar" [class.gcd-avatar--round]="targetType() === 'USER'" [style.--av-hue]="hue()" aria-hidden="true">{{ initial() }}</span>
+      <div class="gcd-target-text">
+        <span class="gcd-target-name">
+          {{ targetName() }}
+          <span class="gcd-badge" [attr.data-tone]="targetType() === 'ORG' ? 'violet' : 'slate'">
+            <app-icon [name]="targetType() === 'ORG' ? 'building' : 'user'" />
+            {{ targetType() === 'ORG' ? i18n.t('qov_badge_org') : i18n.t('qov_badge_user') }}
+          </span>
+          @if (plan()) { <span class="gcd-badge gcd-badge--plan">{{ plan() }}</span> }
+        </span>
+        @if (targetSub()) { <span class="gcd-target-sub mono">{{ targetSub() }}</span> }
+      </div>
+    </div>
+
+    <!-- Amount + expiry -->
+    <div class="gcd-row">
+      <div class="gcd-field">
+        <span class="gcd-label">{{ i18n.t('gcd_amount') }} <span class="gcd-req">*</span></span>
+        <div class="gcd-money">
+          <span class="gcd-money-prefix">€</span>
+          <input class="gcd-input gcd-money-input" type="number" min="0" step="1" inputmode="numeric"
+            data-testid="grant-credit-amount" placeholder="50"
+            [value]="amount()" (input)="onAmount($event)" />
+        </div>
+        @if (attempted() && amountMissing()) {
+          <span class="gcd-hint gcd-hint--error">{{ i18n.t('gcd_amount_err') }}</span>
+        } @else {
+          <span class="gcd-hint">{{ i18n.t('gcd_amount_hint') }}</span>
+        }
+      </div>
+
+      <div class="gcd-field">
+        <span class="gcd-label">{{ i18n.t('gcd_expiry') }} <span class="gcd-opt">· {{ i18n.t('qov_optional') }}</span></span>
+        <input class="gcd-input gcd-date" type="date" data-testid="grant-credit-expiry"
+          [value]="expiryDate()" [min]="todayIso" [disabled]="noExpiry()" (input)="onExpiry($event)" />
+        <label class="gcd-check">
+          <input type="checkbox" data-testid="grant-credit-no-expiry" [checked]="noExpiry()" (change)="toggleNoExpiry($event)" />
+          <span class="gcd-check-box"><app-icon name="check" /></span>
+          {{ i18n.t('gcd_no_expiry') }}
+        </label>
+      </div>
+    </div>
+
+    <!-- Effective cap preview -->
+    <div class="gcd-preview" data-testid="grant-credit-preview">
+      <div class="gcd-preview-head"><app-icon name="sliders" /> {{ i18n.t('qov_preview_head') }}</div>
+      <div class="gcd-preview-row">
+        @if (baseUnlimited()) {
+          <span class="gcd-preview-label">{{ i18n.t('gcd_preview_unlimited') }}</span>
+          <span class="gcd-preview-val"><span class="gcd-inf">∞</span> {{ i18n.t('qov_kind_unlimited') }}</span>
+        } @else if (baseKnown()) {
+          <span class="gcd-preview-label">{{ i18n.t('gcd_preview', { base: euro(baseCapCents()), credit: euro(amountCents()) }) }}</span>
+          <span class="gcd-preview-val">{{ euro(previewCents()) }}</span>
+        } @else {
+          <span class="gcd-preview-label">{{ i18n.t('gcd_preview_credit_only') }}</span>
+          <span class="gcd-preview-val">+{{ euro(amountCents()) }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- Reason -->
+    <div class="gcd-field">
+      <span class="gcd-label">{{ i18n.t('gcd_reason') }} <span class="gcd-req">*</span></span>
+      <textarea class="gcd-input gcd-textarea" rows="3" data-testid="grant-credit-reason"
+        [placeholder]="i18n.t('gcd_reason_ph')" [value]="reason()" (input)="onReason($event)"></textarea>
+      @if (attempted() && reasonMissing()) {
+        <span class="gcd-hint gcd-hint--error">{{ i18n.t('gcd_reason_err') }}</span>
+      }
+    </div>
+  </div>
+
+  <div class="gcd-foot">
+    <span class="gcd-hint gcd-foot-hint">{{ i18n.t('gcd_foot') }}</span>
+    <div class="gcd-foot-right">
+      <button class="gcd-btn" type="button" (click)="close.emit()" data-testid="grant-credit-cancel">{{ i18n.t('confirm_cancel') }}</button>
+      <button class="gcd-btn gcd-btn--solid" type="button" data-testid="grant-credit-submit"
+        [disabled]="!canGrant() || saving()"
+        [attr.title]="canGrant() ? null : i18n.t('admin_perm_required')"
+        (click)="submit()">
+        @if (!canGrant()) { <app-icon name="lock" /> } @else { <app-icon name="creditCard" /> }
+        {{ i18n.t('gcd_submit') }}
+      </button>
+    </div>
+  </div>
+</div>

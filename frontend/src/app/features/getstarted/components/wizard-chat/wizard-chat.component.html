@@ -1,0 +1,99 @@
+<div class="wiz-chat" [attr.data-talk]="hasTalked() ? '1' : '0'" data-testid="wizard-chat">
+  <!-- Ambient backdrop: light orbs + floating workflow tiles -->
+  <div class="wiz-ambient" aria-hidden="true">
+    <span class="wiz-orb a"></span>
+    <span class="wiz-orb b"></span>
+    @for (tile of ambientTiles; track tile.cls) {
+      <div class="wiz-amb-tile {{ tile.cls }}" [attr.data-k]="tile.k">
+        <span class="g"><app-icon [name]="tile.icon" /></span>
+        <span class="l">{{ i18n.t(tile.labelKey) }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="wiz-chat-scroll" #messagesContainer data-testid="wizard-chat-messages">
+    <div class="wiz-chat-inner">
+      <!-- Intro hero -->
+      <div class="wiz-intro" [attr.data-hide]="introCollapsed() ? '1' : '0'" data-testid="wizard-chat-intro">
+        <span class="wiz-intro-eyebrow">
+          <span class="dot"></span>{{ i18n.t('wiz_eyebrow') }}
+        </span>
+        <h1>
+          @for (word of introWords(); track $index; let i = $index) {
+            <span class="w" [attr.data-em]="word.em ? '1' : '0'">
+              <i [style.--d]="(0.1 + i * 0.055) + 's'">{{ word.w }}</i>
+            </span>
+          }
+        </h1>
+        <p>{{ i18n.t('wiz_subtitle') }}</p>
+      </div>
+
+      <!-- Messages -->
+      @for (msg of messages(); track $index) {
+        <div class="wiz-msg" [attr.data-from]="msg.role === 'user' ? 'user' : 'ai'">
+          <span class="wiz-avatar" [class.ai]="msg.role !== 'user'" [class.user]="msg.role === 'user'">
+            @if (msg.role === 'user') {
+              {{ i18n.t('wiz_you').charAt(0) }}
+            } @else {
+              <app-icon name="mail" />
+            }
+          </span>
+          <div class="wiz-bubble" [class.wiz-error]="msg.error" [innerHTML]="renderMarkdown(msg.content)"></div>
+        </div>
+      }
+
+      <!-- Streaming tool calls -->
+      @if (toolCalls().length > 0) {
+        <div class="wiz-tools" data-testid="wizard-chat-tools">
+          @for (tc of toolCalls(); track $index) {
+            <div class="wiz-tool" [class.wiz-tool-done]="tc.result !== null">
+              <span class="wiz-tool-dot" [class.wiz-tool-success]="tc.success"></span>
+              <span class="wiz-tool-label">{{ getToolLabel(tc.tool) }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Thinking indicator -->
+      @if (isLoading() && toolCalls().length === 0) {
+        <div class="wiz-msg" data-from="ai" data-testid="wizard-chat-loading">
+          <span class="wiz-avatar ai"><app-icon name="mail" /></span>
+          <div class="wiz-bubble">
+            <span class="wiz-typing"><span></span><span></span><span></span></span>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Composer -->
+  <div class="wiz-composer-wrap">
+    <div class="wiz-composer" [attr.data-live]="isLoading() ? '1' : '0'" data-testid="wizard-composer">
+      <span class="wiz-composer-spark"><app-icon name="sparkle" /></span>
+      <textarea
+        #composerInput
+        rows="1"
+        [placeholder]="i18n.t('wiz_composer_placeholder')"
+        [ngModel]="inputText()"
+        (ngModelChange)="inputText.set($event)"
+        (input)="autoGrow(composerInput)"
+        (keydown)="onKeydown($event)"
+        [disabled]="isLoading()"
+        data-testid="wizard-composer-input"
+      ></textarea>
+      <button
+        class="wiz-send"
+        (click)="onSend()"
+        [disabled]="!inputText().trim() || isLoading()"
+        aria-label="Send"
+        data-testid="wizard-composer-send"
+      >
+        <app-icon name="send" />
+      </button>
+    </div>
+    <div class="wiz-composer-hint">
+      <span class="hint-l"><app-icon name="sparkle" />{{ i18n.t('wiz_eyebrow') }}</span>
+      <span class="hint-r">{{ i18n.t('wiz_composer_hint') }}</span>
+    </div>
+  </div>
+</div>

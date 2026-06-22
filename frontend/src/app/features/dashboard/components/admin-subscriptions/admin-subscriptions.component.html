@@ -1,0 +1,416 @@
+<app-page-content>
+  <!-- A. Over-cap alert -->
+  @if ((kpis()?.overCapCount ?? 0) > 0 && !alertDismissed()) {
+    <div class="ps-alert" role="alert" data-testid="admin-psub-alert">
+      <app-icon name="alertTriangle" />
+      <span class="ps-alert-text">{{ i18n.t('psub_alert', { n: (kpis()?.overCapCount ?? 0) + '' }) }}</span>
+      <button type="button" class="ps-alert-cta" (click)="inspectOverCap()">{{ i18n.t('psub_alert_inspect') }}</button>
+      <button type="button" class="ps-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head ps-head">
+    <div>
+      <div class="dash-eyebrow ps-eyebrow-mono">{{ i18n.t('psub_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('psub_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.activeSubscriptions ?? 0 }}</b> {{ i18n.t('psub_active_subs') }} ·
+        <b>{{ eur0(kpis()?.mrr ?? 0) }}</b> {{ i18n.t('psub_mrr_derived') }} ·
+        <b>{{ kpis()?.planCount ?? 0 }}</b> {{ i18n.t('psub_plans') }}
+      </div>
+    </div>
+    <div class="ps-head-controls">
+      <button type="button" class="ps-btn ps-btn--solid" data-testid="admin-psub-new-plan"
+        [disabled]="!identity.has('PLAN_MANAGE')"
+        [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')"
+        (click)="openNewPlan()">
+        @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="plusSm" /> }
+        {{ i18n.t('psub_new_plan') }}
+      </button>
+      <button type="button" class="ps-btn ps-refresh" data-testid="admin-psub-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="ps-refresh-ic" [class.ps-spin]="refreshing()"><app-icon name="refresh" /></span>
+        {{ i18n.t('psub_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="ps-updated">{{ i18n.t('psub_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="ps-flash" role="status" data-testid="admin-psub-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="ps-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- D. KPI strip -->
+  <div class="ps-kpis" data-testid="admin-psub-kpis">
+    <div class="ps-kpi">
+      <div class="ps-kpi-label">{{ i18n.t('psub_kpi_mrr') }}</div>
+      <div class="ps-kpi-value">{{ eur0(kpis()?.mrr ?? 0) }}</div>
+      <div class="ps-kpi-foot"><span class="ps-kpi-chip" data-tone="slate">{{ i18n.t('psub_chip_est') }}</span><span class="ps-kpi-note">{{ i18n.t('psub_kpi_mrr_note') }}</span></div>
+    </div>
+    <div class="ps-kpi">
+      <div class="ps-kpi-label">{{ i18n.t('psub_kpi_active') }}</div>
+      <div class="ps-kpi-value">{{ kpis()?.activeSubscriptions ?? 0 }}</div>
+      <div class="ps-kpi-foot"><span class="ps-kpi-chip" data-tone="green">{{ i18n.t('psub_chip_live') }}</span><span class="ps-kpi-note">{{ i18n.t('psub_kpi_active_note') }}</span></div>
+    </div>
+    <div class="ps-kpi">
+      <div class="ps-kpi-label">{{ i18n.t('psub_kpi_aicost') }}</div>
+      <div class="ps-kpi-value">{{ eurFromCents(kpis()?.aiCostCentsThisMonth ?? 0) }}</div>
+      <div class="ps-kpi-foot"><span class="ps-kpi-chip" data-tone="green">{{ i18n.t('psub_chip_metered') }}</span><span class="ps-kpi-note">{{ i18n.t('psub_kpi_aicost_note') }}</span></div>
+    </div>
+    <div class="ps-kpi">
+      <div class="ps-kpi-label">{{ i18n.t('psub_kpi_overcap') }}</div>
+      <div class="ps-kpi-value" [class.ps-val-danger]="(kpis()?.overCapCount ?? 0) > 0">{{ kpis()?.overCapCount ?? 0 }}</div>
+      <div class="ps-kpi-foot"><span class="ps-kpi-chip" [attr.data-tone]="(kpis()?.overCapCount ?? 0) > 0 ? 'amber' : 'green'">{{ (kpis()?.overCapCount ?? 0) > 0 ? i18n.t('psub_chip_watch') : i18n.t('psub_chip_ok') }}</span><span class="ps-kpi-note">{{ i18n.t('psub_kpi_overcap_note') }}</span></div>
+    </div>
+    <div class="ps-kpi">
+      <div class="ps-kpi-label">{{ i18n.t('psub_kpi_plans') }}</div>
+      <div class="ps-kpi-value">{{ kpis()?.planCount ?? 0 }}</div>
+      <div class="ps-kpi-foot"><span class="ps-kpi-chip" data-tone="slate">{{ i18n.t('psub_chip_catalog') }}</span><span class="ps-kpi-note">{{ i18n.t('psub_kpi_plans_note') }}</span></div>
+    </div>
+  </div>
+
+  <!-- E. Plan catalog -->
+  <div class="ps-plans" data-testid="admin-psub-plans">
+    @for (p of plans(); track p.id) {
+      <div class="ps-plan" [attr.data-tone]="planTone(p.name)">
+        <div class="ps-plan-head">
+          <span class="ps-plan-name">{{ p.name }}</span>
+          @if (p.isDefault) { <span class="ps-badge ps-badge--default">{{ i18n.t('psub_default') }}</span> }
+        </div>
+        <div class="ps-plan-price">{{ p.price > 0 ? eur0(p.price) : i18n.t('psub_free') }}@if (p.price > 0) { <span class="ps-plan-mo">/{{ i18n.t('psub_mo') }}</span> }</div>
+        <div class="ps-plan-limits">
+          <div class="ps-plan-row"><span>{{ i18n.t('psub_ai_cap') }}</span><span class="mono">{{ capLabel(p.costLimitCents) }}</span></div>
+          <div class="ps-plan-row"><span>{{ i18n.t('psub_tokens') }}</span><span class="mono">{{ limitLabel(p.tokenLimit) }}</span></div>
+          <div class="ps-plan-row"><span>{{ i18n.t('psub_automations') }}</span><span class="mono">{{ limitLabel(p.automationLimit) }}</span></div>
+          <div class="ps-plan-row"><span>{{ i18n.t('psub_mailboxes') }}</span><span class="mono">{{ limitLabel(p.emailAccountLimit) }}</span></div>
+          <div class="ps-plan-row"><span>{{ i18n.t('psub_marketplace') }}</span><span class="mono">{{ p.marketplacePublishEnabled ? i18n.t('psub_on') : i18n.t('psub_off') }}</span></div>
+        </div>
+        <div class="ps-plan-foot">
+          <span class="ps-plan-subs">{{ p.userCount }} {{ i18n.t('psub_orgs_subscribed') }}</span>
+          <div class="ps-plan-actions">
+            <button type="button" class="ps-icon-btn" [attr.data-testid]="'admin-psub-edit-plan-' + p.id"
+              [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? i18n.t('psub_edit') : i18n.t('admin_perm_required')"
+              (click)="openEditPlan(p, $event)">
+              @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }
+            </button>
+            @if (!p.isDefault) {
+              <button type="button" class="ps-icon-btn ps-icon-btn--danger"
+                [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="i18n.t('admin_org_delete')"
+                (click)="deletePlan(p, $event)"><app-icon name="trash" /></button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+    <button type="button" class="ps-plan ps-plan--new" data-testid="admin-psub-new-plan-card"
+      [disabled]="!identity.has('PLAN_MANAGE')" [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')"
+      (click)="openNewPlan()">
+      @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="plusSm" /> }
+      <span>{{ i18n.t('psub_new_plan') }}</span>
+    </button>
+  </div>
+
+  <!-- F. Toolbar -->
+  <div class="ps-toolbar">
+    <div class="ps-search">
+      <app-icon name="search" />
+      <input type="text" data-testid="admin-psub-search" [attr.aria-label]="i18n.t('psub_search')" [placeholder]="i18n.t('psub_search')" [value]="search()" (input)="onSearch($event)" />
+    </div>
+    <div class="ps-filters">
+      <div class="ps-filter">
+        <label for="ps-f-plan">{{ i18n.t('psub_filter_plan') }}</label>
+        <select id="ps-f-plan" data-testid="admin-psub-filter-plan" [value]="planFilter()" (change)="onPlanFilter($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          @for (p of plans(); track p.id) { <option [value]="p.name">{{ p.name }}</option> }
+        </select>
+      </div>
+      <div class="ps-filter">
+        <label for="ps-f-status">{{ i18n.t('psub_filter_status') }}</label>
+        <select id="ps-f-status" data-testid="admin-psub-filter-status" (change)="onStatusFilter($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="active">{{ i18n.t('admin_org_status_active') }}</option>
+          <option value="suspended">{{ i18n.t('admin_org_status_suspended') }}</option>
+        </select>
+      </div>
+      <div class="ps-filter">
+        <label for="ps-f-usage">{{ i18n.t('psub_filter_usage') }}</label>
+        <select id="ps-f-usage" data-testid="admin-psub-filter-usage" [value]="usageFilter()" (change)="onUsageFilter($event)">
+          <option value="">{{ i18n.t('psub_usage_any') }}</option>
+          <option value="over90">{{ i18n.t('psub_usage_over90') }}</option>
+          <option value="unlimited">{{ i18n.t('psub_usage_unlimited') }}</option>
+          <option value="aiOff">{{ i18n.t('psub_usage_aioff') }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- G. Subscriptions table / states -->
+  @if (loading()) {
+    <div class="ps-card" data-testid="admin-psub-skeleton" aria-hidden="true">
+      <div class="ps-skel-head"></div>
+      @for (r of [1,2,3,4,5,6,7,8]; track r) { <div class="ps-skel-row"></div> }
+    </div>
+  } @else if (rows().length === 0 && usageFilter() === 'over90' && !search() && !planFilter() && !statusFilter()) {
+    <div class="ps-empty" data-testid="admin-psub-empty-overcap"><app-icon name="checkCircle" /><div class="ps-empty-title">{{ i18n.t('psub_empty_overcap') }}</div></div>
+  } @else if (rows().length === 0 && hasActiveFilters()) {
+    <div class="ps-empty" data-testid="admin-psub-empty-filtered"><app-icon name="search" /><div class="ps-empty-title">{{ i18n.t('psub_empty_filtered') }}</div><button type="button" class="ps-btn" (click)="clearFilters()">{{ i18n.t('psub_clear_filters') }}</button></div>
+  } @else if (rows().length === 0) {
+    <div class="ps-empty" data-testid="admin-psub-empty"><app-icon name="building" /><div class="ps-empty-title">{{ i18n.t('psub_empty') }}</div></div>
+  } @else {
+    <div class="ps-card">
+      <div class="ps-scroll">
+        <table class="dtable" data-testid="admin-psub-table">
+          <thead>
+            <tr>
+              <th scope="col"><button class="ps-th-sort" [attr.data-active]="sortKey() === 'orgName'" (click)="toggleSort('orgName')"><span>{{ i18n.t('psub_col_org') }}</span>@if (sortKey() === 'orgName') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col">{{ i18n.t('psub_col_owner') }}</th>
+              <th scope="col"><button class="ps-th-sort" [attr.data-active]="sortKey() === 'planName'" (click)="toggleSort('planName')"><span>{{ i18n.t('psub_col_plan') }}</span>@if (sortKey() === 'planName') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col" class="ps-col-usage"><button class="ps-th-sort" [attr.data-active]="sortKey() === 'usage'" (click)="toggleSort('usage')"><span>{{ i18n.t('psub_col_aiusage') }}</span>@if (sortKey() === 'usage') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }</button></th>
+              <th scope="col" class="ps-num">{{ i18n.t('psub_col_members') }}</th>
+              <th scope="col">{{ i18n.t('psub_col_status') }}</th>
+              <th scope="col">{{ i18n.t('psub_col_since') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of sortedRows(); track r.orgId) {
+              <tr class="ps-row" data-testid="admin-psub-row" [attr.data-overcap]="usageTone(r) === 'danger' && r.status === 'active' ? '1' : null" tabindex="0" (click)="openDetail(r)" (keydown.enter)="openDetail(r)" (keydown.space)="openDetail(r); $event.preventDefault()">
+                <td>
+                  <div class="ps-cell-org">
+                    <span class="ps-avatar" [style.--av-hue]="avatarHue(r.orgName)" aria-hidden="true">{{ initial(r.orgName) }}</span>
+                    <span class="ps-cell-org-text"><span class="ps-cell-name">{{ r.orgName }}</span><span class="ps-cell-sub mono">{{ r.slug }}</span></span>
+                  </div>
+                </td>
+                <td><div class="ps-cell-owner"><span class="ps-cell-owner-n">{{ r.ownerName ?? '—' }}</span>@if (r.ownerEmail) { <span class="ps-cell-sub mono">{{ r.ownerEmail }}</span> }</div></td>
+                <td>@if (r.planName) { <span class="ps-badge" [attr.data-tone]="planTone(r.planName)">{{ r.planName }}</span> } @else { <span class="ps-dash">—</span> }</td>
+                <td class="ps-col-usage">
+                  @if (r.status === 'suspended') { <span class="ps-dash">—</span> }
+                  @else if (r.effectiveCapCents < 0) { <span class="ps-ai-note">∞ {{ i18n.t('psub_unlimited') }}</span> }
+                  @else if (r.effectiveCapCents === 0) { <span class="ps-ai-note ps-ai-note--off">{{ i18n.t('psub_ai_off') }}</span> }
+                  @else {
+                    <div class="ps-bar" [title]="eurFromMicros(r.aiCostMicrosThisMonth) + ' / ' + eurFromCents(r.effectiveCapCents)">
+                      <div class="ps-bar-track"><div class="ps-bar-fill" [attr.data-tone]="usageTone(r)" [style.width.%]="usageRatio(r) * 100"></div></div>
+                      <span class="ps-bar-fig">{{ eurFromMicros(r.aiCostMicrosThisMonth) }}<span class="ps-bar-sub"> / {{ eurFromCents(r.effectiveCapCents) }}</span></span>
+                    </div>
+                  }
+                </td>
+                <td class="ps-num">{{ r.memberCount }}</td>
+                <td>
+                  @if (r.status === 'suspended') { <span class="ps-badge" data-tone="danger"><span class="ps-dot"></span>{{ i18n.t('admin_org_status_suspended') }}</span> }
+                  @else { <span class="ps-badge" data-tone="green"><span class="ps-dot"></span>{{ i18n.t('admin_org_status_active') }}</span> }
+                </td>
+                <td class="ps-muted">{{ fmt.date(r.createdAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (totalPages() > 1) {
+        <div class="ps-pager">
+          <span class="ps-pager-info">{{ totalElements() }} {{ i18n.t('psub_total') }}</span>
+          <div class="ps-pager-ctrls">
+            <button class="ps-pager-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button>
+            <span class="ps-pager-pages">{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+            <button class="ps-pager-btn" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- I. Subscription detail modal -->
+  @if (detailOpen()) {
+    <div class="ps-scrim" (click)="closeDetail()"></div>
+    <div class="ps-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-psub-modal" [attr.aria-label]="detail()?.orgName ?? i18n.t('psub_title')" (click)="$event.stopPropagation()">
+      @if (detailLoading()) {
+        <div class="ps-modal-loading">{{ i18n.t('loading') }}</div>
+      } @else if (detail(); as d) {
+        <div class="ps-modal-head">
+          <div class="ps-modal-id">
+            <span class="ps-avatar ps-avatar--lg" [style.--av-hue]="avatarHue(d.orgName)" aria-hidden="true">{{ initial(d.orgName) }}</span>
+            <div class="ps-modal-id-text">
+              <div class="ps-modal-name">{{ d.orgName }}</div>
+              <div class="ps-modal-owner">{{ d.ownerName ?? d.ownerEmail ?? '—' }}@if (d.ownerName && d.ownerEmail) { · <span class="mono">{{ d.ownerEmail }}</span> }</div>
+              <div class="ps-modal-pills">
+                @if (d.planName) { <span class="ps-badge" [attr.data-tone]="planTone(d.planName)">{{ d.planName }}</span> }
+                @if (d.status === 'suspended') { <span class="ps-badge" data-tone="danger"><span class="ps-dot"></span>{{ i18n.t('admin_org_status_suspended') }}</span> }
+                @else { <span class="ps-badge" data-tone="green"><span class="ps-dot"></span>{{ i18n.t('admin_org_status_active') }}</span> }
+                <span class="ps-badge ps-badge--slug mono">{{ d.slug }}</span>
+              </div>
+            </div>
+          </div>
+          <button class="ps-modal-close" type="button" (click)="closeDetail()" data-testid="admin-psub-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+        </div>
+
+        <!-- Actions -->
+        <div class="ps-modal-actions">
+          <div class="ps-change-plan">
+            <select class="ps-change-select" data-testid="admin-psub-plan-select" [value]="changePlanId()" [disabled]="busy() || !identity.has('PLAN_MANAGE')" (change)="onChangePlanSelect($event)">
+              @for (p of plans(); track p.id) { <option [value]="p.id">{{ p.name }}</option> }
+            </select>
+            <button class="ps-btn" type="button" data-testid="admin-psub-change-plan"
+              [disabled]="busy() || changePlanId() === d.planId || !identity.has('PLAN_MANAGE')"
+              [attr.title]="identity.has('PLAN_MANAGE') ? null : i18n.t('admin_perm_required')"
+              (click)="changePlan()">
+              @if (!identity.has('PLAN_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="sliders" /> }
+              {{ i18n.t('psub_change_plan') }}
+            </button>
+          </div>
+          <button class="ps-btn" type="button" data-testid="admin-psub-grant-credit"
+            [disabled]="busy() || !identity.has('QUOTA_OVERRIDE')"
+            [attr.title]="identity.has('QUOTA_OVERRIDE') ? null : i18n.t('admin_perm_required')"
+            (click)="openGrantCredit()">
+            @if (!identity.has('QUOTA_OVERRIDE')) { <app-icon name="lock" /> } @else { <app-icon name="creditCard" /> }
+            {{ i18n.t('gcd_button') }}
+          </button>
+          @if (!d.personal) {
+            <button class="ps-btn" [class.ps-btn--danger]="d.status !== 'suspended'" type="button" data-testid="admin-psub-suspend"
+              [disabled]="busy() || !identity.has('ORG_MANAGE')"
+              [attr.title]="identity.has('ORG_MANAGE') ? null : i18n.t('admin_perm_required')"
+              (click)="toggleSuspend()">
+              @if (!identity.has('ORG_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon [name]="d.status === 'suspended' ? 'play' : 'pause'" /> }
+              {{ d.status === 'suspended' ? i18n.t('admin_org_activate') : i18n.t('admin_org_suspend') }}
+            </button>
+          }
+          <button class="ps-btn ps-btn--soon" type="button" disabled [attr.title]="i18n.t('psub_invoice_soon')">
+            <app-icon name="lock" /> {{ i18n.t('psub_issue_invoice') }} · {{ i18n.t('psub_soon') }}
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="ps-tabs" role="tablist">
+          <button class="ps-tab" role="tab" [attr.data-active]="modalTab() === 'overview'" (click)="setTab('overview')">{{ i18n.t('psub_tab_overview') }}</button>
+          <button class="ps-tab" role="tab" [attr.data-active]="modalTab() === 'history'" (click)="setTab('history')">{{ i18n.t('psub_tab_history') }}</button>
+        </div>
+
+        <div class="ps-modal-body">
+          @switch (modalTab()) {
+            @case ('overview') {
+              <div class="ps-grid2">
+                <div class="ps-panel">
+                  <div class="ps-panel-head">{{ i18n.t('psub_panel_sub') }}</div>
+                  <div class="ps-fields">
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_col_plan') }}</span><span class="ps-field-val">@if (d.planName) { <span class="ps-badge" [attr.data-tone]="planTone(d.planName)">{{ d.planName }}</span> } @else { — }</span></div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_price') }}</span><span class="ps-field-val">{{ d.planPrice && d.planPrice > 0 ? eur0(d.planPrice) + '/' + i18n.t('psub_mo') : i18n.t('psub_free') }}</span></div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_eff_cap') }}</span><span class="ps-field-val mono">{{ capLabel(d.effectiveCapCents) }}@if (d.effectiveCapCents !== d.planCostLimitCents) { <span class="ps-override-mark">· {{ i18n.t('psub_override') }}</span> }</span></div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('admin_col_created') }}</span><span class="ps-field-val">{{ fmt.date(d.createdAt) }}</span></div>
+                  </div>
+                </div>
+                <div class="ps-panel">
+                  <div class="ps-panel-head">{{ i18n.t('psub_panel_month') }}</div>
+                  <div class="ps-fields">
+                    <div class="ps-field ps-field--bar">
+                      <span class="ps-field-label">{{ i18n.t('psub_kpi_aicost') }}</span>
+                      @if (d.effectiveCapCents < 0) { <span class="ps-field-val">{{ eurFromMicros(d.aiCostMicrosThisMonth) }} · ∞</span> }
+                      @else if (d.effectiveCapCents === 0) { <span class="ps-field-val">{{ i18n.t('psub_ai_off') }}</span> }
+                      @else {
+                        <div class="ps-bar ps-bar--wide">
+                          <div class="ps-bar-track"><div class="ps-bar-fill" [attr.data-tone]="usageTone(d)" [style.width.%]="usageRatio(d) * 100"></div></div>
+                          <span class="ps-bar-fig">{{ eurFromMicros(d.aiCostMicrosThisMonth) }}<span class="ps-bar-sub"> / {{ eurFromCents(d.effectiveCapCents) }}</span></span>
+                        </div>
+                      }
+                    </div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_col_members') }}</span><span class="ps-field-val num">{{ d.memberCount }}</span></div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_mailboxes') }}</span><span class="ps-field-val num">{{ d.mailboxCount }} / {{ limitLabel(d.mailboxLimit) }}</span></div>
+                    <div class="ps-field"><span class="ps-field-label">{{ i18n.t('psub_automations') }}</span><span class="ps-field-val num">{{ d.automationCount }} / {{ limitLabel(d.automationLimit) }}</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="ps-meta-note"><app-icon name="info" /> {{ i18n.t('psub_metadata_note') }}</div>
+            }
+            @case ('history') {
+              @if (d.planHistory.length === 0) {
+                <div class="ps-empty ps-empty--sm"><app-icon name="clock" /><div class="ps-empty-title">{{ i18n.t('psub_history_empty') }}</div></div>
+              } @else {
+                <div class="ps-timeline">
+                  @for (h of d.planHistory; track $index) {
+                    <div class="ps-ev">
+                      <span class="ps-ev-dot"></span>
+                      <div class="ps-ev-body"><div class="ps-ev-title mono">{{ h.detail }}</div><div class="ps-ev-meta">{{ h.by ?? i18n.t('psub_unknown_actor') }} · {{ fmt.dateTime(h.at) }}</div></div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          }
+        </div>
+      } @else {
+        <div class="ps-modal-loading">{{ i18n.t('psub_load_failed') }}</div>
+      }
+    </div>
+
+    @if (grantCreditOpen() && detail(); as d) {
+      <app-grant-credit-dialog
+        targetType="ORG"
+        [targetId]="d.orgId"
+        [targetName]="d.orgName"
+        [targetSub]="d.slug"
+        [plan]="d.planName"
+        [baseCapCents]="d.planCostLimitCents"
+        (close)="grantCreditOpen.set(false)"
+        (granted)="onCreditGranted($event)" />
+    }
+  }
+
+  <!-- Plan editor modal -->
+  @if (editorOpen()) {
+    <div class="ps-scrim" (click)="closeEditor()"></div>
+    <div class="ps-editor" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-psub-editor" (click)="$event.stopPropagation()">
+      <div class="ps-modal-head ps-editor-head">
+        <div>
+          <div class="ps-modal-eyebrow">{{ i18n.t('psub_eyebrow') }}</div>
+          <h2 class="ps-modal-title">{{ editorMode() === 'new' ? i18n.t('psub_editor_new') : i18n.t('psub_editor_edit') }}</h2>
+        </div>
+        <button class="ps-modal-close" type="button" (click)="closeEditor()" data-testid="admin-psub-editor-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+      <div class="ps-editor-body">
+        @if (editorError()) { <div class="ps-error" role="alert"><app-icon name="alertTriangle" /><span>{{ editorError() }}</span></div> }
+        <div class="ps-erow">
+          <div class="ps-efield">
+            <span class="ps-elabel">{{ i18n.t('psub_e_name') }} <span class="ps-req">*</span></span>
+            <input class="ps-einput" type="text" data-testid="admin-psub-e-name" [value]="eName()" (input)="onName($event)" />
+            @if (eAttempted() && editorNameMissing()) { <span class="ps-ehint ps-ehint--error">{{ i18n.t('psub_e_name_err') }}</span> }
+          </div>
+          <div class="ps-efield">
+            <span class="ps-elabel">{{ i18n.t('psub_e_price') }}</span>
+            <div class="ps-emoney"><span class="ps-emoney-pre">€</span><input class="ps-einput ps-emoney-input" type="number" min="0" step="1" data-testid="admin-psub-e-price" [value]="ePrice()" (input)="onPrice($event)" /></div>
+          </div>
+        </div>
+
+        <div class="ps-efield">
+          <span class="ps-elabel">{{ i18n.t('psub_e_aicap') }}</span>
+          <div class="ps-seg" role="group">
+            <button type="button" [attr.data-active]="eCapMode() === 'off' ? '1' : '0'" (click)="setCapMode('off')">{{ i18n.t('psub_cap_off') }}</button>
+            <button type="button" [attr.data-active]="eCapMode() === 'capped' ? '1' : '0'" (click)="setCapMode('capped')">{{ i18n.t('psub_cap_capped') }}</button>
+            <button type="button" [attr.data-active]="eCapMode() === 'unlimited' ? '1' : '0'" (click)="setCapMode('unlimited')">{{ i18n.t('psub_cap_unlimited') }}</button>
+          </div>
+          @if (eCapMode() === 'capped') {
+            <div class="ps-emoney"><span class="ps-emoney-pre">€</span><input class="ps-einput ps-emoney-input" type="number" min="1" step="1" data-testid="admin-psub-e-cap" [placeholder]="'50'" [value]="eCapAmount()" (input)="onCapAmount($event)" /></div>
+            @if (eAttempted() && editorCapMissing()) { <span class="ps-ehint ps-ehint--error">{{ i18n.t('psub_e_cap_err') }}</span> }
+            <span class="ps-ehint">{{ i18n.t('psub_e_cap_hint') }}</span>
+          } @else {
+            <span class="ps-ehint">{{ eCapMode() === 'off' ? i18n.t('psub_e_off_hint') : i18n.t('psub_e_unlimited_hint') }}</span>
+          }
+        </div>
+
+        <div class="ps-erow ps-erow--3">
+          <div class="ps-efield"><span class="ps-elabel">{{ i18n.t('psub_tokens') }}</span><input class="ps-einput" type="number" step="1" data-testid="admin-psub-e-tokens" [value]="eTokenLimit()" (input)="onTokenLimit($event)" /></div>
+          <div class="ps-efield"><span class="ps-elabel">{{ i18n.t('psub_automations') }}</span><input class="ps-einput" type="number" step="1" [value]="eAutomationLimit()" (input)="onAutomationLimit($event)" /></div>
+          <div class="ps-efield"><span class="ps-elabel">{{ i18n.t('psub_mailboxes') }}</span><input class="ps-einput" type="number" step="1" [value]="eMailboxLimit()" (input)="onMailboxLimit($event)" /></div>
+        </div>
+        <span class="ps-ehint">{{ i18n.t('psub_e_limit_hint') }}</span>
+
+        <label class="ps-echeck">
+          <input type="checkbox" data-testid="admin-psub-e-marketplace" [checked]="eMarketplace()" (change)="toggleMarketplace($event)" />
+          <span class="ps-echeck-box"><app-icon name="check" /></span>
+          {{ i18n.t('psub_e_marketplace') }}
+        </label>
+      </div>
+      <div class="ps-editor-foot">
+        <button class="ps-btn" type="button" (click)="closeEditor()" data-testid="admin-psub-editor-cancel">{{ i18n.t('confirm_cancel') }}</button>
+        <button class="ps-btn ps-btn--solid" type="button" data-testid="admin-psub-editor-save"
+          [disabled]="editorSaving() || !identity.has('PLAN_MANAGE')" (click)="savePlan()">
+          {{ editorMode() === 'new' ? i18n.t('psub_create_plan') : i18n.t('psub_save_plan') }}
+        </button>
+      </div>
+    </div>
+  }
+</app-page-content>

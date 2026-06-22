@@ -1,0 +1,43 @@
+/* Self-contained footer styles so the footer can be reused outside the
+   landing page (e.g. legal pages) without relying on the landing page's
+   global section styles. */
+.lp2-wrap { max-width: 1240px; margin: 0 auto; padding: 0 40px; }
+
+.lp2-footer { border-top: 0.5px solid var(--border); padding: 52px 0 36px; }
+.lp2-footer-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.lp2-footer-brand p {
+  font-size: 13px;
+  color: var(--fg-subtle);
+  max-width: 280px;
+  margin: 12px 0 0;
+  line-height: 1.6;
+}
+.lp2-footer-links { display: flex; gap: 26px; font-size: 13px; flex-wrap: wrap; }
+.lp2-footer-links a {
+  color: var(--fg-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.lp2-footer-links a:hover { color: var(--fg); }
+.lp2-footer-bottom {
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 0.5px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--fg-subtle);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .lp2-wrap { padding: 0 24px; }
+}

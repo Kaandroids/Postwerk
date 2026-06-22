@@ -1,0 +1,120 @@
+<div class="mrd-scrim" (click)="onScrim()"></div>
+<div class="mrd-modal" role="dialog" aria-modal="true" data-testid="manual-run-dialog"
+  [attr.aria-label]="i18n.t('auto_run_title')" (click)="$event.stopPropagation()">
+
+  <div class="mrd-head">
+    <div class="mrd-head-main">
+      <span class="mrd-head-ic" aria-hidden="true"><app-icon name="bolt" /></span>
+      <div>
+        <div class="mrd-eyebrow">{{ i18n.t('auto_run_eyebrow') }}</div>
+        <h2 class="mrd-title">{{ automationName() }}</h2>
+      </div>
+    </div>
+    <button class="mrd-close" type="button" (click)="close.emit()" data-testid="manual-run-close"
+      [attr.aria-label]="i18n.t('confirm_cancel')">
+      <app-icon name="close" />
+    </button>
+  </div>
+
+  <div class="mrd-body">
+    @if (loading()) {
+      <div class="mrd-state" data-testid="manual-run-loading">
+        <app-icon name="clock" />
+        <span>{{ i18n.t('auto_run_loading') }}</span>
+      </div>
+    } @else if (loadError()) {
+      <div class="mrd-error" role="alert"><app-icon name="alertTriangle" /><span>{{ loadError() }}</span></div>
+    } @else if (done()) {
+      <div class="mrd-state mrd-state--ok" data-testid="manual-run-done">
+        <app-icon name="check" />
+        <span>{{ i18n.t('auto_run_started') }}</span>
+      </div>
+    } @else {
+      @if (runError()) {
+        <div class="mrd-error" role="alert"><app-icon name="alertTriangle" /><span>{{ runError() }}</span></div>
+      }
+
+      @if (params().length === 0) {
+        <p class="mrd-confirm" data-testid="manual-run-confirm">{{ i18n.t('auto_run_no_params') }}</p>
+      } @else {
+        <p class="mrd-intro">{{ i18n.t('auto_run_params_intro') }}</p>
+        <div class="mrd-fields">
+          @for (p of params(); track p.name) {
+            <div class="mrd-field">
+              <span class="mrd-label">
+                {{ p.name }}
+                @if (p.required && p.type !== 'BOOLEAN') { <span class="mrd-req">*</span> }
+                <span class="mrd-type">{{ p.type }}{{ p.isList ? '[]' : '' }}</span>
+              </span>
+
+              @if (p.isList) {
+                <textarea class="mrd-input mrd-textarea" rows="3"
+                  [attr.data-testid]="'manual-run-field-' + p.name"
+                  [placeholder]="i18n.t('auto_run_list_ph')"
+                  [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)"></textarea>
+              } @else {
+                @switch (p.type) {
+                  @case ('BOOLEAN') {
+                    <label class="mrd-check">
+                      <input type="checkbox" [attr.data-testid]="'manual-run-field-' + p.name"
+                        [checked]="values()[p.name] === 'true'" (change)="onCheckbox(p.name, $event)" />
+                      <span class="mrd-check-box"><app-icon name="check" /></span>
+                      {{ p.description || p.name }}
+                    </label>
+                  }
+                  @case ('NUMBER') {
+                    <input class="mrd-input" type="number" [attr.data-testid]="'manual-run-field-' + p.name"
+                      [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)" />
+                  }
+                  @case ('DATE') {
+                    <input class="mrd-input mrd-date" type="date" [attr.data-testid]="'manual-run-field-' + p.name"
+                      [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)" />
+                  }
+                  @case ('EMAIL') {
+                    <input class="mrd-input" type="email" [attr.data-testid]="'manual-run-field-' + p.name"
+                      [placeholder]="p.positiveExample || ''"
+                      [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)" />
+                  }
+                  @case ('OBJECT') {
+                    <textarea class="mrd-input mrd-textarea" rows="3"
+                      [attr.data-testid]="'manual-run-field-' + p.name"
+                      placeholder="{ }"
+                      [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)"></textarea>
+                  }
+                  @default {
+                    <input class="mrd-input" type="text" [attr.data-testid]="'manual-run-field-' + p.name"
+                      [placeholder]="p.positiveExample || ''"
+                      [value]="values()[p.name] || ''" (input)="onInput(p.name, $event)" />
+                  }
+                }
+              }
+
+              @if (p.type !== 'BOOLEAN' && p.description) {
+                <span class="mrd-hint">{{ p.description }}</span>
+              }
+              @if (attempted() && isMissing(p)) {
+                <span class="mrd-hint mrd-hint--error">{{ i18n.t('auto_run_field_required') }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <div class="mrd-foot">
+    @if (done()) {
+      <button class="mrd-btn mrd-btn--solid" type="button" (click)="close.emit()" data-testid="manual-run-done-close">
+        {{ i18n.t('auto_run_close') }}
+      </button>
+    } @else {
+      <button class="mrd-btn" type="button" (click)="close.emit()" data-testid="manual-run-cancel">{{ i18n.t('confirm_cancel') }}</button>
+      <button class="mrd-btn mrd-btn--solid" type="button" data-testid="manual-run-submit"
+        [disabled]="loading() || !!loadError() || running()"
+        (click)="run()">
+        <app-icon name="bolt" />
+        {{ running() ? i18n.t('auto_run_running') : i18n.t('auto_run_submit') }}
+      </button>
+    }
+  </div>
+</div>

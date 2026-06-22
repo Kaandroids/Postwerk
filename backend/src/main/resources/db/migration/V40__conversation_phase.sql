@@ -1,0 +1,1 @@
+ALTER TABLE ai_conversations ADD COLUMN phase VARCHAR(20) DEFAULT 'OPEN' NOT NULL;

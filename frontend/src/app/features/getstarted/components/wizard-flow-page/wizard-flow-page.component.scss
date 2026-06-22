@@ -1,0 +1,205 @@
+:host {
+  --c-trigger: #3e8e62;
+  --wiz-paper: var(--bg);
+  --wiz-line:  var(--border);
+}
+
+:host-context([data-theme="dark"]) {
+  --c-trigger: #56b07e;
+}
+
+.wp-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.wp-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+// The wizard never scrolls, so the landing nav would otherwise stay in its
+// transparent "top" state — giving an abrupt color change above the chat.
+// Pin it to the "scrolled" look (blur bg + 0.5px bottom hairline) so the chat
+// sits below a clean divider at the 64px boundary.
+:host ::ng-deep .lp2-nav {
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  border-bottom-color: var(--border);
+}
+
+// ─── Chat panel (full screen, below the fixed landing nav) ──
+.wp-chat-panel {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  animation: wp-fade-in 0.4s ease-out;
+}
+
+// ─── Canvas panel (full screen) ─────────────────────────────
+.wp-canvas-panel {
+  position: absolute;
+  inset: 0;
+  animation: wp-fade-in 0.4s ease-out 0.2s both;
+}
+
+// ─── Summary badge (bottom-left, to the right of the zoom pill) ──
+.wp-summary {
+  position: absolute;
+  left: 272px;
+  bottom: 14px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 16px 11px 12px;
+  background: var(--wiz-paper);
+  border: 0.5px solid var(--wiz-line);
+  border-radius: 14px;
+  box-shadow: 0 1px 1px rgba(20, 16, 8, .05), 0 18px 44px -26px rgba(20, 16, 8, .5);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .5s ease, transform .55s cubic-bezier(.34, 1.3, .5, 1);
+  pointer-events: none;
+
+  &[data-on="1"] {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+.wp-summary-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--c-trigger);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+
+.wp-summary-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.wp-summary-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.wp-summary-sub {
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+// ─── CTA corner (bottom-right, above the node/connection counter) ──
+.wp-cta-corner {
+  position: absolute;
+  right: 14px;
+  bottom: 62px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .5s ease .06s, transform .55s cubic-bezier(.34, 1.3, .5, 1) .06s;
+  pointer-events: none;
+
+  &[data-on="1"] {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+.wp-btn {
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 11px;
+  border: 0.5px solid var(--border-strong, var(--border));
+  background: var(--bg);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  transition: background .14s, transform .08s, border-color .14s;
+
+  &:hover {
+    background: var(--bg-2);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.wp-btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg, #fff);
+  box-shadow: 0 8px 22px -10px var(--accent);
+
+  &:hover {
+    filter: brightness(1.04);
+    background: var(--accent);
+  }
+}
+
+// ─── Transitions ────────────────────────────────────────────
+@keyframes wp-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ─── Responsive ─────────────────────────────────────────────
+@media (max-width: 920px) {
+  // Right of the zoom pill so nothing overlaps.
+  .wp-summary {
+    left: 246px;
+    bottom: 14px;
+    padding: 8px 12px 8px 9px;
+  }
+
+  .wp-cta-corner {
+    right: 14px;
+    bottom: 62px;
+
+    .wp-btn { height: 42px; }
+  }
+}
+
+// ─── Reduce motion ──────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .wp-chat-panel,
+  .wp-canvas-panel,
+  .wp-summary,
+  .wp-cta-corner {
+    animation: none;
+    transition-duration: .08s !important;
+  }
+}

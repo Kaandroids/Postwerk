@@ -1,0 +1,173 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ detail()?.name ?? i18n.t('nav_organization') }}</div>
+      <h1 class="dash-title">{{ i18n.t('org_members_title') }}</h1>
+      <div class="dash-subtitle">
+        {{ i18n.t('org_members_n').replace('%n%', members().length + '') }}
+        @if (detail(); as d) {
+          · {{ roleLabel(d.myRole) }}
+        }
+      </div>
+    </div>
+    @if (detail() && !isPersonal()) {
+      <button class="om-leave" type="button" (click)="leave()" data-testid="org-leave">
+        <app-icon name="signout" />
+        <span>{{ i18n.t('org_members_leave') }}</span>
+      </button>
+    }
+  </div>
+
+  <app-error-banner [message]="error()" />
+
+  @if (loading()) {
+    <div class="om-loading">{{ i18n.t('loading') }}</div>
+  } @else {
+    @if (isPersonal()) {
+      <div class="om-note" data-testid="org-personal-note">
+        <app-icon name="info" />
+        <span>{{ i18n.t('org_members_personal_hint') }}</span>
+      </div>
+    }
+
+    @if (canManage()) {
+      <form class="om-invite" (submit)="invite(); $event.preventDefault()">
+        <div class="om-invite-field">
+          <label>{{ i18n.t('org_members_invite_email') }}</label>
+          <input
+            type="email"
+            [value]="inviteEmail()"
+            (input)="inviteEmail.set($any($event.target).value)"
+            [placeholder]="i18n.t('org_members_invite_email_ph')"
+            autocomplete="off"
+            data-testid="org-invite-email"
+          />
+        </div>
+        <div class="om-invite-field om-invite-role">
+          <label>{{ i18n.t('org_members_role') }}</label>
+          <select [value]="inviteRole()" (change)="onInviteRole($event)" data-testid="org-invite-role">
+            @for (r of assignableRoles; track r) {
+              <option [value]="r" [selected]="r === inviteRole()">{{ roleLabel(r) }}</option>
+            }
+          </select>
+        </div>
+        <button class="om-invite-btn" type="submit" [disabled]="inviting() || !inviteEmail().trim()" data-testid="org-invite-submit">
+          <app-icon name="plus" />
+          <span>{{ i18n.t('org_members_invite') }}</span>
+        </button>
+      </form>
+    }
+
+    <div class="om-table-wrap">
+      <table class="om-table">
+        <thead>
+          <tr>
+            <th>{{ i18n.t('org_members_col_member') }}</th>
+            <th>{{ i18n.t('org_members_col_role') }}</th>
+            <th>{{ i18n.t('org_members_col_status') }}</th>
+            @if (canManage()) { <th class="om-col-actions">{{ i18n.t('org_members_col_actions') }}</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of members(); track m.userId) {
+            <tr data-testid="org-member-row">
+              <td>
+                <div class="om-member">
+                  <span class="om-mono">{{ (m.fullName || m.email).charAt(0).toUpperCase() }}</span>
+                  <div class="om-member-info">
+                    <span class="om-member-name">
+                      {{ m.fullName || m.email }}
+                      @if (isMe(m)) { <span class="om-you">{{ i18n.t('org_members_you') }}</span> }
+                    </span>
+                    <span class="om-member-email">{{ m.email }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                @if (canManage() && !isMe(m) && m.role !== 'OWNER') {
+                  <select class="om-role-select" [value]="m.role" (change)="changeRole(m, $event)" data-testid="org-member-role">
+                    @for (r of assignableRoles; track r) {
+                      <option [value]="r" [selected]="r === m.role">{{ roleLabel(r) }}</option>
+                    }
+                  </select>
+                } @else {
+                  <span class="om-role-badge" [attr.data-role]="m.role">{{ roleLabel(m.role) }}</span>
+                }
+              </td>
+              <td>
+                <span class="om-status" [attr.data-status]="m.status">{{ i18n.t('org_status_' + m.status.toLowerCase()) }}</span>
+              </td>
+              @if (canManage()) {
+                <td class="om-col-actions">
+                  <div class="om-actions">
+                    @if (hasGrantEditor(m)) {
+                      <button class="om-action" type="button" (click)="openGrants(m)" [attr.aria-label]="i18n.t('org_members_grants')" [title]="i18n.t('org_members_grants')" data-testid="org-member-grants">
+                        <app-icon name="mail" />
+                      </button>
+                    } @else {
+                      <span class="om-full-access" [title]="i18n.t('org_members_full_access')">{{ i18n.t('org_members_full_access') }}</span>
+                    }
+                    @if (!isMe(m) && m.role !== 'OWNER') {
+                      <button class="om-action om-action--danger" type="button" (click)="removeMember(m)" [attr.aria-label]="i18n.t('org_members_remove')" [title]="i18n.t('org_members_remove')" data-testid="org-member-remove">
+                        <app-icon name="trash" />
+                      </button>
+                    }
+                  </div>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Mailbox-grant drawer -->
+  @if (grantMember(); as gm) {
+    <div class="om-drawer-overlay" (click)="closeGrants()"></div>
+    <aside class="om-drawer" data-testid="org-grants-drawer">
+      <header class="om-drawer-head">
+        <div>
+          <div class="om-drawer-eyebrow">{{ i18n.t('org_members_grants') }}</div>
+          <h2 class="om-drawer-title">{{ gm.fullName || gm.email }}</h2>
+        </div>
+        <button class="om-drawer-close" type="button" (click)="closeGrants()" aria-label="Close">
+          <app-icon name="close" />
+        </button>
+      </header>
+
+      <p class="om-drawer-hint">{{ i18n.t('org_members_grants_hint') }}</p>
+
+      @if (grantsLoading()) {
+        <div class="om-loading">{{ i18n.t('loading') }}</div>
+      } @else if (grants().length === 0) {
+        <div class="om-empty">{{ i18n.t('org_members_no_mailboxes') }}</div>
+      } @else {
+        <div class="om-grant-list">
+          @for (g of grants(); track g.mailboxId) {
+            <div class="om-grant" data-testid="org-grant-row">
+              <span class="om-grant-email">{{ g.email }}</span>
+              <div class="om-grant-toggles">
+                <label class="om-toggle">
+                  <input type="checkbox" [checked]="g.canRead" (change)="toggleGrant(g.mailboxId, 'read')" data-testid="org-grant-read" />
+                  <span>{{ i18n.t('org_members_grant_read') }}</span>
+                </label>
+                <label class="om-toggle">
+                  <input type="checkbox" [checked]="g.canSend" (change)="toggleGrant(g.mailboxId, 'send')" data-testid="org-grant-send" />
+                  <span>{{ i18n.t('org_members_grant_send') }}</span>
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <footer class="om-drawer-foot">
+        <button class="om-btn-ghost" type="button" (click)="closeGrants()">{{ i18n.t('confirm_cancel') }}</button>
+        <button class="om-btn-primary" type="button" (click)="saveGrants()" [disabled]="grantsSaving() || grantsLoading()" data-testid="org-grants-save">
+          {{ i18n.t('org_members_grants_save') }}
+        </button>
+      </footer>
+    </aside>
+  }
+</app-page-content>

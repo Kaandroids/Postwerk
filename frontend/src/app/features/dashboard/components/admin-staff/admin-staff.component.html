@@ -1,0 +1,231 @@
+<app-page-content>
+  <!-- A. Alert strip (single super-admin) -->
+  @if (soleSuperAdmin()) {
+    <div class="sf-alert" role="alert" data-testid="admin-staff-alert">
+      <app-icon name="alertTriangle" />
+      <span class="sf-alert-text"><b>{{ i18n.t('sf_alert_solo') }}</b></span>
+      <button type="button" class="sf-alert-cta" data-testid="admin-staff-alert-inspect" (click)="inspectBanner()">{{ i18n.t('sf_alert_inspect') }}</button>
+      <button type="button" class="sf-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+    </div>
+  }
+
+  <!-- B. Header -->
+  <div class="dash-page-head sf-head">
+    <div>
+      <div class="dash-eyebrow sf-eyebrow-mono">{{ i18n.t('sf_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('sf_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.total ?? 0 }}</b> {{ i18n.t('sf_staff_lc') }} ·
+        <b>{{ kpis()?.superAdmins ?? 0 }}</b> {{ i18n.t('sf_superadmins_lc') }} · {{ i18n.t('sf_six_roles') }}
+      </div>
+    </div>
+    <div class="sf-head-controls">
+      <button type="button" class="sf-btn sf-btn--solid" data-testid="admin-staff-grant" [disabled]="!canManage()" [attr.title]="canManage() ? null : i18n.t('admin_perm_required')" (click)="openGrant()">
+        @if (!canManage()) { <app-icon name="lock" /> } @else { <app-icon name="plus" /> }{{ i18n.t('sf_grant') }}
+      </button>
+      <button type="button" class="sf-btn" data-testid="admin-staff-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="sf-refresh-ic" [class.sf-spin]="refreshing()"><app-icon name="refresh" /></span>{{ i18n.t('sf_refresh') }}
+      </button>
+      @if (updatedAt()) { <span class="sf-updated">{{ i18n.t('sf_updated', { time: updatedAt() }) }}</span> }
+    </div>
+  </div>
+
+  @if (flash()) { <div class="sf-flash" role="status" data-testid="admin-staff-flash"><app-icon name="check" /><span>{{ flash() }}</span></div> }
+  @if (error()) { <div class="sf-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div> }
+
+  <!-- C. View toggle -->
+  <div class="sf-viewtabs" role="tablist" data-testid="admin-staff-viewtabs">
+    <button type="button" role="tab" [attr.data-active]="view() === 'staff' ? '1' : '0'" data-testid="admin-staff-view-staff" (click)="setView('staff')"><app-icon name="user" /> {{ i18n.t('sf_view_staff') }}</button>
+    <button type="button" role="tab" [attr.data-active]="view() === 'roles' ? '1' : '0'" data-testid="admin-staff-view-roles" (click)="setView('roles')"><app-icon name="shield" /> {{ i18n.t('sf_view_roles') }}</button>
+  </div>
+
+  <!-- D. KPI strip -->
+  <div class="sf-kpis" data-testid="admin-staff-kpis">
+    <div class="sf-kpi"><div class="sf-kpi-label">{{ i18n.t('sf_kpi_total') }}</div><div class="sf-kpi-value">{{ kpis()?.total ?? 0 }}</div><div class="sf-kpi-foot"><span class="sf-chip">{{ i18n.t('sf_chip_total') }}</span></div></div>
+    <div class="sf-kpi"><div class="sf-kpi-label">{{ i18n.t('sf_kpi_superadmins') }}</div><div class="sf-kpi-value" [attr.data-tone]="(kpis()?.superAdmins ?? 0) === 1 ? 'danger' : 'default'">{{ kpis()?.superAdmins ?? 0 }}</div><div class="sf-kpi-foot"><span class="sf-chip" [attr.data-tone]="(kpis()?.superAdmins ?? 0) === 1 ? 'danger' : 'green'">{{ (kpis()?.superAdmins ?? 0) === 1 ? i18n.t('sf_chip_risk') : i18n.t('sf_chip_ok') }}</span></div></div>
+    <div class="sf-kpi"><div class="sf-kpi-label">{{ i18n.t('sf_kpi_privileged') }}</div><div class="sf-kpi-value">{{ kpis()?.privileged ?? 0 }}</div><div class="sf-kpi-foot"><span class="sf-chip" data-tone="amber">{{ i18n.t('sf_chip_manage') }}</span></div></div>
+    <div class="sf-kpi"><div class="sf-kpi-label">{{ i18n.t('sf_kpi_readonly') }}</div><div class="sf-kpi-value">{{ kpis()?.readOnly ?? 0 }}</div><div class="sf-kpi-foot"><span class="sf-chip">{{ i18n.t('sf_chip_view') }}</span></div></div>
+    <div class="sf-kpi"><div class="sf-kpi-label">{{ i18n.t('sf_kpi_added') }}</div><div class="sf-kpi-value">{{ kpis()?.added30d ?? 0 }}</div><div class="sf-kpi-foot"><span class="sf-chip">{{ i18n.t('sf_chip_30d') }}</span></div></div>
+  </div>
+
+  @if (view() === 'staff') {
+    <!-- Toolbar -->
+    <div class="sf-toolbar">
+      <div class="sf-search"><app-icon name="search" /><input type="text" data-testid="admin-staff-search" [attr.aria-label]="i18n.t('sf_search')" [placeholder]="i18n.t('sf_search')" [value]="search()" (input)="onSearch($event)" /></div>
+      <div class="sf-filters">
+        <div class="sf-filter"><label>{{ i18n.t('sf_filter_role') }}</label><select data-testid="admin-staff-f-role" (change)="onRole($event)"><option value="">{{ i18n.t('sf_filter_all') }}</option>@for (r of roleKeys; track r) { <option [value]="r">{{ roleLabel(r) }}</option> }</select></div>
+        <div class="sf-filter"><label>{{ i18n.t('sf_filter_tier') }}</label><select data-testid="admin-staff-f-tier" (change)="onTier($event)"><option value="">{{ i18n.t('sf_filter_all') }}</option><option value="PRIVILEGED">{{ i18n.t('sf_tier_privileged') }}</option><option value="READ_ONLY">{{ i18n.t('sf_tier_readonly') }}</option></select></div>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="sf-card" aria-hidden="true" data-testid="admin-staff-skeleton"><div class="sf-skel-head"></div>@for (s of [1,2,3,4,5,6]; track s) { <div class="sf-skel-row"></div> }</div>
+    } @else if (rows().length === 0 && hasFilters()) {
+      <div class="sf-empty" data-testid="admin-staff-empty-filtered"><app-icon name="search" /><div class="sf-empty-title">{{ i18n.t('sf_empty_filtered') }}</div><button type="button" class="sf-btn" (click)="clearFilters()">{{ i18n.t('sf_clear_filters') }}</button></div>
+    } @else if (rows().length === 0) {
+      <div class="sf-empty" data-testid="admin-staff-empty"><app-icon name="user" /><div class="sf-empty-title">{{ i18n.t('sf_empty') }}</div></div>
+    } @else {
+      <div class="sf-card">
+        <div class="sf-scroll">
+          <table class="dtable" data-testid="admin-staff-table">
+            <thead><tr>
+              <th scope="col">{{ i18n.t('sf_col_member') }}</th>
+              <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'role' ? '1' : '0'" (click)="toggleSort('role')"><span>{{ i18n.t('sf_col_role') }}</span></button></th>
+              <th scope="col">{{ i18n.t('sf_col_caps') }}</th>
+              <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'lastActive' ? '1' : '0'" (click)="toggleSort('lastActive')"><span>{{ i18n.t('sf_col_lastactive') }}</span></button></th>
+              <th scope="col"><button class="th-sort" [attr.data-active]="sortKey() === 'staffSince' ? '1' : '0'" (click)="toggleSort('staffSince')"><span>{{ i18n.t('sf_col_since') }}</span></button></th>
+              <th scope="col" class="sf-col-menu"></th>
+            </tr></thead>
+            <tbody>
+              @for (m of rows(); track m.id) {
+                <tr class="sf-row" data-testid="admin-staff-row" [attr.data-self]="m.self ? '1' : null" tabindex="0" (click)="openMember(m)" (keydown.enter)="openMember(m)" (keydown.space)="openMember(m); $event.preventDefault()">
+                  <td>
+                    <div class="sf-cell-user">
+                      <span class="sf-avatar" [style.background]="'hsl(' + avatarHue(m.email) + ' 55% 48%)'">{{ initial(m.name) }}</span>
+                      <span class="sf-cell-text"><span class="sf-cell-name">{{ m.name }}@if (m.self) { <span class="sf-you">{{ i18n.t('sf_you') }}</span> }</span><span class="sf-cell-mail mono">{{ m.email }}</span></span>
+                    </div>
+                  </td>
+                  <td><span class="sf-role" [attr.data-role]="m.role"><app-icon [name]="roleIcon(m.role)" />{{ roleLabel(m.role) }}</span></td>
+                  <td><div class="sf-caps-cell"><span class="sf-caps-n">{{ i18n.t('sf_caps_n', { n: m.capabilityCount + '' }) }}</span><span class="sf-caps-areas">{{ topAreas(m.role) }}</span></div></td>
+                  <td class="sf-muted">{{ relative(m.lastActiveAt) }}</td>
+                  <td class="sf-muted">{{ fmt.date(m.staffSince) }}</td>
+                  <td class="sf-col-menu" (click)="$event.stopPropagation()">
+                    <div class="sf-menu-wrap">
+                      <button type="button" class="sf-icon-btn" [attr.data-testid]="'admin-staff-menu-' + m.id" [attr.aria-label]="i18n.t('sf_row_menu')" (click)="toggleMenu(m.id, $event)"><app-icon name="list" /></button>
+                      @if (openMenuId() === m.id) {
+                        <div class="sf-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                          <button type="button" class="sf-menu-item" role="menuitem" (click)="openMember(m); openMenuId.set(null)"><app-icon name="eye" /><span>{{ i18n.t('sf_menu_view') }}</span></button>
+                          <button type="button" class="sf-menu-item" role="menuitem" [disabled]="!canManage() || m.self" [attr.title]="m.self ? i18n.t('sf_self_short') : (canManage() ? null : i18n.t('admin_perm_required'))" (click)="openMember(m); openMenuId.set(null)">@if (!canManage() || m.self) { <app-icon name="lock" /> } @else { <app-icon name="edit" /> }<span>{{ i18n.t('sf_change_role') }}</span></button>
+                          <button type="button" class="sf-menu-item sf-menu-item--danger" role="menuitem" [disabled]="!canManage() || m.self" [attr.title]="m.self ? i18n.t('sf_self_short') : (canManage() ? null : i18n.t('admin_perm_required'))" (click)="rowRevoke(m, $event)">@if (!canManage() || m.self) { <app-icon name="lock" /> } @else { <app-icon name="logout" /> }<span>{{ i18n.t('sf_revoke') }}</span></button>
+                        </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (totalPages() > 1) {
+          <div class="sf-pager"><span class="sf-pager-info">{{ total() }} {{ i18n.t('sf_staff_lc') }}</span><div class="sf-pager-ctrls"><button class="sf-pager-btn" [disabled]="page() === 0" (click)="goToPage(page() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button><span class="sf-pager-pages">{{ page() + 1 }} / {{ totalPages() }}</span><button class="sf-pager-btn" [disabled]="page() >= totalPages() - 1" (click)="goToPage(page() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button></div></div>
+        }
+      </div>
+    }
+  } @else {
+    <!-- Roles reference -->
+    <div class="sf-roles-grid" data-testid="admin-staff-roles">
+      @for (r of roleKeys; track r) {
+        <div class="sf-role-card">
+          <div class="sf-role-card-head">
+            <span class="sf-role-glyph" [attr.data-role]="r"><app-icon [name]="roleIcon(r)" /></span>
+            <div class="sf-role-card-titles"><div class="sf-role-card-name">{{ roleLabel(r) }}</div><div class="sf-role-card-meta">{{ tierLabel(matrix()?.roles?.length ? (r === 'SUPPORT' || r === 'AUDITOR' ? 'READ_ONLY' : 'PRIVILEGED') : null) }} · {{ i18n.t('sf_caps_n', { n: capCount(r) + '' }) }}</div></div>
+          </div>
+          <div class="sf-role-card-purpose">{{ rolePurpose(r) }}</div>
+          <div class="sf-matrix">
+            @for (g of capGroups; track g.area) {
+              <div class="sf-mat-group">
+                <div class="sf-mat-area">{{ areaLabel(g.area) }}</div>
+                <div class="sf-mat-caps">
+                  @for (c of g.caps; track c.id) {
+                    <span class="sf-cap" [attr.data-on]="capsFor(r).includes(c.id) ? '1' : '0'"><span class="sf-cap-dot" [attr.data-on]="capsFor(r).includes(c.id) ? '1' : '0'"><app-icon [name]="capsFor(r).includes(c.id) ? 'check' : 'close'" /></span>{{ capLabel(c.key) }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- H. Member detail modal -->
+  @if (editing(); as m) {
+    <div class="sf-scrim" (click)="closeDetail()"></div>
+    <div class="sf-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-staff-modal" (click)="$event.stopPropagation()">
+      <div class="sf-modal-head">
+        <div class="sf-modal-id">
+          <span class="sf-avatar sf-avatar--lg" [style.background]="'hsl(' + avatarHue(m.email) + ' 55% 48%)'" aria-hidden="true">{{ initial(m.name) }}</span>
+          <div class="sf-modal-id-text">
+            <div class="sf-modal-name">{{ m.name }}</div>
+            <div class="sf-modal-mail mono">{{ m.email }}</div>
+            <div class="sf-modal-pills">
+              <span class="sf-role" [attr.data-role]="m.role"><app-icon [name]="roleIcon(m.role)" />{{ roleLabel(m.role) }}</span>
+              <span class="sf-tier" [attr.data-tier]="m.tier">{{ tierLabel(m.tier) }}</span>
+              @if (m.self) { <span class="sf-you">{{ i18n.t('sf_you') }}</span> }
+            </div>
+          </div>
+        </div>
+        <button class="sf-modal-close" type="button" (click)="closeDetail()" data-testid="admin-staff-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+
+      <div class="sf-modal-actions">
+        @if (m.self) {
+          <span class="sf-self-lock"><app-icon name="lock" />{{ i18n.t('sf_self_lock') }}</span>
+        } @else if (!canManage()) {
+          <span class="sf-self-lock"><app-icon name="lock" />{{ i18n.t('admin_perm_required') }}</span>
+        } @else {
+          <div class="sf-changerow">
+            <div class="sf-rolepick" data-testid="admin-staff-rolepick">
+              @for (r of roleKeys; track r) { <button type="button" class="sf-rolepick-btn" [attr.data-active]="picked() === r ? '1' : '0'" (click)="setPicked(r)"><app-icon [name]="roleIcon(r)" />{{ roleLabel(r) }}</button> }
+            </div>
+            <button class="sf-btn sf-btn--solid sf-btn--sm" type="button" data-testid="admin-staff-saverole" [disabled]="busy() || !pickedChanged()" (click)="saveRole()"><app-icon name="check" />{{ pickedChanged() ? i18n.t('sf_save_role') : i18n.t('sf_saved') }}</button>
+          </div>
+          <button class="sf-btn sf-btn--danger sf-btn--sm" type="button" data-testid="admin-staff-revoke" [disabled]="busy()" (click)="revokeMember()"><app-icon name="logout" />{{ i18n.t('sf_revoke') }}</button>
+        }
+      </div>
+
+      <div class="sf-tabs" role="tablist">
+        <button class="sf-tab" role="tab" [attr.data-active]="detailTab() === 'caps'" (click)="setDetailTab('caps')">{{ i18n.t('sf_tab_caps') }}</button>
+        <button class="sf-tab" role="tab" [attr.data-active]="detailTab() === 'activity'" (click)="setDetailTab('activity')">{{ i18n.t('sf_tab_activity') }}</button>
+      </div>
+
+      <div class="sf-modal-body">
+        @if (detailFlash()) { <div class="sf-detail-flash" data-testid="admin-staff-detail-flash"><app-icon name="check" /><span>{{ detailFlash() }}</span></div> }
+
+        @if (detailTab() === 'caps') {
+          @if (pickedChanged()) { <div class="sf-mat-preview" style="margin-bottom:10px">{{ i18n.t('sf_preview_role', { role: roleLabel(picked()) }) }}</div> }
+          <div class="sf-matrix">
+            @for (g of capGroups; track g.area) {
+              <div class="sf-mat-group">
+                <div class="sf-mat-area">{{ areaLabel(g.area) }}</div>
+                <div class="sf-mat-caps">
+                  @for (c of g.caps; track c.id) {
+                    <span class="sf-cap" [attr.data-on]="granted(c.id) ? '1' : '0'"><span class="sf-cap-dot" [attr.data-on]="granted(c.id) ? '1' : '0'"><app-icon [name]="granted(c.id) ? 'check' : 'close'" /></span>{{ capLabel(c.key) }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+          <div class="sf-mat-note"><app-icon name="info" /><span>{{ i18n.t('sf_caps_note') }}</span></div>
+        } @else {
+          <div class="sf-mat-note"><app-icon name="info" /><span>{{ i18n.t('sf_activity_note') }}</span></div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- I. Grant staff access modal -->
+  @if (granting()) {
+    <div class="sf-scrim" (click)="closeGrant()"></div>
+    <div class="sf-modal sf-modal--sm" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-staff-grant-modal" (click)="$event.stopPropagation()">
+      <div class="sf-modal-title">{{ i18n.t('sf_grant_title') }}</div>
+      <div class="sf-modal-text">{{ i18n.t('sf_grant_sub') }}</div>
+      <div class="sf-form">
+        <div class="sf-field"><label class="sf-field-label">{{ i18n.t('sf_grant_user') }}</label>
+          <div class="sf-search" style="max-width:none"><app-icon name="search" /><input type="text" data-testid="admin-staff-grant-search" [placeholder]="i18n.t('sf_grant_search')" [value]="grantSearch()" (input)="onGrantSearch($event)" /></div>
+          @if (grantResults().length) {
+            <div class="sf-results">@for (c of grantResults(); track c.id) { <button type="button" class="sf-result" (click)="selectCandidate(c)"><span class="sf-result-name">{{ c.name }}</span><span class="sf-result-mail mono">{{ c.email }}</span></button> }</div>
+          }
+        </div>
+        <div class="sf-field"><label class="sf-field-label">{{ i18n.t('sf_grant_role') }}</label>
+          <div class="sf-rolepick">@for (r of roleKeys; track r) { <button type="button" class="sf-rolepick-btn" [attr.data-active]="grantRole() === r ? '1' : '0'" (click)="setGrantRole(r)"><app-icon [name]="roleIcon(r)" />{{ roleLabel(r) }}</button> }</div>
+        </div>
+      </div>
+      <div class="sf-modal-note"><app-icon name="alertTriangle" /><span>{{ i18n.t('sf_grant_note') }}</span></div>
+      <div class="sf-modal-foot">
+        <button type="button" class="sf-btn" (click)="closeGrant()">{{ i18n.t('confirm_cancel') }}</button>
+        <button type="button" class="sf-btn sf-btn--solid" data-testid="admin-staff-grant-submit" [disabled]="busy() || !grantSelected()" (click)="submitGrant()">{{ i18n.t('sf_grant') }}</button>
+      </div>
+    </div>
+  }
+</app-page-content>

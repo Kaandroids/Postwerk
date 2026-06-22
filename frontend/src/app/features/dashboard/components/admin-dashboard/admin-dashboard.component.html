@@ -1,0 +1,240 @@
+<app-page-content>
+  <div class="dash-page-head">
+    <div>
+      <div class="dash-eyebrow">{{ i18n.t('admin_pretitle') }}</div>
+      <h1 class="dash-title">{{ i18n.t('admin_overview_title') }}</h1>
+      <div class="dash-subtitle">{{ i18n.t('admin_overview_subtitle') }}</div>
+    </div>
+
+    <div class="ad-head-controls">
+      <div class="ad-range-seg" role="group" [attr.aria-label]="i18n.t('admin_range_aria')" data-testid="admin-range">
+        @for (r of ranges; track r) {
+          <button
+            type="button"
+            [attr.data-active]="range() === r ? '1' : '0'"
+            [attr.data-testid]="'admin-range-' + r"
+            (click)="setRange(r)">
+            {{ rangeLabel(r) }}
+          </button>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="ad-btn-refresh"
+        [attr.data-spin]="refreshing() ? '1' : '0'"
+        [disabled]="refreshing()"
+        (click)="refresh()"
+        data-testid="admin-refresh">
+        <app-icon name="refresh" />
+        {{ i18n.t('admin_refresh') }}
+      </button>
+
+      @if (lastUpdated()) {
+        <span class="ad-last-updated" data-testid="admin-last-updated">
+          {{ i18n.t('admin_updated') }} {{ lastUpdated() }}
+        </span>
+      }
+    </div>
+  </div>
+
+  @if (loading()) {
+    <!-- ── Skeleton ─────────────────────────────────────────────── -->
+    <div data-testid="admin-skeleton">
+      <div class="ad-kpi-grid">
+        @for (i of [1,2,3,4,5,6]; track i) {
+          <div class="ad-sk ad-sk-kpi"></div>
+        }
+      </div>
+      <div class="ad-charts-row">
+        <div class="ad-sk ad-sk-chart"></div>
+        <div class="ad-sk ad-sk-chart"></div>
+      </div>
+      <div class="ad-lower-grid">
+        <div class="ad-sk ad-sk-panel"></div>
+        <div class="ad-sk ad-sk-panel"></div>
+      </div>
+    </div>
+  } @else {
+    <!-- ── KPI grid ─────────────────────────────────────────────── -->
+    <div class="ad-kpi-grid" data-testid="admin-kpi-grid">
+      @for (k of kpis(); track k.key) {
+        <div
+          class="ad-kpi"
+          [attr.data-testid]="k.key === 'users' ? 'admin-stat-users' : 'admin-kpi-' + k.key">
+          <div class="ad-kpi-top">
+            <div class="ad-kpi-label">{{ k.label }}</div>
+            <div class="ad-kpi-ic" [attr.data-tone]="k.tone"><app-icon [name]="k.iconName" /></div>
+          </div>
+          <div class="ad-kpi-value">{{ k.value }}</div>
+          @if (k.sub) {
+            <div class="ad-kpi-sub">{{ k.sub }}</div>
+          }
+          @if (k.spark) {
+            <svg class="ad-spark" viewBox="0 0 56 28" preserveAspectRatio="none" aria-hidden="true">
+              <path [attr.d]="k.spark.area" class="ad-spark-area" [attr.data-tone]="k.tone" />
+              <path [attr.d]="k.spark.line" class="ad-spark-line" [attr.data-tone]="k.tone" />
+            </svg>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ── Charts row ───────────────────────────────────────────── -->
+    <div class="ad-charts-row">
+      <!-- AI usage over time -->
+      <div class="ad-card" data-testid="admin-chart">
+        <div class="ad-card-head">
+          <div>
+            <div class="ad-card-title">{{ i18n.t('admin_chart_ai_usage') }}</div>
+            <div class="ad-card-sub">{{ rangeLabel(range()) }}</div>
+          </div>
+        </div>
+        @if (hasTimeline()) {
+          <div class="ad-chart-pad">
+            <svg class="ad-line-chart" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true">
+              <path [attr.d]="chartArea()" class="ad-chart-area" />
+              <path [attr.d]="chartLine()" class="ad-chart-line" />
+            </svg>
+          </div>
+        } @else {
+          <div class="ad-empty" data-testid="admin-chart-empty">
+            <div class="ad-empty-ic"><app-icon name="analytics" /></div>
+            <div class="ad-empty-title">{{ i18n.t('admin_no_data_title') }}</div>
+            <div class="ad-empty-sub">{{ i18n.t('admin_no_data_sub') }}</div>
+          </div>
+        }
+      </div>
+
+      <!-- AI spend by model (donut) -->
+      <div class="ad-card" data-testid="admin-spend-by-model">
+        <div class="ad-card-head">
+          <div>
+            <div class="ad-card-title">{{ i18n.t('admin_chart_spend_by_model') }}</div>
+            <div class="ad-card-sub">{{ i18n.t('admin_chart_spend_by_model_sub') }}</div>
+          </div>
+        </div>
+        @if (donutArcs().length > 0) {
+          <div class="ad-donut-wrap">
+            <svg
+              class="ad-donut"
+              [attr.width]="donutSize"
+              [attr.height]="donutSize"
+              [attr.viewBox]="'0 0 ' + donutSize + ' ' + donutSize"
+              aria-hidden="true">
+              <circle
+                [attr.cx]="donutCenter" [attr.cy]="donutCenter" [attr.r]="donutRadius"
+                fill="none" class="ad-donut-track" [attr.stroke-width]="donutStroke" />
+              @for (a of donutArcs(); track a.name) {
+                <circle
+                  [attr.cx]="donutCenter" [attr.cy]="donutCenter" [attr.r]="donutRadius"
+                  fill="none"
+                  class="ad-donut-arc"
+                  [attr.data-tone]="a.tone"
+                  [attr.stroke-width]="donutStroke"
+                  [attr.stroke-dasharray]="arcDashArray(a)"
+                  [attr.stroke-dashoffset]="-a.offset"
+                  [attr.transform]="'rotate(-90 ' + donutCenter + ' ' + donutCenter + ')'"
+                  stroke-linecap="butt" />
+              }
+              <text [attr.x]="donutCenter" [attr.y]="donutCenter - 4" text-anchor="middle" class="ad-donut-value">
+                {{ donutTotalLabel() }}
+              </text>
+              <text [attr.x]="donutCenter" [attr.y]="donutCenter + 16" text-anchor="middle" class="ad-donut-label">
+                {{ i18n.t('admin_donut_total') }}
+              </text>
+            </svg>
+            <div class="ad-donut-legend">
+              @for (a of donutArcs(); track a.name) {
+                <div class="ad-legend-row">
+                  <span class="ad-legend-dot" [attr.data-tone]="a.tone"></span>
+                  <span class="ad-legend-name">{{ a.name }}</span>
+                  <span class="ad-legend-val">{{ a.pct }}%</span>
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="ad-empty" data-testid="admin-spend-empty">
+            <div class="ad-empty-ic"><app-icon name="sparkle" /></div>
+            <div class="ad-empty-title">{{ i18n.t('admin_no_data_title') }}</div>
+            <div class="ad-empty-sub">{{ i18n.t('admin_no_data_sub') }}</div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ── Lower grid: System Health + Quick Actions + Recent Activity ──────────── -->
+    <div class="ad-lower-grid">
+      <div class="ad-stack">
+        <!-- System Health (real — live subsystem probes) -->
+        <div class="ad-card" data-testid="admin-system-health">
+          <div class="ad-card-head">
+            <div>
+              <div class="ad-card-title">{{ i18n.t('admin_system_health') }}</div>
+              <div class="ad-card-sub">
+                {{ healthSummary().ok }}/{{ healthSummary().total }} {{ i18n.t('sh_operational') }}@if (healthSummary().down > 0) { · <span class="ad-sub-bad">{{ healthSummary().down }} {{ i18n.t('sh_status_down') }}</span> }@if (healthSummary().degraded > 0) { · {{ healthSummary().degraded }} {{ i18n.t('sh_status_degraded') }} }
+              </div>
+            </div>
+            <button type="button" class="ad-card-link" (click)="navTo('/dashboard/admin/system-health')">{{ i18n.t('admin_view_all') }}</button>
+          </div>
+          @if (subsystems().length === 0) {
+            <div class="ad-empty ad-empty--inset" data-testid="admin-health-empty"><div class="ad-empty-ic"><app-icon name="server" /></div><div class="ad-empty-title">{{ i18n.t('admin_no_data_title') }}</div></div>
+          } @else {
+            <div class="ad-health-list" data-testid="admin-health-list">
+              @for (s of subsystems(); track s.id) {
+                <div class="ad-health-row">
+                  <span class="ad-health-dot" [attr.data-tone]="healthTone(s.status)"></span>
+                  <span class="ad-health-name">{{ s.name }}</span>
+                  <span class="ad-health-metric mono">{{ s.primary }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Quick Actions (real navigation, capability-gated) -->
+        <div class="ad-card" data-testid="admin-quick-actions">
+          <div class="ad-card-head"><div><div class="ad-card-title">{{ i18n.t('admin_quick_actions') }}</div></div></div>
+          <div class="ad-qa-grid">
+            @for (qa of quickActions; track qa.key) {
+              <button type="button" class="ad-qa-btn" [attr.data-testid]="'admin-qa-' + qa.key"
+                [disabled]="!identity.has(qa.perm)" [attr.title]="identity.has(qa.perm) ? null : i18n.t('admin_perm_required')"
+                (click)="navTo(qa.path)">
+                <span class="ad-qa-ic"><app-icon [name]="qa.icon" /></span>
+                <span class="ad-qa-label">{{ i18n.t(qa.labelKey) }}</span>
+                @if (!identity.has(qa.perm)) { <span class="ad-qa-lock"><app-icon name="lock" /></span> }
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity (real — latest audit-log entries) -->
+      <div class="ad-card" data-testid="admin-activity">
+        <div class="ad-card-head">
+          <div>
+            <div class="ad-card-title">{{ i18n.t('admin_recent_activity') }}</div>
+            <div class="ad-card-sub">{{ i18n.t('admin_recent_activity_sub') }}</div>
+          </div>
+          <button type="button" class="ad-card-link" (click)="navTo('/dashboard/admin/audit-log')">{{ i18n.t('admin_view_all') }}</button>
+        </div>
+        @if (recentActivity().length === 0) {
+          <div class="ad-empty ad-empty--inset" data-testid="admin-activity-empty"><div class="ad-empty-ic"><app-icon name="clock" /></div><div class="ad-empty-title">{{ i18n.t('admin_no_activity_title') }}</div></div>
+        } @else {
+          <div class="ad-activity-list" data-testid="admin-activity-list">
+            @for (a of recentActivity(); track a.id) {
+              <div class="ad-activity-row">
+                <span class="ad-activity-dot"></span>
+                <div class="ad-activity-body">
+                  <div class="ad-activity-action">{{ a.action }}@if (a.detail) { <span class="ad-activity-detail">{{ a.detail }}</span> }</div>
+                  <div class="ad-activity-meta">@if (a.userName || a.userEmail) { {{ a.userName ?? a.userEmail }} · }{{ fmt.dateTime(a.createdAt) }}</div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
+</app-page-content>

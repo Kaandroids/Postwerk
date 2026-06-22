@@ -1,0 +1,438 @@
+<app-page-content>
+  <!-- A. Alert strip (down cluster) -->
+  @if (downCluster(); as dc) {
+    @if (!alertDismissed()) {
+      <div class="eh-alert" role="alert" data-testid="admin-eh-alert">
+        <app-icon name="alertTriangle" />
+        <span class="eh-alert-text">{{ i18n.t('eh_alert', { n: dc.bad + '', host: dc.host }) }}</span>
+        <button type="button" class="eh-alert-cta" (click)="inspectCluster(dc.host)">{{ i18n.t('eh_alert_inspect') }}</button>
+        <button type="button" class="eh-alert-x" (click)="alertDismissed.set(true)" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+      </div>
+    }
+  }
+
+  <!-- B. Page header -->
+  <div class="dash-page-head eh-head">
+    <div>
+      <div class="dash-eyebrow eh-eyebrow-mono">{{ i18n.t('eh_eyebrow') }}</div>
+      <h1 class="dash-title">{{ i18n.t('eh_title') }}</h1>
+      <div class="dash-subtitle">
+        <b>{{ kpis()?.total ?? 0 }}</b> {{ i18n.t('eh_subtitle_mailboxes') }} ·
+        <b class="eh-sub-danger">{{ kpis()?.failing ?? 0 }}</b> {{ i18n.t('eh_subtitle_failing') }} ·
+        <b class="eh-sub-warn">{{ kpis()?.authErrors ?? 0 }}</b> {{ i18n.t('eh_subtitle_auth') }}
+      </div>
+    </div>
+    <div class="eh-head-controls">
+      <button type="button" class="eh-btn eh-refresh" data-testid="admin-eh-refresh" (click)="refresh()" [disabled]="refreshing()">
+        <span class="eh-refresh-ic" [class.eh-spin]="refreshing()"><app-icon name="refresh" /></span>
+        {{ i18n.t('eh_refresh') }}
+      </button>
+      @if (updatedAt()) {
+        <span class="eh-updated">{{ i18n.t('eh_updated', { time: updatedAt() }) }}</span>
+      }
+    </div>
+  </div>
+
+  @if (flash()) {
+    <div class="eh-flash" role="status" data-testid="admin-eh-flash"><app-icon name="check" /><span>{{ flash() }}</span></div>
+  }
+  @if (error()) {
+    <div class="eh-error" role="alert"><app-icon name="alertTriangle" /><span>{{ error() }}</span></div>
+  }
+
+  <!-- D. KPI strip -->
+  <div class="eh-kpis" data-testid="admin-eh-kpis">
+    <div class="eh-kpi">
+      <div class="eh-kpi-label">{{ i18n.t('eh_kpi_total') }}</div>
+      <div class="eh-kpi-value">{{ kpis()?.total ?? 0 }}</div>
+      <div class="eh-kpi-foot"><span class="eh-kpi-chip" data-tone="green">{{ i18n.t('eh_kpi_live') }}</span><span class="eh-kpi-note">{{ kpis()?.healthy ?? 0 }} {{ i18n.t('eh_kpi_healthy') }}</span></div>
+    </div>
+    <div class="eh-kpi">
+      <div class="eh-kpi-label">{{ i18n.t('eh_kpi_failing') }}</div>
+      <div class="eh-kpi-value" [class.eh-val-danger]="(kpis()?.failing ?? 0) > 0">{{ kpis()?.failing ?? 0 }}</div>
+      <div class="eh-kpi-foot">
+        <span class="eh-kpi-chip" [attr.data-tone]="(kpis()?.failing ?? 0) > 0 ? 'danger' : 'green'">{{ (kpis()?.failing ?? 0) > 0 ? i18n.t('eh_kpi_action') : i18n.t('eh_kpi_ok') }}</span>
+        <span class="eh-kpi-note">{{ i18n.t('eh_kpi_failing_note') }}</span>
+      </div>
+    </div>
+    <div class="eh-kpi">
+      <div class="eh-kpi-label">{{ i18n.t('eh_kpi_auth') }}</div>
+      <div class="eh-kpi-value" [class.eh-val-warn]="(kpis()?.authErrors ?? 0) > 0">{{ kpis()?.authErrors ?? 0 }}</div>
+      <div class="eh-kpi-foot">
+        <span class="eh-kpi-chip" [attr.data-tone]="(kpis()?.authErrors ?? 0) > 0 ? 'amber' : 'green'">{{ (kpis()?.authErrors ?? 0) > 0 ? i18n.t('eh_kpi_creds') : i18n.t('eh_kpi_ok') }}</span>
+        <span class="eh-kpi-note">{{ i18n.t('eh_kpi_auth_note') }}</span>
+      </div>
+    </div>
+    <div class="eh-kpi">
+      <div class="eh-kpi-label">{{ i18n.t('eh_kpi_lag') }}</div>
+      <div class="eh-kpi-value">{{ ago(kpis()?.avgSyncLagMinutes) }}</div>
+      <div class="eh-kpi-foot"><span class="eh-kpi-chip" data-tone="slate"><app-icon name="clock" /></span><span class="eh-kpi-note">{{ i18n.t('eh_kpi_lag_note') }}</span></div>
+    </div>
+    <div class="eh-kpi">
+      <div class="eh-kpi-label">{{ i18n.t('eh_kpi_paused') }}</div>
+      <div class="eh-kpi-value">{{ kpis()?.paused ?? 0 }}</div>
+      <div class="eh-kpi-foot"><span class="eh-kpi-chip" [attr.data-tone]="(kpis()?.paused ?? 0) > 0 ? 'amber' : 'slate'">{{ (kpis()?.paused ?? 0) > 0 ? i18n.t('eh_status_paused') : i18n.t('eh_kpi_none') }}</span><span class="eh-kpi-note">{{ i18n.t('eh_kpi_paused_note') }}</span></div>
+    </div>
+  </div>
+
+  <!-- E. By-cluster summary -->
+  @if (clusters().length > 0) {
+    <div class="eh-hosts" data-testid="admin-eh-clusters">
+      @for (c of clusters(); track c.host) {
+        <button type="button" class="eh-host" [class.eh-host--active]="serverFilter() === c.host" (click)="toggleCluster(c.host)">
+          <span class="eh-host-dot" [attr.data-status]="clusterDot(c.status)"></span>
+          <span class="eh-host-name mono">{{ c.host }}</span>
+          <span class="eh-host-count">{{ c.healthy }}/{{ c.total }} {{ i18n.t('eh_host_healthy') }} · {{ c.bad }} {{ i18n.t('eh_host_attention') }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- F. Toolbar -->
+  <div class="eh-toolbar">
+    <div class="eh-search">
+      <app-icon name="search" />
+      <input type="text" data-testid="admin-eh-search" [attr.aria-label]="i18n.t('eh_search')" [placeholder]="i18n.t('eh_search')" [value]="search()" (input)="onSearch($event)" />
+    </div>
+    <div class="eh-filters">
+      <div class="eh-filter">
+        <label for="eh-f-proto">{{ i18n.t('eh_filter_protocol') }}</label>
+        <select id="eh-f-proto" data-testid="admin-eh-filter-protocol" (change)="onProtocol($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="IMAP">{{ i18n.t('eh_proto_imap') }}</option>
+          <option value="SMTP">{{ i18n.t('eh_proto_smtp') }}</option>
+        </select>
+      </div>
+      <div class="eh-filter">
+        <label for="eh-f-health">{{ i18n.t('eh_filter_health') }}</label>
+        <select id="eh-f-health" data-testid="admin-eh-filter-health" (change)="onHealth($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          <option value="ok">{{ i18n.t('eh_status_ok') }}</option>
+          <option value="failing">{{ i18n.t('eh_status_failing') }}</option>
+          <option value="auth_error">{{ i18n.t('eh_status_auth') }}</option>
+          <option value="paused">{{ i18n.t('eh_status_paused') }}</option>
+        </select>
+      </div>
+      <div class="eh-filter">
+        <label for="eh-f-cluster">{{ i18n.t('eh_filter_cluster') }}</label>
+        <select id="eh-f-cluster" data-testid="admin-eh-filter-cluster" [value]="serverFilter()" (change)="onServer($event)">
+          <option value="">{{ i18n.t('admin_filter_all') }}</option>
+          @for (c of clusters(); track c.host) {
+            <option [value]="c.host">{{ c.host }}</option>
+          }
+        </select>
+      </div>
+      <div class="eh-filter">
+        <label for="eh-f-sync">{{ i18n.t('eh_filter_sync') }}</label>
+        <select id="eh-f-sync" data-testid="admin-eh-filter-sync" (change)="onSync($event)">
+          <option value="">{{ i18n.t('eh_sync_any') }}</option>
+          <option value="recent">{{ i18n.t('eh_sync_recent') }}</option>
+          <option value="stale">{{ i18n.t('eh_sync_stale') }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- G. Table / states -->
+  @if (loading()) {
+    <div class="eh-card" data-testid="admin-eh-skeleton" aria-hidden="true">
+      <div class="eh-skel-head"></div>
+      @for (row of [1,2,3,4,5,6,7,8]; track row) { <div class="eh-skel-row"></div> }
+    </div>
+  } @else if (rows().length === 0 && healthFilter() === 'failing' && !search() && !protocolFilter() && !serverFilter() && !syncFilter()) {
+    <div class="eh-empty" data-testid="admin-eh-empty-healthy">
+      <app-icon name="checkCircle" />
+      <div class="eh-empty-title">{{ i18n.t('eh_empty_healthy_title') }}</div>
+      <div class="eh-empty-sub">{{ i18n.t('eh_empty_healthy_sub') }}</div>
+    </div>
+  } @else if (rows().length === 0 && hasActiveFilters()) {
+    <div class="eh-empty" data-testid="admin-eh-empty-filtered">
+      <app-icon name="search" />
+      <div class="eh-empty-title">{{ i18n.t('eh_empty_filtered_title') }}</div>
+      <button type="button" class="eh-btn" (click)="clearFilters()">{{ i18n.t('eh_clear_filters') }}</button>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="eh-empty" data-testid="admin-eh-empty">
+      <app-icon name="mailbox" />
+      <div class="eh-empty-title">{{ i18n.t('eh_empty_title') }}</div>
+      <div class="eh-empty-sub">{{ i18n.t('eh_empty_sub') }}</div>
+    </div>
+  } @else {
+    <div class="eh-card">
+      <div class="eh-scroll">
+        <table class="dtable" data-testid="admin-eh-table">
+          <thead>
+            <tr>
+              <th scope="col">
+                <button class="eh-th-sort" [attr.data-active]="sortKey() === 'email'" (click)="toggleSort('email')">
+                  <span>{{ i18n.t('eh_col_mailbox') }}</span>
+                  @if (sortKey() === 'email') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }
+                </button>
+              </th>
+              <th scope="col">{{ i18n.t('eh_col_owner') }}</th>
+              <th scope="col">{{ i18n.t('eh_col_protocol') }}</th>
+              <th scope="col">
+                <button class="eh-th-sort" [attr.data-active]="sortKey() === 'health'" (click)="toggleSort('health')">
+                  <span>{{ i18n.t('eh_col_health') }}</span>
+                  @if (sortKey() === 'health') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }
+                </button>
+              </th>
+              <th scope="col">
+                <button class="eh-th-sort" [attr.data-active]="sortKey() === 'sync'" (click)="toggleSort('sync')">
+                  <span>{{ i18n.t('eh_col_last_sync') }}</span>
+                  @if (sortKey() === 'sync') { <app-icon [name]="sortDir() === 'asc' ? 'arrowUp' : 'arrowDown'" /> }
+                </button>
+              </th>
+              <th scope="col">{{ i18n.t('eh_col_detail') }}</th>
+              <th scope="col">{{ i18n.t('eh_col_cluster') }}</th>
+              <th scope="col" class="eh-col-menu"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of sortedRows(); track r.id) {
+              <tr class="eh-row" data-testid="admin-eh-row" [attr.data-failing]="r.health === 'failing' ? '1' : null" tabindex="0" (click)="openDetail(r)" (keydown.enter)="openDetail(r)" (keydown.space)="openDetail(r); $event.preventDefault()">
+                <td>
+                  <div class="eh-cell-mb">
+                    <span class="eh-swatch" [style.background]="r.color" aria-hidden="true"></span>
+                    <span class="eh-cell-mb-text">
+                      <span class="eh-cell-name">{{ r.email }}</span>
+                      <span class="eh-cell-sub mono">{{ r.id.slice(0, 8) }}…</span>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <div class="eh-cell-owner">
+                    <span class="eh-cell-owner-n">{{ r.ownerOrgName ?? '—' }}</span>
+                    @if (r.ownerEmail) { <span class="eh-cell-sub mono">{{ r.ownerEmail }}</span> }
+                  </div>
+                </td>
+                <td>
+                  <div class="eh-protos">
+                    @for (p of r.protocols; track p) { <span class="eh-badge" data-tone="slate">{{ p }}</span> }
+                    @if (r.protocols.length === 0) { <span class="eh-dash">—</span> }
+                  </div>
+                </td>
+                <td>
+                  <span class="eh-health">
+                    <span class="eh-dot" [attr.data-tone]="healthTone(r)"></span>
+                    <span class="eh-badge" [attr.data-tone]="healthTone(r)">{{ healthLabel(r) }}</span>
+                  </span>
+                </td>
+                <td><span [class.eh-stale]="r.stale">{{ ago(r.syncAgoMinutes) }}</span></td>
+                <td>
+                  @if (r.paused) { <span class="eh-detail-muted">{{ i18n.t('eh_detail_paused') }}</span> }
+                  @else if (r.lastError) { <span class="eh-detail-err mono">{{ r.lastError }}</span> }
+                  @else { <span class="eh-dash">—</span> }
+                </td>
+                <td class="mono eh-muted">{{ r.server }}</td>
+                <td class="eh-col-menu" (click)="$event.stopPropagation()">
+                  <div class="eh-menu-wrap">
+                    <button type="button" class="eh-icon-btn" [attr.data-testid]="'admin-eh-menu-' + r.id" [attr.aria-label]="i18n.t('eh_row_menu')" (click)="toggleMenu(r.id, $event)">
+                      <app-icon name="list" />
+                    </button>
+                    @if (openMenuId() === r.id) {
+                      <div class="eh-menu" role="menu" [style.top.px]="menuPos()?.top" [style.left.px]="menuPos()?.left">
+                        <button type="button" class="eh-menu-item" role="menuitem" (click)="openDetail(r); openMenuId.set(null)">
+                          <app-icon name="link" /><span>{{ i18n.t('eh_menu_view') }}</span>
+                        </button>
+                        <button type="button" class="eh-menu-item" role="menuitem"
+                          [attr.data-testid]="'admin-eh-resync-' + r.id"
+                          [disabled]="!identity.has('INFRA_MANAGE') || r.paused"
+                          [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+                          (click)="resync(r, $event); openMenuId.set(null)">
+                          @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="refresh" /> }
+                          <span>{{ i18n.t('eh_menu_resync') }}</span>
+                        </button>
+                        @if (r.paused) {
+                          <button type="button" class="eh-menu-item" role="menuitem"
+                            [attr.data-testid]="'admin-eh-resume-' + r.id"
+                            [disabled]="!identity.has('INFRA_MANAGE')"
+                            [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+                            (click)="resume(r, $event); openMenuId.set(null)">
+                            @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }
+                            <span>{{ i18n.t('eh_menu_resume') }}</span>
+                          </button>
+                        } @else {
+                          <button type="button" class="eh-menu-item eh-menu-item--danger" role="menuitem"
+                            [attr.data-testid]="'admin-eh-pause-' + r.id"
+                            [disabled]="!identity.has('INFRA_MANAGE')"
+                            [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+                            (click)="pause(r, $event); openMenuId.set(null)">
+                            @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }
+                            <span>{{ i18n.t('eh_menu_pause') }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      @if (totalPages() > 1) {
+        <div class="eh-pager">
+          <span class="eh-pager-info">{{ totalElements() }} {{ i18n.t('eh_total') }}</span>
+          <div class="eh-pager-ctrls">
+            <button class="eh-pager-btn" [disabled]="currentPage() === 0" (click)="goToPage(currentPage() - 1)" [attr.aria-label]="i18n.t('admin_pager_prev')"><app-icon name="chevronLeft" /></button>
+            <span class="eh-pager-pages">{{ currentPage() + 1 }} / {{ totalPages() }}</span>
+            <button class="eh-pager-btn" [disabled]="currentPage() >= totalPages() - 1" (click)="goToPage(currentPage() + 1)" [attr.aria-label]="i18n.t('admin_pager_next')"><app-icon name="chevronRight" /></button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- I. Detail modal -->
+  @if (detailOpen()) {
+    <div class="eh-scrim" (click)="closeDetail()"></div>
+    <div class="eh-modal" appFocusTrap role="dialog" aria-modal="true" data-testid="admin-eh-modal" [attr.aria-label]="detail()?.email ?? i18n.t('eh_title')" (click)="$event.stopPropagation()">
+      @if (detailLoading()) {
+        <div class="eh-modal-loading">{{ i18n.t('loading') }}</div>
+      } @else if (detail(); as d) {
+        <!-- Header -->
+        <div class="eh-modal-head">
+          <div class="eh-modal-id">
+            <span class="eh-swatch eh-swatch--lg" [style.background]="d.color" aria-hidden="true"><app-icon name="mail" /></span>
+            <div class="eh-modal-id-text">
+              <div class="eh-modal-name">{{ d.email }}</div>
+              <div class="eh-modal-owner">{{ d.ownerOrgName ?? '—' }} @if (d.ownerEmail) { · <span class="mono">{{ d.ownerEmail }}</span> }</div>
+              <div class="eh-modal-pills">
+                <span class="eh-health"><span class="eh-dot" [attr.data-tone]="healthTone(d)"></span><span class="eh-badge" [attr.data-tone]="healthTone(d)">{{ healthLabel(d) }}</span></span>
+                @for (p of d.protocols; track p) { <span class="eh-badge" data-tone="slate">{{ p }}</span> }
+                <span class="eh-badge eh-badge--server mono">{{ i18n.t('eh_server_chip') }} {{ d.server }}</span>
+              </div>
+            </div>
+          </div>
+          <button class="eh-modal-close" type="button" (click)="closeDetail()" data-testid="admin-eh-modal-close" [attr.aria-label]="i18n.t('confirm_cancel')"><app-icon name="close" /></button>
+        </div>
+
+        <!-- Actions -->
+        <div class="eh-modal-actions">
+          <button class="eh-btn" type="button" data-testid="admin-eh-modal-resync"
+            [disabled]="busy() || d.paused || !identity.has('INFRA_MANAGE')"
+            [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+            (click)="resync(d)">
+            @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="refresh" /> }
+            {{ i18n.t('eh_menu_resync') }}
+          </button>
+          @if (d.paused) {
+            <button class="eh-btn eh-btn--solid" type="button" data-testid="admin-eh-modal-resume"
+              [disabled]="busy() || !identity.has('INFRA_MANAGE')"
+              [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+              (click)="resume(d)">
+              @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="play" /> }
+              {{ i18n.t('eh_menu_resume') }}
+            </button>
+          } @else {
+            <button class="eh-btn eh-btn--danger" type="button" data-testid="admin-eh-modal-pause"
+              [disabled]="busy() || !identity.has('INFRA_MANAGE')"
+              [attr.title]="identity.has('INFRA_MANAGE') ? null : i18n.t('admin_perm_required')"
+              (click)="pause(d)">
+              @if (!identity.has('INFRA_MANAGE')) { <app-icon name="lock" /> } @else { <app-icon name="pause" /> }
+              {{ i18n.t('eh_menu_pause') }}
+            </button>
+          }
+        </div>
+
+        <!-- Tabs -->
+        <div class="eh-tabs" role="tablist">
+          <button class="eh-tab" role="tab" [attr.data-active]="modalTab() === 'overview'" (click)="setTab('overview')">{{ i18n.t('eh_tab_overview') }}</button>
+          <button class="eh-tab" role="tab" [attr.data-active]="modalTab() === 'attempts'" (click)="setTab('attempts')">{{ i18n.t('eh_tab_attempts') }}</button>
+        </div>
+
+        <!-- Body -->
+        <div class="eh-modal-body">
+          @switch (modalTab()) {
+            @case ('overview') {
+              <div class="eh-panel">
+                <div class="eh-panel-head">{{ i18n.t('eh_panel_connection') }}</div>
+                <div class="eh-config-rows">
+                  <div class="eh-config">
+                    <span class="eh-config-ic"><app-icon name="inbox" /></span>
+                    <div class="eh-config-text">
+                      <div class="eh-config-title">{{ i18n.t('eh_imap') }}</div>
+                      @if (d.imapHost) {
+                        <div class="eh-config-val mono">{{ d.imapHost }}:{{ d.imapPort ?? '—' }} · {{ d.imapSsl ? 'TLS' : i18n.t('eh_no_tls') }}</div>
+                      } @else {
+                        <div class="eh-config-val eh-config-val--off">{{ i18n.t('eh_not_configured') }}</div>
+                      }
+                    </div>
+                    <span class="eh-badge" [attr.data-tone]="d.readEnabled ? 'green' : 'slate'">{{ d.readEnabled ? i18n.t('eh_reading') : i18n.t('eh_off') }}</span>
+                  </div>
+                  <div class="eh-config">
+                    <span class="eh-config-ic"><app-icon name="send" /></span>
+                    <div class="eh-config-text">
+                      <div class="eh-config-title">{{ i18n.t('eh_smtp') }}</div>
+                      @if (d.smtpHost) {
+                        <div class="eh-config-val mono">{{ d.smtpHost }}:{{ d.smtpPort ?? '—' }} · {{ d.smtpSsl ? 'TLS' : i18n.t('eh_no_tls') }}</div>
+                      } @else {
+                        <div class="eh-config-val eh-config-val--off">{{ i18n.t('eh_not_configured') }}</div>
+                      }
+                    </div>
+                    <span class="eh-badge" [attr.data-tone]="d.sendEnabled ? 'green' : 'slate'">{{ d.sendEnabled ? i18n.t('eh_sending') : i18n.t('eh_off') }}</span>
+                  </div>
+                </div>
+                <div class="eh-config-note"><app-icon name="lock" /> {{ i18n.t('eh_creds_note') }}</div>
+              </div>
+
+              <div class="eh-grid2">
+                <div class="eh-panel">
+                  <div class="eh-panel-head">{{ i18n.t('eh_panel_owner') }}</div>
+                  <div class="eh-fields">
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_field_org') }}</span><span class="eh-field-val">{{ d.ownerOrgName ?? '—' }}</span></div>
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_field_owner') }}</span><span class="eh-field-val mono">{{ d.ownerEmail ?? '—' }}</span></div>
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_field_cluster') }}</span><span class="eh-field-val mono">{{ d.server }}</span></div>
+                  </div>
+                </div>
+                <div class="eh-panel">
+                  <div class="eh-panel-head">{{ i18n.t('eh_panel_sync') }}</div>
+                  <div class="eh-fields">
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_col_health') }}</span><span class="eh-field-val"><span class="eh-badge" [attr.data-tone]="healthTone(d)">{{ healthLabel(d) }}</span></span></div>
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_field_last_sync') }}</span><span class="eh-field-val">{{ d.lastSyncAt ? fmt.dateTime(d.lastSyncAt) : i18n.t('eh_never') }}</span></div>
+                    <div class="eh-field"><span class="eh-field-label">{{ i18n.t('eh_field_created') }}</span><span class="eh-field-val">{{ fmt.date(d.createdAt) }}</span></div>
+                  </div>
+                </div>
+              </div>
+
+              @if (d.lastError) {
+                <div class="eh-lasterr">
+                  <app-icon name="alertTriangle" />
+                  <div>
+                    <div class="eh-lasterr-msg mono">{{ d.lastError }}</div>
+                    @if (d.lastErrorAt) { <div class="eh-lasterr-meta">{{ i18n.t('eh_first_seen', { ago: ago(d.syncAgoMinutes) }) }} · {{ fmt.dateTime(d.lastErrorAt) }}</div> }
+                  </div>
+                </div>
+              }
+            }
+            @case ('attempts') {
+              @if (d.recentAttempts.length === 0) {
+                <div class="eh-empty eh-empty--sm">
+                  <app-icon name="clock" />
+                  <div class="eh-empty-title">{{ i18n.t('eh_attempts_empty_title') }}</div>
+                  <div class="eh-empty-sub">{{ i18n.t('eh_attempts_empty_sub') }}</div>
+                </div>
+              } @else {
+                <div class="eh-timeline">
+                  @for (a of d.recentAttempts; track $index) {
+                    <div class="eh-att">
+                      <span class="eh-att-dot" [attr.data-ok]="a.ok ? '1' : '0'"></span>
+                      <div class="eh-att-body">
+                        <div class="eh-att-title">{{ a.ok ? i18n.t('eh_att_ok') : i18n.t('eh_att_fail') }} <span class="eh-att-msg mono">{{ a.message }}</span></div>
+                        <div class="eh-att-time">{{ a.at ? fmt.dateTime(a.at) : '—' }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            }
+          }
+        </div>
+      } @else {
+        <div class="eh-modal-loading">{{ i18n.t('eh_load_failed') }}</div>
+      }
+    </div>
+  }
+</app-page-content>

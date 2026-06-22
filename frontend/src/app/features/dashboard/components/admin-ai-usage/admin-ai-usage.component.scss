@@ -1,0 +1,129 @@
+$card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 40px -12px rgba(0, 0, 0, 0.08);
+
+.admin-loading { text-align: center; padding: 60px 0; color: var(--fg-muted); }
+
+// KPI strip + by-user table use the shared global recipe (.adm-kpis / .adm-table) in styles/admin.scss.
+
+// ── Chart card ─────────────────────────────────────────────────────
+.ai-chart-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: $card-shadow;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+
+  h2 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+
+  select {
+    appearance: none;
+    border: 0.5px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+    font-size: 12.5px;
+    height: 30px;
+    padding: 0 26px 0 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239a9080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    transition: border-color 0.12s, background-color 0.12s;
+    &:hover { border-color: var(--border-strong); background-color: var(--bg-2); }
+  }
+}
+
+.line-chart { width: 100%; height: 120px; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.chart-area { fill: color-mix(in srgb, var(--accent) 10%, transparent); }
+.chart-empty { text-align: center; padding: 30px 0; color: var(--fg-subtle); font-size: 13px; }
+
+// ── Breakdown cards ────────────────────────────────────────────────
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.breakdown-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  box-shadow: $card-shadow;
+  padding: 16px;
+
+  h2 { margin: 0 0 14px; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.breakdown-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  min-width: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.breakdown-bar-wrap {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.breakdown-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+
+  &--purple { background: color-mix(in srgb, var(--accent) 55%, var(--warning)); }
+}
+
+.breakdown-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+  text-align: right;
+}
+
+// ── By-user table section ──────────────────────────────────────────
+.ai-user-section {
+  h2 { margin: 0 0 14px; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+}
+
+// The by-user table uses the global .adm-table recipe; only the page-specific bits remain.
+.adm-table {
+  tbody td strong { font-variant-numeric: tabular-nums; }
+  tbody tr:hover td { background: var(--bg-2); }
+  // numeric columns (prompt, output, total, requests, cost)
+  tbody td:nth-child(n + 3) { font-variant-numeric: tabular-nums; }
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--fg-subtle);
+  padding: 30px 0;
+}
+
+@media (max-width: 768px) {
+  .breakdown-grid { grid-template-columns: 1fr; }
+}

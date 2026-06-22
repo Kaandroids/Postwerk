@@ -1,0 +1,261 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <div class="auto-page">
+      <div class="dash-page-head auto-page-head">
+        <div>
+          <div class="dash-eyebrow">{{ i18n.t('auto_pretitle') }}</div>
+          <h1 class="dash-title">{{ i18n.t('auto_list_title') }}</h1>
+          <div class="dash-subtitle">
+            {{ i18n.t('auto_list_subtitle', { total: '' + automations().length, active: '' + activeCount() }) }}
+          </div>
+        </div>
+        <div class="auto-head-actions">
+          <button class="auto-action-btn" (click)="exportData()" [title]="i18n.t('auto_export')">
+            <app-icon name="download" />
+          </button>
+          <button class="auto-action-btn" (click)="fileInput.click()" [title]="i18n.t('auto_import')">
+            <app-icon name="upload" />
+          </button>
+          <input #fileInput type="file" accept=".json" hidden (change)="importData($event)" />
+          <button class="auto-add-btn" (click)="showAddForm()">
+            <app-icon name="plus" />
+            <span>{{ i18n.t('auto_list_add') }}</span>
+          </button>
+        </div>
+      </div>
+
+      @if (automations().length === 0) {
+        <app-empty-state
+          [title]="i18n.t('auto_list_empty_title')"
+          [sub]="i18n.t('auto_list_empty_sub')"
+          [ctaLabel]="i18n.t('auto_list_empty_cta')"
+          [glyphColors]="['#3b82f6', '#10b981', '#f59e0b']"
+          (cta)="showAddForm()" />
+      } @else {
+        <div class="auto-filterbar">
+          <div class="auto-filter-tabs" role="tablist">
+            <button class="auto-filter-tab" [class.active]="statusFilter() === 'ALL'" (click)="statusFilter.set('ALL')">
+              {{ i18n.t('auto_filter_all') }}
+              <span class="auto-filter-count">{{ automations().length }}</span>
+            </button>
+            <button class="auto-filter-tab" [class.active]="statusFilter() === 'ACTIVE'" (click)="statusFilter.set('ACTIVE')">
+              {{ i18n.t('auto_status_active') }}
+              <span class="auto-filter-count">{{ activeCount() }}</span>
+            </button>
+            <button class="auto-filter-tab" [class.active]="statusFilter() === 'TESTING'" (click)="statusFilter.set('TESTING')">
+              {{ i18n.t('auto_status_testing') }}
+              <span class="auto-filter-count">{{ testingCount() }}</span>
+            </button>
+            <button class="auto-filter-tab" [class.active]="statusFilter() === 'PAUSED'" (click)="statusFilter.set('PAUSED')">
+              {{ i18n.t('auto_status_paused') }}
+              <span class="auto-filter-count">{{ pausedCount() }}</span>
+            </button>
+          </div>
+          <div class="auto-search">
+            <app-icon name="search" />
+            <input type="text" class="auto-search-input"
+              [placeholder]="i18n.t('auto_search_placeholder')"
+              [value]="searchQuery()"
+              (input)="searchQuery.set(v($event))" />
+          </div>
+        </div>
+
+        @if (filteredAutomations().length === 0) {
+          <div class="auto-no-results">
+            <app-icon name="search" />
+            <span>{{ i18n.t('auto_search_empty') }}</span>
+          </div>
+        }
+
+        <div class="auto-list">
+          @for (a of filteredAutomations(); track a.id) {
+            <div class="auto-card" [style.--ac]="a.color">
+              <div class="auto-card-body">
+                <div class="auto-card-head">
+                  <span class="auto-card-name">{{ a.name }}</span>
+                  <span class="auto-status-badge" [attr.data-status]="a.status">
+                    {{ i18n.t(a.status === 'ACTIVE' ? 'auto_status_active' : a.status === 'TESTING' ? 'auto_status_testing' : 'auto_status_paused') }}
+                  </span>
+                  @if (a.status === 'TESTING' && a.testModeStats) {
+                    <span class="auto-accuracy-badge">
+                      {{ a.testModeStats.accuracyPercent }}% ({{ a.testModeStats.correct }}/{{ a.testModeStats.correct + a.testModeStats.incorrect }})
+                    </span>
+                  }
+                </div>
+
+                @if (a.description) {
+                  <div class="auto-card-desc">{{ a.description }}</div>
+                }
+
+                <div class="auto-card-stats">
+                  <div class="auto-stat">
+                    <span class="auto-stat-value">{{ a.totalExecutions }}</span>
+                    <span class="auto-stat-label">{{ i18n.t('auto_stat_executions') }}</span>
+                  </div>
+                  <div class="auto-stat" [attr.data-tone]="getSuccessRate(a) >= 90 ? 'success' : getSuccessRate(a) >= 50 ? 'warning' : 'danger'">
+                    <span class="auto-stat-value">{{ a.totalExecutions > 0 ? getSuccessRate(a) + '%' : '–' }}</span>
+                    <span class="auto-stat-label">{{ i18n.t('auto_stat_success_rate') }}</span>
+                  </div>
+                  <div class="auto-stat">
+                    <span class="auto-stat-value">{{ a.nodeCount }}</span>
+                    <span class="auto-stat-label">{{ i18n.t('auto_nodes') }}</span>
+                  </div>
+                </div>
+
+                <div class="auto-card-footer">
+                  <div class="auto-card-meta">
+                    <span class="auto-meta-item">
+                      <app-icon name="automations" />
+                      {{ a.nodeCount }} {{ i18n.t('auto_stat_nodes') }}
+                    </span>
+                    @if (a.lastRunAt) {
+                      <span class="auto-meta-item">
+                        <app-icon name="clock" />
+                        {{ a.lastRunAt | date:'dd.MM.yyyy HH:mm' }}
+                      </span>
+                    } @else {
+                      <span class="auto-meta-item auto-meta-muted">
+                        {{ i18n.t('auto_stat_never_run') }}
+                      </span>
+                    }
+                  </div>
+                  <div class="auto-card-actions">
+                    @if (a.triggerMode === 'MANUAL' && a.status === 'ACTIVE') {
+                      <button class="auto-icon-btn auto-icon-btn-run" [title]="i18n.t('auto_run')"
+                        [attr.data-testid]="'auto-run-' + a.id" (click)="runNow(a)">
+                        <app-icon name="play" />
+                      </button>
+                    }
+                    <button class="auto-icon-btn lock-btn"
+                      [class.locked]="a.locked"
+                      [attr.data-testid]="'auto-lock-' + a.id"
+                      (click)="toggleLock(a)">
+                      <app-icon [name]="a.locked ? 'lock' : 'unlock'" />
+                    </button>
+                    <button class="auto-icon-btn" [title]="i18n.t('auto_open_editor')" (click)="openEditor(a)">
+                      <app-icon name="edit" />
+                    </button>
+                    <div class="auto-status-menu-wrap">
+                      <button class="auto-icon-btn" data-testid="auto-toggle-btn" [title]="i18n.t('auto_toggle_status')" (click)="toggleStatusMenu(a)">
+                        <app-icon [name]="a.status === 'ACTIVE' ? 'pause' : a.status === 'TESTING' ? 'beaker' : 'play'" />
+                      </button>
+                      @if (statusMenuOpen() === a.id) {
+                        <div class="auto-status-dropdown">
+                          <button class="auto-status-opt" [attr.data-active]="a.status === 'ACTIVE'" (click)="setStatus(a, 'ACTIVE'); statusMenuOpen.set(null)">
+                            <app-icon name="play" /> {{ i18n.t('auto_status_active') }}
+                          </button>
+                          <button class="auto-status-opt" [attr.data-active]="a.status === 'TESTING'" (click)="setStatus(a, 'TESTING'); statusMenuOpen.set(null)">
+                            <app-icon name="beaker" /> {{ i18n.t('auto_status_testing') }}
+                          </button>
+                          <button class="auto-status-opt" [attr.data-active]="a.status === 'PAUSED'" (click)="setStatus(a, 'PAUSED'); statusMenuOpen.set(null)">
+                            <app-icon name="pause" /> {{ i18n.t('auto_status_paused') }}
+                          </button>
+                        </div>
+                      }
+                    </div>
+                    <button class="auto-icon-btn" [title]="i18n.t('auto_settings')" (click)="editAutomation(a)">
+                      <app-icon name="settings" />
+                    </button>
+                    <button class="auto-icon-btn auto-icon-btn-danger" [title]="i18n.t('auto_delete')" (click)="deleteAutomation(a.id)">
+                      <app-icon name="trash" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="auto-page">
+      <div class="dash-page-head auto-page-head">
+        <div>
+          <button class="dash-back" data-testid="auto-back-btn" (click)="cancel()">
+            <app-icon name="arrowLeft" />
+            <span>{{ i18n.t('auto_back') }}</span>
+          </button>
+          <h1 class="dash-title">{{ editId() ? i18n.t('auto_edit_title') : i18n.t('auto_create_title') }}</h1>
+          <div class="dash-subtitle">{{ i18n.t('auto_create_subtitle') }}</div>
+        </div>
+      </div>
+
+      <div class="auto-editor">
+        <app-error-banner [message]="error()" />
+
+        <div class="auto-editor-grid">
+          <div class="auto-form">
+            <div class="auto-field">
+              <label class="auto-field-label" for="auto-name">{{ i18n.t('auto_name') }}</label>
+              <input id="auto-name" class="auto-input" type="text"
+                [placeholder]="i18n.t('auto_name_placeholder')"
+                [attr.data-error]="hasErr('name') ? '1' : '0'"
+                [value]="name()"
+                (input)="name.set(v($event))"
+                maxlength="255" />
+            </div>
+
+            <div class="auto-field">
+              <label class="auto-field-label" for="auto-desc">
+                <span>{{ i18n.t('auto_description') }}</span>
+                <span class="auto-field-aux">{{ i18n.t('auto_optional') }}</span>
+              </label>
+              <textarea id="auto-desc" class="auto-textarea" rows="3"
+                [placeholder]="i18n.t('auto_description_placeholder')"
+                [value]="description()"
+                (input)="description.set(v($event))"></textarea>
+            </div>
+
+            <div class="auto-field">
+              <label class="auto-field-label">{{ i18n.t('auto_color') }}</label>
+              <app-color-picker
+                [value]="color()"
+                [presets]="colors"
+                [ariaLabel]="i18n.t('auto_color')"
+                (valueChange)="color.set($event)" />
+            </div>
+
+
+          </div>
+
+          <div class="auto-insight-col">
+            <div class="auto-insight">
+              <div class="auto-ins-card" data-tone="blue">
+                <span class="auto-ins-icon"><app-icon name="automations" /></span>
+                <div class="auto-ins-body">
+                  <div class="auto-ins-title">{{ i18n.t('auto_info_what_title') }}</div>
+                  <div class="auto-ins-text">{{ i18n.t('auto_info_what_text') }}</div>
+                </div>
+              </div>
+
+              <div class="auto-ins-card" data-tone="green">
+                <span class="auto-ins-icon"><app-icon name="zap" /></span>
+                <div class="auto-ins-body">
+                  <div class="auto-ins-title">{{ i18n.t('auto_info_flow_title') }}</div>
+                  <div class="auto-ins-text">{{ i18n.t('auto_info_flow_text') }}</div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="auto-editor-foot">
+          <app-button variant="ghost" type="button" data-testid="auto-cancel-btn" (click)="cancel()">
+            {{ i18n.t('auto_cancel') }}
+          </app-button>
+          <app-button variant="primary" type="submit" data-testid="auto-save-btn" [disabled]="loading()" (click)="submit($event)">
+            {{ loading() ? i18n.t('loading') : (editId() ? i18n.t('auto_edit_submit') : i18n.t('auto_submit')) }}
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (manualRunFor(); as a) {
+    <app-manual-run-dialog
+      [automationId]="a.id"
+      [automationName]="a.name"
+      (close)="manualRunFor.set(null)" />
+  }
+</app-page-content>

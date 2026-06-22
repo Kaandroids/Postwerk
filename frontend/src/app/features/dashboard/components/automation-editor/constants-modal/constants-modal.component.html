@@ -1,0 +1,205 @@
+<!-- ── Constants / Variables modal ──────────────────────────── -->
+<div class="cv-scrim" (click)="close.emit()" data-testid="constants-backdrop"></div>
+<div class="cv cv-modal-card" data-variant="modal" data-testid="constants-modal" role="dialog" aria-modal="true" [style.--cv-c]="'#0ea5e9'">
+  <button class="cv-modal-x" (click)="close.emit()" data-testid="constants-close" aria-label="Close">
+    <app-icon name="x" />
+  </button>
+
+  <!-- header -->
+  <div class="cv-head">
+    <div class="cv-head-text">
+      <span class="cv-eyebrow"><app-icon name="cube" /> {{ i18n.t('auto_constants_eyebrow') }}</span>
+      <span class="cv-title">{{ i18n.t('auto_constants_title') }}</span>
+      <p class="cv-sub">{{ i18n.t('auto_constants_desc') }}</p>
+    </div>
+    <div class="cv-head-actions">
+      <button class="cv-btn" (click)="startAddConstant()" data-testid="constants-add">
+        <app-icon name="plus" /> {{ i18n.t('auto_constants_add') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- body -->
+  <div class="cv-body">
+    <div class="cv-list">
+      @if (constantEditIndex() === 'new') {
+        <ng-container [ngTemplateOutlet]="cvEditor" />
+      }
+
+      @if (constantsDraft().length === 0 && constantEditIndex() !== 'new') {
+        <div class="cv-empty" data-testid="constants-empty">
+          <span class="cv-empty-ico"><app-icon name="cube" /></span>
+          <span class="t">{{ i18n.t('auto_constants_empty_title') }}</span>
+          <span class="d">{{ i18n.t('auto_constants_empty_desc') }}</span>
+        </div>
+      } @else {
+        @for (c of constantsDraft(); track c.name; let ci = $index) {
+          @if (constantEditIndex() === ci) {
+            <ng-container [ngTemplateOutlet]="cvEditor" />
+          } @else {
+            <div class="cv-row" data-testid="constants-row" [style.--ct]="constantTypeColor(c.type)">
+              <span class="cv-tbadge"><app-icon [name]="constantTypeIcon(c.type)" /></span>
+              <div class="cv-row-main">
+                <div class="cv-row-top">
+                  <code class="cv-key">{{ c.name }}</code>
+                  <span class="cv-type-tag">{{ constantTypeLabel(c.type) }}</span>
+                  <button class="cv-token" [class.copied]="copiedToken() === 'const.' + c.name"
+                    (click)="copyConstantToken(c.name)" data-testid="constants-token"
+                    [title]="i18n.t('auto_constants_copy')">
+                    <app-icon [name]="copiedToken() === 'const.' + c.name ? 'check' : 'copy'" />
+                    <span>{{ copiedToken() === 'const.' + c.name ? i18n.t('auto_constants_copied') : constantToken(c.name) }}</span>
+                  </button>
+                </div>
+
+                @if (c.type === 'boolean') {
+                  <span class="cv-bool" [attr.data-on]="c.value === 'true' ? 'true' : 'false'">
+                    <span class="dot"></span>
+                    {{ c.value === 'true' ? i18n.t('auto_const_bool_true') : i18n.t('auto_const_bool_false') }}
+                  </span>
+                } @else if (c.type === 'secret') {
+                  <div class="cv-row-val">
+                    <span class="cv-val-text mask">••••••••••••••••</span>
+                    <span class="cv-secret-note">{{ i18n.t('auto_const_secret_stored') }}</span>
+                  </div>
+                } @else {
+                  <div class="cv-row-val">
+                    <span class="cv-val-text">{{ c.value || i18n.t('auto_const_empty_value') }}</span>
+                  </div>
+                }
+
+                @if (c.description) {
+                  <div class="cv-row-desc">{{ c.description }}</div>
+                }
+              </div>
+
+              <div class="cv-row-side">
+                <span class="cv-usage-wrap">
+                  <button class="cv-usage" [attr.data-zero]="constantUsage(c.name).count === 0 ? '1' : '0'"
+                    (click)="constantUsage(c.name).count > 0 && toggleUsagePopover(c.name)"
+                    data-testid="constants-usage">
+                    <app-icon name="cube" />
+                    <span class="n">{{ constantUsage(c.name).count }}</span>
+                    {{ constantUsage(c.name).count === 1 ? i18n.t('auto_const_usage_node') : i18n.t('auto_const_usage_nodes') }}
+                  </button>
+                  @if (usagePopoverFor() === c.name && constantUsage(c.name).count > 0) {
+                    <div class="cv-usage-pop">
+                      <div class="cv-usage-pop-h">{{ i18n.t('auto_const_usage_usedin') }}</div>
+                      @for (nd of constantUsage(c.name).nodes; track $index) {
+                        <div class="cv-usage-node">
+                          <span class="g" [style.background]="nd.color"><app-icon [name]="nd.icon" /></span>
+                          <span>{{ nd.label }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </span>
+                <div class="cv-row-btns">
+                  <button class="cv-iconbtn" (click)="startEditConstant(ci)"
+                    data-testid="constants-edit" [title]="i18n.t('auto_edit')">
+                    <app-icon name="edit" />
+                  </button>
+                  <button class="cv-iconbtn danger" (click)="deleteConstant(ci)"
+                    data-testid="constants-remove" [title]="i18n.t('auto_constants_remove')">
+                    <app-icon name="trash" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
+  </div>
+
+  <!-- foot -->
+  <div class="cv-foot-modal">
+    <span class="cv-foot-note"><span class="dot"></span>{{ i18n.t('auto_constants_autosaved') }}</span>
+    <button class="cv-btn ghost sm" (click)="close.emit()" data-testid="constants-cancel">
+      {{ i18n.t('auto_constants_done') }}
+    </button>
+  </div>
+</div>
+
+<!-- ── inline add/edit editor template ──────────────────────── -->
+<ng-template #cvEditor>
+  <div class="cv-edit" [style.--ct]="constantTypeColor(cEditType())" data-testid="constants-editor">
+    <div class="cv-edit-h">
+      {{ constantEditIndex() === 'new' ? i18n.t('auto_constants_new') : i18n.t('auto_constants_editing') }}
+    </div>
+
+    <div class="cv-field">
+      <label class="cv-flabel">{{ i18n.t('auto_constants_name') }}</label>
+      <input class="cv-input mono" data-testid="constants-name-input"
+        [attr.data-error]="cEditError() ? '1' : '0'"
+        [value]="cEditName()" (input)="cEditName.set(v($event))"
+        (blur)="cEditTouched.set(true)"
+        placeholder="API_ENDPOINT" />
+      @if (cEditError()) {
+        <span class="cv-err"><app-icon name="info" /> {{ i18n.t(cEditError()) }}</span>
+      } @else {
+        <span class="cv-hint">{{ i18n.t('auto_constants_usedas') }} <code>{{ constantToken(cEditNormName()) }}</code></span>
+      }
+    </div>
+    <div class="cv-field">
+        <label class="cv-flabel">{{ i18n.t('auto_constants_type') }}</label>
+        <div class="cv-types">
+          @for (tk of constantTypeOrder; track tk) {
+            <button class="cv-type-opt" [class.on]="cEditType() === tk"
+              [style.--ct]="constantTypeColor(tk)"
+              (click)="selectConstantType(tk)"
+              [title]="constantTypeLabel(tk)" [attr.data-testid]="'constants-type-' + tk">
+              <app-icon [name]="constantTypeIcon(tk)" />
+              <span>{{ constantTypeLabel(tk) }}</span>
+            </button>
+          }
+        </div>
+    </div>
+
+    <div class="cv-field">
+      <label class="cv-flabel">{{ i18n.t('auto_constants_value') }}</label>
+      @if (cEditType() === 'boolean') {
+        <div class="cv-toggle">
+          <button [class.on]="cEditValue() === 'true'" (click)="cEditValue.set('true')">{{ i18n.t('auto_const_bool_true') }}</button>
+          <button [class.on]="cEditValue() !== 'true'" (click)="cEditValue.set('false')">{{ i18n.t('auto_const_bool_false') }}</button>
+        </div>
+      } @else if (cEditType() === 'secret') {
+        <div class="cv-input-wrap">
+          <input class="cv-input mono" data-testid="constants-value-input"
+            [type]="cEditRevealSecret() ? 'text' : 'password'"
+            [value]="cEditValue()" (input)="cEditValue.set(v($event))"
+            placeholder="sk_live_…" />
+          <button class="cv-reveal" type="button" (click)="cEditRevealSecret.set(!cEditRevealSecret())"
+            [title]="cEditRevealSecret() ? i18n.t('auto_const_hide') : i18n.t('auto_const_reveal')">
+            <app-icon [name]="cEditRevealSecret() ? 'eyeOff' : 'eye'" />
+          </button>
+        </div>
+      } @else {
+        <input class="cv-input" data-testid="constants-value-input"
+          [class.mono]="cEditType() === 'url' || cEditType() === 'number'"
+          [type]="cEditType() === 'number' ? 'number' : 'text'"
+          [value]="cEditValue()" (input)="cEditValue.set(v($event))"
+          [placeholder]="cEditType() === 'url' ? 'https://…' : (cEditType() === 'number' ? '3' : i18n.t('auto_const_value_ph'))" />
+      }
+      @if (cEditType() === 'secret') {
+        <span class="cv-hint">{{ i18n.t('auto_const_secret_hint') }}</span>
+      }
+    </div>
+
+    <div class="cv-field">
+      <label class="cv-flabel">{{ i18n.t('auto_constants_desc_label') }} <span style="color: var(--fg-subtle); font-weight: 400;">· {{ i18n.t('auto_optional') }}</span></label>
+      <input class="cv-input" data-testid="constants-desc-input"
+        [value]="cEditDesc()" (input)="cEditDesc.set(v($event))"
+        [placeholder]="i18n.t('auto_constants_desc_ph')" />
+    </div>
+
+    <div class="cv-edit-foot">
+      <span class="cv-token-prev"><app-icon name="cube" /> <b>{{ constantToken(cEditNormName()) }}</b></span>
+      <button class="cv-btn ghost sm" (click)="cancelEditConstant()" data-testid="constants-edit-cancel">
+        {{ i18n.t('auto_compose_cancel') }}
+      </button>
+      <button class="cv-btn sm" (click)="commitConstant()" data-testid="constants-save">
+        <app-icon name="check" /> {{ i18n.t('auto_constants_save') }}
+      </button>
+    </div>
+  </div>
+</ng-template>

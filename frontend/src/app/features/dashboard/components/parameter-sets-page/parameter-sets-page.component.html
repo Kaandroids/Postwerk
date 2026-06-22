@@ -1,0 +1,373 @@
+<app-page-content>
+  @if (view() === 'list') {
+    <!-- ── LIST VIEW ────────────────────────────────────────────── -->
+    <div class="ps-page">
+      <div class="dash-page-head ps-page-head ps-page-head-list">
+        <div>
+          <div class="dash-eyebrow">{{ i18n.t('ps_pretitle') }}</div>
+          <h1 class="dash-title">{{ i18n.t('ps_list_title') }}</h1>
+          <div class="dash-subtitle">{{ i18n.t('ps_list_subtitle') }}</div>
+        </div>
+        <div class="ps-head-actions">
+          <button class="ps-action-btn" (click)="exportData()" [title]="i18n.t('ps_export')">
+            <app-icon name="download" />
+          </button>
+          <button class="ps-action-btn" (click)="fileInput.click()" [title]="i18n.t('ps_import')">
+            <app-icon name="upload" />
+          </button>
+          <input #fileInput type="file" accept=".json" hidden (change)="importData($event)" />
+          <button class="ps-add-btn" (click)="showAddForm()">
+            <app-icon name="plus" />
+            <span>{{ i18n.t('ps_list_add') }}</span>
+          </button>
+        </div>
+      </div>
+
+      @if (parameterSets().length === 0) {
+        <app-empty-state
+          [title]="i18n.t('ps_list_empty_title')"
+          [sub]="i18n.t('ps_list_empty_sub')"
+          [ctaLabel]="i18n.t('ps_list_empty_cta')"
+          [glyphColors]="['#3b82f6', '#8b5cf6', '#06b6d4']"
+          (cta)="showAddForm()" />
+      } @else {
+        <div class="ps-list">
+          @for (ps of parameterSets(); track ps.id) {
+            <div class="ps-card">
+              <div class="ps-card-main">
+                <div class="ps-card-head">
+                  <span class="ps-card-name">{{ ps.name }}</span>
+                  @if (ps.parameters && ps.parameters.length > 0) {
+                    <span class="ps-card-param-badge">
+                      {{ i18n.t('ps_param_count', { count: '' + ps.parameters.length }) }}
+                    </span>
+                  }
+                </div>
+                @if (ps.parameters && ps.parameters.length > 0) {
+                  <div class="ps-card-params">
+                    @for (p of ps.parameters; track p.name) {
+                      <span class="ps-card-param-pill">
+                        <span class="ps-card-param-pill-type">{{ i18n.t('ps_param_type_' + p.type.toLowerCase()) }}</span>
+                        {{ p.name }}
+                        @if (p.isList) {
+                          <span class="ps-card-param-pill-list">{{ i18n.t('ps_param_is_list') }}</span>
+                        }
+                        @if (p.required) {
+                          <span class="ps-card-param-pill-required">{{ i18n.t('ps_param_required') }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="ps-card-actions">
+                <button class="ps-icon-btn lock-btn"
+                  [class.locked]="ps.locked"
+                  [attr.data-testid]="'ps-lock-' + ps.id"
+                  (click)="toggleLock(ps)">
+                  <app-icon [name]="ps.locked ? 'lock' : 'unlock'" />
+                </button>
+                <button class="ps-icon-btn"
+                  [attr.aria-label]="i18n.t('ps_edit')"
+                  [title]="i18n.t('ps_edit')"
+                  (click)="editParameterSet(ps)">
+                  <app-icon name="edit" />
+                </button>
+                <button class="ps-icon-btn ps-icon-btn-danger"
+                  [attr.aria-label]="i18n.t('ps_delete')"
+                  [title]="i18n.t('ps_delete')"
+                  (click)="deleteParameterSet(ps.id)">
+                  <app-icon name="trash" />
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <!-- ── FORM / EDITOR VIEW ───────────────────────────────────── -->
+    <div class="ps-page">
+      <div class="dash-page-head ps-page-head">
+        <div>
+          <button class="dash-back" (click)="cancel()">
+            <app-icon name="arrowLeft" />
+            <span>{{ i18n.t('ps_back') }}</span>
+          </button>
+          <h1 class="dash-title">{{ editId() ? i18n.t('ps_edit_title') : i18n.t('ps_title') }}</h1>
+          <div class="dash-subtitle">{{ editId() ? i18n.t('ps_edit_subtitle') : i18n.t('ps_subtitle') }}</div>
+        </div>
+      </div>
+
+      <div class="ps-editor">
+        <app-error-banner [message]="error()" />
+
+        <div class="ps-editor-grid">
+          <!-- ── Left: Form ──────────────────────────── -->
+          <div class="ps-form">
+            <div class="ps-field">
+              <label class="ps-field-label" for="ps-name">{{ i18n.t('ps_name') }}</label>
+              <input id="ps-name" class="ps-input" type="text"
+                [placeholder]="i18n.t('ps_name_placeholder')"
+                [attr.data-error]="hasErr('name') ? '1' : '0'"
+                [value]="name()"
+                (input)="name.set(v($event))"
+                maxlength="100" />
+            </div>
+
+            <!-- ── Parameter Builder ──────────────── -->
+            <div class="ps-param-section">
+              <div class="ps-param-section-head">
+                <span class="ps-param-section-title">{{ i18n.t('ps_param_section') }}</span>
+                <span class="ps-param-section-hint">{{ i18n.t('ps_param_section_hint') }}</span>
+              </div>
+
+              @for (param of parameters(); track $index) {
+                @let parentIndex = $index;
+                <div class="ps-param-card">
+                  <div class="ps-param-card-head">
+                    <span class="ps-param-card-num">#{{ $index + 1 }}</span>
+                    <button class="ps-param-remove" type="button"
+                      [title]="i18n.t('ps_param_remove')"
+                      (click)="removeParameter($index)">
+                      <app-icon name="x" />
+                    </button>
+                  </div>
+
+                  <!-- Row 1: Name + Type + isList -->
+                  <div class="ps-param-row-2col">
+                    <div class="ps-param-cell">
+                      <label class="ps-param-label">{{ i18n.t('ps_param_name') }}</label>
+                      <input class="ps-param-input" type="text"
+                        [placeholder]="i18n.t('ps_param_name_placeholder')"
+                        [value]="param.name"
+                        [attr.data-error]="RESERVED_PARAM_NAMES.has(param.name) ? '1' : '0'"
+                        (input)="updateParameter($index, 'name', v($event))"
+                        maxlength="100" />
+                      @if (RESERVED_PARAM_NAMES.has(param.name)) {
+                        <span class="ps-param-reserved-warn">{{ i18n.t('ps_param_reserved', { name: param.name }) }}</span>
+                      }
+                    </div>
+                    <div class="ps-param-cell">
+                      <label class="ps-param-label">{{ i18n.t('ps_param_type') }}</label>
+                      <div class="ps-param-type-row">
+                        <select class="ps-param-select"
+                          [value]="param.type"
+                          (change)="updateParameter($index, 'type', v($event))">
+                          @for (t of parameterTypes; track t) {
+                            <option [value]="t" [selected]="param.type === t">{{ i18n.t('ps_param_type_' + t.toLowerCase()) }}</option>
+                          }
+                        </select>
+                        <button type="button"
+                          class="ps-param-list-toggle"
+                          [class.ps-param-list-toggle-active]="param.isList"
+                          [title]="i18n.t('ps_param_is_list_hint')"
+                          (click)="toggleIsList($index)">
+                          <app-icon name="list" />
+                          <span>{{ i18n.t('ps_param_is_list') }}</span>
+                        </button>
+                        <button type="button"
+                          class="ps-param-required-toggle"
+                          [class.ps-param-required-toggle-active]="param.required"
+                          [title]="i18n.t('ps_param_required_hint')"
+                          (click)="toggleRequired($index)">
+                          <app-icon name="asterisk" />
+                          <span>{{ i18n.t('ps_param_required') }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Row 2: Description -->
+                  <div class="ps-param-cell">
+                    <label class="ps-param-label">{{ i18n.t('ps_param_description') }}</label>
+                    <input class="ps-param-input" type="text"
+                      [placeholder]="i18n.t('ps_param_desc_placeholder')"
+                      [value]="param.description"
+                      (input)="updateParameter($index, 'description', v($event))"
+                      maxlength="500" />
+                  </div>
+
+                  <!-- Row 3: Positive + Negative Example (hidden for OBJECT) -->
+                  @if (param.type !== 'OBJECT') {
+                    <div class="ps-param-row-2col">
+                      <div class="ps-param-cell">
+                        <label class="ps-param-label">
+                          <span class="ps-param-label-icon ps-param-label-icon-pos"><app-icon name="check" /></span>
+                          {{ i18n.t('ps_param_positive') }}
+                        </label>
+                        <input class="ps-param-input" type="text"
+                          [placeholder]="i18n.t('ps_param_positive_placeholder')"
+                          [value]="param.positiveExample"
+                          (input)="updateParameter($index, 'positiveExample', v($event))" />
+                      </div>
+                      <div class="ps-param-cell">
+                        <label class="ps-param-label">
+                          <span class="ps-param-label-icon ps-param-label-icon-neg"><app-icon name="x" /></span>
+                          {{ i18n.t('ps_param_negative') }}
+                        </label>
+                        <input class="ps-param-input" type="text"
+                          [placeholder]="i18n.t('ps_param_negative_placeholder')"
+                          [value]="param.negativeExample"
+                          (input)="updateParameter($index, 'negativeExample', v($event))" />
+                      </div>
+                    </div>
+                  }
+
+                  <!-- OBJECT children builder -->
+                  @if (param.type === 'OBJECT') {
+                    <div class="ps-param-children">
+                      <div class="ps-param-children-head">
+                        <span class="ps-param-children-title">{{ i18n.t('ps_param_children_title') }}</span>
+                        <span class="ps-param-children-hint">{{ i18n.t('ps_param_children_hint') }}</span>
+                      </div>
+
+                      @if (param.children.length === 0) {
+                        <div class="ps-param-children-empty">
+                          {{ i18n.t('ps_param_children_empty') }}
+                        </div>
+                      }
+
+                      @for (child of param.children; track $index) {
+                        <div class="ps-param-child">
+                          <div class="ps-param-child-head">
+                            <span class="ps-param-card-num">#{{ $index + 1 }}</span>
+                            <button class="ps-param-remove" type="button"
+                              [title]="i18n.t('ps_param_children_remove')"
+                              (click)="removeChildParameter(parentIndex, $index)">
+                              <app-icon name="x" />
+                            </button>
+                          </div>
+
+                          <!-- Child: Name + Type -->
+                          <div class="ps-param-row-2col">
+                            <div class="ps-param-cell">
+                              <label class="ps-param-label">{{ i18n.t('ps_param_name') }}</label>
+                              <input class="ps-param-input" type="text"
+                                [placeholder]="i18n.t('ps_param_name_placeholder')"
+                                [value]="child.name"
+                                [attr.data-error]="RESERVED_PARAM_NAMES.has(child.name) ? '1' : '0'"
+                                (input)="updateChildParameter(parentIndex, $index, 'name', v($event))"
+                                maxlength="100" />
+                              @if (RESERVED_PARAM_NAMES.has(child.name)) {
+                                <span class="ps-param-reserved-warn">{{ i18n.t('ps_param_reserved', { name: child.name }) }}</span>
+                              }
+                            </div>
+                            <div class="ps-param-cell">
+                              <label class="ps-param-label">{{ i18n.t('ps_param_type') }}</label>
+                              <div class="ps-param-type-row">
+                                <select class="ps-param-select"
+                                  [value]="child.type"
+                                  (change)="updateChildParameter(parentIndex, $index, 'type', v($event))">
+                                  @for (t of scalarTypes; track t) {
+                                    <option [value]="t" [selected]="child.type === t">{{ i18n.t('ps_param_type_' + t.toLowerCase()) }}</option>
+                                  }
+                                </select>
+                                <button type="button"
+                                  class="ps-param-required-toggle"
+                                  [class.ps-param-required-toggle-active]="child.required"
+                                  [title]="i18n.t('ps_param_required_hint')"
+                                  (click)="toggleChildRequired(parentIndex, $index)">
+                                  <app-icon name="asterisk" />
+                                  <span>{{ i18n.t('ps_param_required') }}</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Child: Description -->
+                          <div class="ps-param-cell">
+                            <label class="ps-param-label">{{ i18n.t('ps_param_description') }}</label>
+                            <input class="ps-param-input" type="text"
+                              [placeholder]="i18n.t('ps_param_desc_placeholder')"
+                              [value]="child.description"
+                              (input)="updateChildParameter(parentIndex, $index, 'description', v($event))"
+                              maxlength="500" />
+                          </div>
+
+                          <!-- Child: Positive + Negative Example -->
+                          <div class="ps-param-row-2col">
+                            <div class="ps-param-cell">
+                              <label class="ps-param-label">
+                                <span class="ps-param-label-icon ps-param-label-icon-pos"><app-icon name="check" /></span>
+                                {{ i18n.t('ps_param_positive') }}
+                              </label>
+                              <input class="ps-param-input" type="text"
+                                [placeholder]="i18n.t('ps_param_positive_placeholder')"
+                                [value]="child.positiveExample"
+                                (input)="updateChildParameter(parentIndex, $index, 'positiveExample', v($event))" />
+                            </div>
+                            <div class="ps-param-cell">
+                              <label class="ps-param-label">
+                                <span class="ps-param-label-icon ps-param-label-icon-neg"><app-icon name="x" /></span>
+                                {{ i18n.t('ps_param_negative') }}
+                              </label>
+                              <input class="ps-param-input" type="text"
+                                [placeholder]="i18n.t('ps_param_negative_placeholder')"
+                                [value]="child.negativeExample"
+                                (input)="updateChildParameter(parentIndex, $index, 'negativeExample', v($event))" />
+                            </div>
+                          </div>
+                        </div>
+                      }
+
+                      <button class="ps-param-child-add" type="button" (click)="addChildParameter(parentIndex)">
+                        <app-icon name="plus" />
+                        <span>{{ i18n.t('ps_param_children_add') }}</span>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <button class="ps-param-add" type="button" (click)="addParameter()">
+                <app-icon name="plus" />
+                <span>{{ i18n.t('ps_param_add') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Right: Insight panel ────────────────── -->
+          <div class="ps-insight-col">
+            <div class="ps-insight">
+              <!-- Info card: Parameters -->
+              <div class="ps-ins-card ps-ins-info" data-tone="violet">
+                <span class="ps-ins-icon ps-ins-icon-violet"><app-icon name="target" /></span>
+                <div class="ps-ins-body">
+                  <div class="ps-ins-info-title">{{ i18n.t('ps_info_params_title') }}</div>
+                  <div class="ps-ins-info-text">{{ i18n.t('ps_info_params_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Info card: Examples -->
+              <div class="ps-ins-card ps-ins-info" data-tone="green">
+                <span class="ps-ins-icon ps-ins-icon-green"><app-icon name="check" /></span>
+                <div class="ps-ins-body">
+                  <div class="ps-ins-info-title">{{ i18n.t('ps_info_examples_title') }}</div>
+                  <div class="ps-ins-info-text">{{ i18n.t('ps_info_examples_text') }}</div>
+                </div>
+              </div>
+
+              <!-- Tip card -->
+              <div class="ps-ins-card ps-ins-tip">
+                <span class="ps-ins-icon-inline"><app-icon name="zap" /></span>
+                <span>{{ i18n.t('ps_info_tip') }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="ps-editor-foot">
+          <app-button variant="ghost" type="button" (click)="cancel()">
+            {{ i18n.t('ps_cancel') }}
+          </app-button>
+          <app-button variant="primary" type="submit" [disabled]="loading() || !canSave()" (click)="submit($event)">
+            {{ loading() ? i18n.t('loading') : (editId() ? i18n.t('ps_edit_submit') : i18n.t('ps_submit')) }}
+          </app-button>
+        </div>
+      </div>
+    </div>
+  }
+</app-page-content>

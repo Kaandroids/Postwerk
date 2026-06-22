@@ -1,0 +1,1026 @@
+// Marketplace feature styles. Semantic theme vars only (no hardcoded colors).
+// Loaded once globally via styles.scss. All selectors are mk- prefixed.
+
+// Container (padding / max-width / fade-in) is provided by <app-page-content> (.dash-content),
+// so the marketplace pages sit in the same shell as every other dashboard page.
+.mk-page { display: block; }
+
+.mk-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 6px;
+}
+
+.mk-h1 {
+  font-family: var(--font-serif);
+  font-size: 38px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--fg);
+}
+
+.mk-lede {
+  margin-top: 8px;
+  max-width: 620px;
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+
+.mk-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.mk-head-row > .grow { flex: 1; min-width: 0; }
+
+// ── Buttons ───────────────────────────────────────────────
+// Match the app's standard primary button (dark --fg surface, --bg text),
+// same as .btn-primary / list-page add buttons across the dashboard.
+.mk-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--fg);
+  border-radius: 11px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.08s;
+}
+.mk-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+.mk-cta:active { transform: translateY(0); }
+.mk-cta:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.mk-cta.ghost {
+  background: var(--bg);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.mk-cta.ghost:hover { background: var(--bg-2); opacity: 1; }
+.mk-cta.accent { background: var(--success); color: var(--bg); border-color: var(--success); }
+.mk-cta.block { width: 100%; }
+
+.mk-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 6px 10px 6px 6px;
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.mk-back:hover { color: var(--fg); background: var(--bg-2); }
+
+// ── Toolbar / search / sort ──────────────────────────────
+.mk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mk-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  // Field surface sits lighter than the --bg-2 page (handoff), so it reads as an input.
+  background: var(--bg);
+  color: var(--fg-subtle);
+}
+.mk-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  font-size: 13.5px;
+}
+
+.mk-sort {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-2);
+}
+.mk-sort button {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mk-sort button.on { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+
+// ── Category rail ────────────────────────────────────────
+.mk-cats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.mk-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mk-cat:hover { border-color: var(--border-strong); color: var(--fg); }
+.mk-cat.on {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.mk-section-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 14px;
+}
+.mk-section-h h2 { font-size: 16px; font-weight: 700; color: var(--fg); }
+.mk-section-h .count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
+
+// ── Grid + card (compact) ────────────────────────────────
+.mk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.mk-card {
+  display: flex;
+  gap: 13px;
+  padding: 14px;
+  text-align: left;
+  // Handoff card surface: lighter than the --bg-2 dashboard page so the card reads as a
+  // raised tile (set off by border + hover shadow), matching the handoff contrast.
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  // Card root is a <button>; pin the text color so inner text doesn't inherit the
+  // UA `buttontext` (black) and break dark mode (per handoff design note).
+  color: var(--fg);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.mk-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-card);
+}
+.mk-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.mk-card-row1 { display: flex; align-items: center; gap: 7px; }
+.mk-card-name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mk-card-top { margin-left: auto; }
+.mk-card-tag {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mk-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.mk-card-foot .sp { flex: 1; }
+
+// ── Glyph ────────────────────────────────────────────────
+// Handoff: solid type-colored tile with a white icon (mirrors the node glyphs).
+.mk-glyph {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: var(--gc, var(--accent));
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.mk-glyph svg { width: 60%; height: 60%; }
+
+// ── Stars / metrics / price / badges ─────────────────────
+.mk-stars { display: inline-flex; align-items: center; gap: 1px; color: var(--warning); }
+.mk-stars .dim { color: var(--border-strong); }
+.mk-rate-num { margin-left: 5px; font-size: 12px; font-weight: 600; color: var(--fg-muted); }
+
+.mk-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--fg-subtle);
+}
+
+.mk-price { font-size: 13px; font-weight: 700; color: var(--fg); }
+.mk-price[data-free="1"] { color: var(--success); }
+.mk-price .per { font-size: 11px; font-weight: 500; color: var(--fg-subtle); margin-left: 1px; }
+
+.mk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg-muted);
+}
+.mk-badge.featured {
+  background: color-mix(in srgb, var(--warning) 14%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--border));
+  color: var(--warning);
+}
+.mk-badge.verified {
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  color: var(--accent);
+}
+
+.mk-vis {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg-muted);
+}
+.mk-vis[data-v="private"] {
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+  color: var(--danger);
+}
+.mk-vis[data-v="public"] {
+  background: color-mix(in srgb, var(--success) 12%, var(--bg-2));
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  color: var(--success);
+}
+.mk-vis svg { width: 12px; height: 12px; }
+
+.mk-kind {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-2));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  color: var(--accent);
+}
+
+.vrf { display: inline-flex; color: var(--accent); }
+.vrf svg { width: 14px; height: 14px; }
+
+// ── Author chip / avatar ─────────────────────────────────
+.mk-author-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--fg-muted); }
+.mk-ava {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--ac, var(--accent));
+}
+
+// ── Empty ────────────────────────────────────────────────
+.mk-empty {
+  margin-top: 18px;
+  padding: 48px 24px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg-2);
+}
+.mk-empty .t { font-size: 14px; color: var(--fg-muted); }
+
+// ── Detail layout ────────────────────────────────────────
+.mk-detail {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 30px;
+  align-items: start;
+}
+@media (max-width: 860px) { .mk-detail { grid-template-columns: 1fr; } }
+
+.mk-d-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 8px; }
+.mk-d-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mk-d-badges { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.mk-d-title { font-family: var(--font-serif); font-size: 30px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.08; color: var(--fg); }
+.mk-d-tag { font-size: 14px; color: var(--fg-muted); }
+
+.mk-d-sec { margin-top: 26px; }
+.mk-d-sec h3 { font-size: 14px; font-weight: 700; color: var(--fg); margin-bottom: 12px; }
+.mk-d-body { font-size: 13.5px; line-height: 1.6; color: var(--fg-muted); white-space: pre-line; }
+
+// I/O block
+.mk-io { display: flex; align-items: center; gap: 12px; }
+.mk-io-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.mk-io-card .ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, var(--bg-2));
+}
+.mk-io-card.out .ic { color: var(--success); background: color-mix(in srgb, var(--success) 13%, var(--bg-2)); }
+.mk-io-card .lbl { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-subtle); }
+.mk-io-card .val { font-size: 13px; font-weight: 600; color: var(--fg); }
+.mk-io-arrow { color: var(--fg-subtle); display: inline-flex; }
+
+// Node flow chips (public)
+.mk-node-flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mk-node-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px 7px 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.mk-node-chip .g {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--nc, var(--accent));
+  background: color-mix(in srgb, var(--nc, var(--accent)) 16%, var(--bg-2));
+}
+.mk-node-chip .nm { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.mk-node-chip .kd { font-size: 11px; color: var(--fg-subtle); }
+.mk-node-flow .sepr { color: var(--fg-subtle); display: inline-flex; }
+
+// Locked panel (private)
+.mk-locked {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.mk-locked .ic {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-2));
+}
+.mk-locked .t { font-size: 14px; font-weight: 700; color: var(--fg); }
+.mk-locked .d { font-size: 12.5px; line-height: 1.55; color: var(--fg-muted); max-width: 520px; margin: 0 auto; }
+
+// Reviews
+.mk-rating-summary { display: flex; align-items: center; gap: 18px; margin-bottom: 16px; }
+.mk-rating-summary .big { font-size: 34px; font-weight: 700; color: var(--fg); line-height: 1; }
+.mk-rating-summary .sub { font-size: 12.5px; color: var(--fg-muted); }
+.mk-reviews { display: flex; flex-direction: column; gap: 12px; }
+.mk-review { padding: 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.mk-review-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.mk-review-top .who { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.mk-review-top .role { font-size: 12px; color: var(--fg-subtle); }
+.mk-review-top .when { font-size: 12px; color: var(--fg-subtle); margin-left: auto; }
+.mk-review p { font-size: 13px; color: var(--fg-muted); line-height: 1.55; }
+
+// Own review highlight + "Deine" badge
+.mk-review.mine {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+}
+.mk-review-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+// Review composer
+.mk-review-compose {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg);
+  padding: 15px 16px;
+  margin-bottom: 14px;
+}
+.mk-rc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mk-rc-title { font-size: 13.5px; font-weight: 600; color: var(--fg); }
+.mk-rc-stars { display: inline-flex; gap: 2px; }
+.mk-rc-star {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 3px;
+  cursor: pointer;
+  color: var(--border-strong);
+  display: grid;
+  place-items: center;
+  transition: transform 0.12s, color 0.12s;
+
+  app-icon, svg { width: 19px; height: 19px; }
+  &:hover { transform: scale(1.12); }
+  &.on { color: oklch(0.72 0.15 75); }
+}
+.mk-rc-text { min-height: 70px; font-size: 13.5px; }
+.mk-rc-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mk-rc-hint { font-size: 12px; color: var(--fg-subtle); font-variant-numeric: tabular-nums; }
+
+// Author card
+.mk-authorcard {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.mk-authorcard .mk-ava { width: 42px; height: 42px; border-radius: 11px; font-size: 14px; }
+.mk-authorcard .nm { font-size: 14px; font-weight: 650; color: var(--fg); display: flex; align-items: center; gap: 6px; }
+.mk-authorcard .hd { font-size: 12px; color: var(--fg-subtle); }
+.mk-authorcard .stats { display: flex; gap: 18px; margin-left: auto; }
+.mk-authorcard .stats .n { font-size: 16px; font-weight: 700; color: var(--fg); }
+.mk-authorcard .stats .l { font-size: 11px; color: var(--fg-subtle); }
+
+// Buy box
+.mk-buybox {
+  position: sticky;
+  top: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+}
+.mk-buybox .price-row { font-size: 22px; font-weight: 700; color: var(--fg); margin-bottom: 8px; }
+.mk-buybox .note { font-size: 12px; color: var(--fg-muted); margin: 8px 0; }
+.mk-buybox .facts { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.mk-fact { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mk-fact .k { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--fg-muted); }
+.mk-fact .v { font-size: 12.5px; font-weight: 600; color: var(--fg); }
+
+// ── Confirm modal ────────────────────────────────────────
+.mk-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--fg) 45%, transparent);
+  backdrop-filter: blur(2px);
+}
+.mk-modal {
+  width: 100%;
+  max-width: 420px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  padding: 22px;
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.5);
+}
+.mk-modal-top { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.mk-modal-top h3 { font-size: 18px; font-weight: 700; color: var(--fg); }
+.mk-modal-top p { font-size: 12.5px; color: var(--fg-muted); }
+.mk-modal .price-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-2);
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+.mk-modal-foot { display: flex; gap: 10px; margin-top: 18px; }
+.mk-modal-foot .mk-cta { flex: 1; }
+
+// ── Configure ────────────────────────────────────────────
+.mk-config { max-width: 760px; }
+.mk-config-banner {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg);
+}
+.mk-config-banner .nm { font-size: 15px; font-weight: 650; color: var(--fg); }
+.mk-config-banner .by { font-size: 12px; color: var(--fg-subtle); }
+.mk-config-banner .run {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+}
+.mk-config-banner .run .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.mk-config-banner .run.paused { color: var(--fg-subtle); }
+.mk-config-banner .run.paused .dot { background: var(--fg-subtle); }
+
+// Value editor (mk-cv-*)
+.mk-cv { display: flex; flex-direction: column; gap: 9px; }
+.mk-cv-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 13px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.mk-cv-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--ct, var(--accent));
+  background: color-mix(in srgb, var(--ct, var(--accent)) 15%, var(--bg-2));
+}
+.mk-cv-main { min-width: 0; }
+.mk-cv-top { display: flex; align-items: center; gap: 8px; }
+.mk-cv-key { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.mk-cv-type { font-size: 11px; color: var(--fg-subtle); text-transform: capitalize; }
+.mk-cv-desc { font-size: 12px; color: var(--fg-muted); margin-top: 3px; }
+.mk-cv-field { margin-top: 7px; }
+.mk-cv-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13px;
+  outline: none;
+}
+.mk-cv-input:focus { border-color: var(--accent); }
+.mk-cv-input.mono { font-family: var(--font-mono); }
+.mk-cv-input-wrap { position: relative; display: flex; align-items: center; }
+.mk-cv-reveal {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  border: none;
+  background: transparent;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  padding: 4px;
+}
+.mk-cv-toggle { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.mk-cv-toggle button {
+  height: 28px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mk-cv-toggle button.on { background: var(--accent); color: var(--bg); }
+
+// Account binding selector
+.mk-accounts { display: flex; flex-direction: column; gap: 9px; }
+.mk-acc {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.mk-acc.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--bg-2)); }
+.mk-acc .box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--bg);
+}
+.mk-acc.on .box { background: var(--accent); border-color: var(--accent); }
+.mk-acc .em { font-size: 13px; font-weight: 600; color: var(--fg); }
+.mk-acc .sub { font-size: 12px; color: var(--fg-subtle); }
+
+.mk-publish-foot, .mk-config-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.mk-publish-foot .sp, .mk-config-foot .sp { flex: 1; }
+
+// ── Publish ──────────────────────────────────────────────
+.mk-publish-grid { display: grid; grid-template-columns: 1fr 320px; gap: 30px; align-items: start; margin-top: 24px; }
+@media (max-width: 860px) { .mk-publish-grid { grid-template-columns: 1fr; } }
+
+.mk-field { margin-bottom: 16px; }
+.mk-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+  margin-bottom: 7px;
+}
+.mk-label .aux { text-transform: none; letter-spacing: 0; color: var(--fg-muted); font-weight: 500; }
+.mk-input, .mk-select, .mk-textarea {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13.5px;
+  outline: none;
+}
+.mk-textarea { height: auto; min-height: 92px; padding: 11px 13px; resize: vertical; line-height: 1.5; }
+.mk-input:focus, .mk-select:focus, .mk-textarea:focus { border-color: var(--accent); }
+.mk-field-error { font-size: 12px; color: var(--danger); margin-top: 6px; }
+
+.mk-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .mk-choice { grid-template-columns: 1fr; } }
+.mk-choice-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 15px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg);
+  color: var(--fg); // <button> root — keep text color for dark mode (handoff note)
+  cursor: pointer;
+}
+.mk-choice-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.mk-choice-card .tick {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+}
+.mk-choice-card.on .tick { display: inline-flex; }
+.mk-choice-card .ic { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 9px; }
+.mk-choice-card .ic.pub { color: var(--success); background: color-mix(in srgb, var(--success) 12%, var(--bg-2)); }
+.mk-choice-card .ic.prv { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); }
+.mk-choice-card .ti { font-size: 14px; font-weight: 650; color: var(--fg); }
+.mk-choice-card .de { font-size: 12px; color: var(--fg-muted); line-height: 1.5; }
+
+.mk-pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.mk-pm {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+  color: var(--fg); // <button> root — keep text color for dark mode (handoff note)
+  cursor: pointer;
+}
+.mk-pm.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.mk-pm .t { font-size: 13px; font-weight: 650; color: var(--fg); }
+.mk-pm .s { font-size: 11.5px; color: var(--fg-subtle); margin-top: 2px; }
+
+// Publishable constants picker
+.mk-pc { display: flex; flex-direction: column; gap: 9px; }
+.mk-pc-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg);
+}
+.mk-pc-row .box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--bg);
+  cursor: pointer;
+}
+.mk-pc-row.on .box { background: var(--accent); border-color: var(--accent); }
+.mk-pc-row .key { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; color: var(--fg); }
+.mk-pc-row .desc {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 12.5px;
+  outline: none;
+}
+.mk-pc-row .desc:focus { border-color: var(--accent); }
+.mk-pc-row .desc:disabled { opacity: 0.5; }
+
+// ── Library ──────────────────────────────────────────────
+.mk-lib-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  margin: 0 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-2);
+}
+.mk-lib-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mk-lib-tabs button.on { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+.mk-lib-tabs .cnt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  background: color-mix(in srgb, var(--fg) 8%, var(--bg-2));
+  border-radius: 999px;
+  padding: 0 7px;
+}
+
+.mk-lib-list { display: flex; flex-direction: column; gap: 10px; }
+.mk-lib-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg);
+  cursor: pointer;
+}
+.mk-lib-row:hover { border-color: var(--border-strong); }
+.mk-lib-row .main { flex: 1; min-width: 0; }
+.mk-lib-row .nm { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; color: var(--fg); }
+.mk-lib-row .sub { font-size: 12px; color: var(--fg-subtle); margin-top: 2px; }
+.mk-lib-row .act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.mk-lib-row .act:hover { background: color-mix(in srgb, var(--accent) 12%, var(--bg-2)); }
+.mk-lib-row .act.danger { color: var(--danger); }
+.mk-lib-row .act.danger:hover { background: color-mix(in srgb, var(--danger) 12%, var(--bg-2)); }
+
+// ── Misc states ──────────────────────────────────────────
+.mk-loading, .mk-error-box {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--fg-muted);
+}
+.mk-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--success);
+}
+
+// ── Rich-text editor (MKRichText) ────────────────────────
+.mk-rt {
+  border: 0.5px solid var(--border-strong);
+  border-radius: 11px;
+  background: var(--bg);
+  overflow: hidden;
+
+  &:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+}
+.mk-rt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--bg-2);
+}
+.mk-rt-btn {
+  appearance: none;
+  border: 0;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13.5px;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+
+  app-icon, svg { width: 14px; height: 14px; }
+  b { font-weight: 800; }
+  i { font-family: var(--font-serif, serif); font-style: italic; }
+  u { text-decoration: underline; }
+
+  &:hover { background: var(--bg); color: var(--fg); }
+  &.on { background: var(--fg); color: var(--bg); }
+}
+.mk-rt-div {
+  width: 0.5px;
+  align-self: stretch;
+  margin: 4px 5px;
+  background: var(--border-strong);
+}
+.mk-rt-editor {
+  padding: 13px 14px;
+  min-height: 132px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg);
+  outline: none;
+
+  &[data-empty="1"]::before {
+    content: attr(data-placeholder);
+    color: var(--fg-subtle);
+    pointer-events: none;
+  }
+}
+
+// ── Shared rich-text rendering (.mk-rich) ────────────────
+.mk-rich {
+  white-space: normal;
+
+  > :first-child { margin-top: 0; }
+  > :last-child { margin-bottom: 0; }
+  p { margin: 0 0 10px; }
+  h3 {
+    font-family: var(--font-serif, serif);
+    font-weight: 400;
+    font-size: 18px;
+    margin: 16px 0 8px;
+  }
+  ul, ol { margin: 0 0 10px; padding-left: 22px; }
+  li { margin: 3px 0; }
+  a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  blockquote {
+    margin: 10px 0;
+    padding: 4px 0 4px 14px;
+    border-left: 2.5px solid var(--border-strong);
+    color: var(--fg-muted);
+    font-style: italic;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin: 6px 0;
+    display: block;
+    border: 0.5px solid var(--border);
+  }
+}
+
+// ── Publish description live preview ─────────────────────
+.mk-desc-preview {
+  margin-top: 14px;
+  padding: 14px 15px;
+  border: 0.5px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg-2);
+}
+.mk-desc-preview-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-subtle);
+  margin-bottom: 10px;
+}

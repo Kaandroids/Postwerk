@@ -1,0 +1,59 @@
+<div class="wp-shell" [attr.data-phase]="phase()" data-testid="wizard-flow-page">
+  <!-- App header — only during chat. In the canvas phase the editor-style
+       toolbar inside <app-wizard-flow-canvas> is the single header. -->
+  @if (isChatting()) {
+    <app-landing-nav />
+  }
+
+  <div class="wp-body">
+    <!-- Phase: chatting -->
+    @if (isChatting()) {
+      <div class="wp-chat-panel" data-testid="wizard-phase-chatting">
+        <app-wizard-chat />
+      </div>
+    }
+
+    <!-- Phase: building / ready -->
+    @if (isBuilding() || isReady()) {
+      <div class="wp-canvas-panel" data-testid="wizard-phase-canvas">
+        <app-wizard-flow-canvas />
+
+        <app-wizard-how-card
+          [visible]="isReady()"
+          (continueChat)="onContinueChat()"
+        />
+
+        <!-- Bottom-left summary badge -->
+        <div
+          class="wp-summary"
+          [attr.data-on]="isReady() ? '1' : '0'"
+          data-testid="wizard-summary-badge"
+        >
+          <span class="wp-summary-check">
+            <app-icon name="check" />
+          </span>
+          <div class="wp-summary-text">
+            <span class="wp-summary-title">{{ i18n.t('wiz_foot_title') }}</span>
+            <span class="wp-summary-sub">{{ summaryText() }}</span>
+          </div>
+        </div>
+
+        <!-- Bottom-right CTA corner -->
+        <div
+          class="wp-cta-corner"
+          [attr.data-on]="isReady() ? '1' : '0'"
+          data-testid="wizard-cta-corner"
+        >
+          <button
+            class="wp-btn wp-btn-primary"
+            (click)="onRegister()"
+            data-testid="wizard-cta-register"
+          >
+            <app-icon name="lock" />
+            {{ i18n.t('wiz_cta_primary') }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

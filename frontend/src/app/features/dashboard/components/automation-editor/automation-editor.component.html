@@ -1,0 +1,945 @@
+<!-- ── Toolbar ──────────────────────────────────────────────── -->
+<div class="ae-toolbar">
+  <div class="ae-toolbar-left">
+    <button class="ae-back-btn" (click)="goBack()" aria-label="Back">
+      <app-icon name="arrowLeft" />
+    </button>
+    <span class="ae-toolbar-name">{{ automation()?.name || '...' }}</span>
+    @if (automation(); as a) {
+      <span class="ae-status-pill" [attr.data-status]="a.status" data-testid="automation-status-pill">
+        <span class="ae-status-dot"></span>
+        <span class="ae-status-label">{{ i18n.t('auto_status_' + a.status.toLowerCase()) }}</span>
+      </span>
+    }
+  </div>
+  <div class="ae-toolbar-right">
+    @if (!canEdit()) {
+      <span class="ae-status-pill" data-status="VIEW" data-testid="automation-readonly-pill" [title]="i18n.t('auto_readonly_hint')">
+        <app-icon name="lock" />
+        <span class="ae-status-label">{{ i18n.t('auto_readonly') }}</span>
+      </span>
+    }
+    @if (canEdit()) {
+      <button class="ae-toolbar-btn ae-btn-lock" [class.locked]="automation()?.locked"
+        (click)="toggleLock()" data-testid="automation-lock-btn"
+        [title]="automation()?.locked ? i18n.t('locked_by_user') : i18n.t('lock_resource')">
+        <app-icon [name]="automation()?.locked ? 'lock' : 'unlock'" />
+      </button>
+      <button class="ae-toolbar-btn ae-btn-ai" [attr.data-active]="aiChat.isOpen() ? '1' : '0'"
+        (click)="aiChat.toggleOpen()" data-testid="automation-ai-btn"
+        [title]="i18n.t('auto_ai_assistant')">
+        <app-icon name="sparkle" />
+      </button>
+    }
+    <div class="ae-tabs">
+      <button class="ae-tab" [class.active]="editorTab() === 'canvas'"
+        (click)="editorTab.set('canvas')" data-testid="editor-tab-canvas">
+        <app-icon name="workflow" />
+        <span>{{ i18n.t('auto_tab_canvas') }}</span>
+      </button>
+      @if (canEdit()) {
+        <button class="ae-tab" [class.active]="editorTab() === 'tests'"
+          (click)="editorTab.set('tests')" data-testid="editor-tab-tests">
+          <app-icon name="beaker" />
+          <span>{{ i18n.t('auto_tab_tests') }}</span>
+        </button>
+        <button class="ae-tab" [class.active]="editorTab() === 'simulations'"
+          (click)="editorTab.set('simulations')" data-testid="editor-tab-simulations">
+          <app-icon name="inbox" />
+          <span>{{ i18n.t('auto_tab_simulations') }}</span>
+        </button>
+      }
+    </div>
+    <button class="ae-toolbar-btn ae-btn-problems" (click)="problemsOpen.set(!problemsOpen())"
+      [class.has-errors]="lintErrorCount() > 0" [class.has-warnings]="lintErrorCount() === 0 && lintWarningCount() > 0"
+      data-testid="automation-problems-btn" [title]="i18n.t('auto_lint_problems')">
+      <app-icon name="alertTriangle" />
+      {{ i18n.t('auto_lint_problems') }}
+      @if (lintIssues().length > 0) {
+        <span class="ae-problems-count">{{ lintIssues().length }}</span>
+      }
+    </button>
+    @if (canEdit()) {
+      <button class="ae-toolbar-btn ae-btn-vars" (click)="openConstants()"
+        data-testid="automation-constants-btn" [title]="i18n.t('auto_constants_title')">
+        <app-icon name="code" />
+        {{ i18n.t('auto_constants_btn') }}
+      </button>
+      <button class="ae-toolbar-btn ae-btn-save" [disabled]="saving()" (click)="save()">
+        <app-icon name="check" />
+        {{ saving() ? i18n.t('auto_saving') : i18n.t('auto_save') }}
+      </button>
+    }
+    @if (canActivate() && triggerKind() === 'MANUAL') {
+      <button class="ae-toolbar-btn ae-btn-run" (click)="runManually()" data-testid="editor-run-btn">
+        <app-icon name="play" />
+        {{ i18n.t('auto_run') }}
+      </button>
+    }
+  </div>
+  <div class="ae-toolbar-accent" aria-hidden="true"></div>
+</div>
+
+@if (error()) {
+  <div class="ae-toast" role="alert" data-testid="automation-error-toast">
+    <span class="ae-toast-dot"></span>
+    <span class="ae-toast-msg">{{ error() }}</span>
+    <button class="ae-toast-close" (click)="error.set('')" aria-label="Close" data-testid="automation-error-toast-close">
+      <app-icon name="x" />
+    </button>
+  </div>
+}
+
+<!-- ── Main Area ───────────────────────────────────────────── -->
+<div class="ae-main">
+  <!-- ── Tool library rail (Bausteine) ───────────────────── -->
+  @if (editorTab() === 'canvas' && canEdit()) {
+    <aside class="ae-toolrail" [class.collapsed]="railCollapsed()">
+      <div class="ae-toolrail-head">
+        <span class="ae-toolrail-mark"><app-icon name="grid" /></span>
+        <div class="ae-toolrail-titles">
+          <span class="ae-toolrail-eyebrow">{{ i18n.t('auto_lib_eyebrow') }}</span>
+          <span class="ae-toolrail-title">{{ i18n.t('auto_lib_title') }}</span>
+        </div>
+        <button class="ae-toolrail-toggle" (click)="toggleRail()"
+          [title]="railCollapsed() ? i18n.t('auto_lib_expand') : i18n.t('auto_lib_collapse')"
+          aria-label="Toggle library">
+          <app-icon name="chevronRight" />
+        </button>
+      </div>
+
+      @if (!railCollapsed()) {
+        <div class="ae-toolrail-search">
+          <span class="ic"><app-icon name="search" /></span>
+          <input type="text" [value]="librarySearch()"
+            (input)="librarySearch.set(v($event))"
+            [placeholder]="i18n.t('auto_lib_search')" />
+          @if (librarySearch()) {
+            <button class="clr" (click)="librarySearch.set('')" aria-label="Clear">
+              <app-icon name="x" />
+            </button>
+          }
+        </div>
+      }
+
+      <div class="ae-toolrail-scroll">
+        @for (group of libraryGroups(); track group.labelKey) {
+          <div class="ae-toolgroup">
+            @if (!railCollapsed()) {
+              <div class="ae-toolgroup-h">
+                <span class="lbl">{{ i18n.t(group.labelKey) }}</span>
+                <span class="cnt">{{ group.items.length }}</span>
+              </div>
+            }
+            <div class="ae-toolgroup-items">
+              @for (item of group.items; track item.type) {
+                <div class="ae-toolitem" role="button" tabindex="0"
+                  [style.--nc]="item.color"
+                  (click)="addNode(item.type)"
+                  (keydown.enter)="addNode(item.type)"
+                  (keydown.space)="$event.preventDefault(); addNode(item.type)"
+                  (mouseenter)="showLibTip($event, item)"
+                  (mouseleave)="hideLibTip()">
+                  <span class="ae-toolitem-rail"></span>
+                  <span class="ae-glyph" [attr.data-k]="item.type">
+                    <app-icon [name]="item.icon" />
+                  </span>
+                  @if (!railCollapsed()) {
+                    <span class="ae-toolitem-text">
+                      <span class="n">{{ i18n.t(item.labelKey) }}</span>
+                      <span class="s">{{ nodeSub(item) }}</span>
+                    </span>
+                    <span class="ae-toolitem-add" aria-hidden="true"><app-icon name="plus" /></span>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+        @if (!railCollapsed() && libraryGroups().length === 0) {
+          <div class="ae-toolrail-empty">{{ i18n.t('auto_lib_no_matches') }}</div>
+        }
+      </div>
+
+      @if (!railCollapsed()) {
+        <div class="ae-toolrail-foot">
+          <app-icon name="grid" />
+          <span>{{ libraryTotal() }} {{ i18n.t('auto_lib_count') }}</span>
+          <span class="hint">{{ i18n.t('auto_lib_click_add') }}</span>
+        </div>
+      }
+    </aside>
+
+    @if (railCollapsed() && libTip(); as tip) {
+      <div class="ae-tip" [style.top.px]="tip.top" [style.left.px]="tip.left" [style.--nc]="tip.nc">
+        <span class="ae-tip-name">{{ tip.name }}</span>
+        @if (tip.sub) { <span class="ae-tip-sub">{{ tip.sub }}</span> }
+        <span class="ae-tip-add"><app-icon name="plus" /> {{ i18n.t('auto_lib_click_add') }}</span>
+      </div>
+    }
+  }
+
+  <!-- ── Canvas ──────────────────────────────────────────── -->
+  <div class="ae-canvas-wrap"
+    [class.ae-panning]="panning()"
+    (contextmenu)="onCanvasContextMenu($event)"
+    (mousedown)="onCanvasMouseDown($event)">
+    <f-flow fDraggable
+      [fCanvasMoveTrigger]="disableCanvasDrag"
+      (fSelectionChange)="onSelectionChanged($event)"
+      (fCreateConnection)="onConnectionCreated($event)"
+      (fMoveNodes)="onNodeMoved($event)">
+      <f-background>
+        <f-circle-pattern [color]="'rgba(128,128,128,0.35)'" [radius]="22" />
+      </f-background>
+      <f-canvas fZoom [fZoomMinimum]="0.2" [fZoomMaximum]="3"
+        (fCanvasChange)="onCanvasChange($event)">
+
+        <!-- Nodes -->
+        @for (node of nodes(); track node.id) {
+          <div fNode
+            [fNodeId]="node.id"
+            [fNodePosition]="node.position"
+            class="ae-node"
+            [class.ae-node--error]="nodeSeverity(node.id) === 'error'"
+            [class.ae-node--warning]="nodeSeverity(node.id) === 'warning'"
+            [attr.data-type]="node.nodeType"
+            [style.--nc]="getNodeColor(node.nodeType)"
+            (dblclick)="selectNode(node.id)">
+
+            <div class="ae-node-header" fDragHandle
+              (contextmenu)="onNodeContextMenu($event, node.id)">
+              <span class="ae-node-icon">
+                <app-icon [name]="getNodeIcon(node.nodeType)" />
+              </span>
+              <div class="ae-node-header-text">
+                <span class="ae-node-type-label">{{ getNodeTypeLabel(node.nodeType) }}</span>
+                <span class="ae-node-label">{{ node.label }}</span>
+              </div>
+              @if (nodeSeverity(node.id); as sev) {
+                <span class="ae-node-badge" [attr.data-sev]="sev"
+                  [title]="(issuesByNode().get(node.id) ?? [])[0]?.message">
+                  <app-icon name="alertTriangle" />
+                </span>
+              }
+            </div>
+
+            <!-- TRIGGER body: mode-aware -->
+            @if (node.nodeType === 'TRIGGER') {
+              <div class="ae-node-body ae-trigger-body">
+                @if (getTriggerMode(node) === 'EMAIL') {
+                  @for (accId of getTriggerAccountIds(node); track accId) {
+                    <div class="ae-trigger-acc-chip">
+                      <app-icon name="mail" />
+                      <span>{{ getAccountName(accId) }}</span>
+                    </div>
+                  }
+                  @if (getTriggerAccountIds(node).length === 0) {
+                    <span class="ae-trigger-empty">{{ i18n.t('auto_trigger_no_accounts') }}</span>
+                  }
+                } @else if (getTriggerMode(node) === 'WEBHOOK') {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="globe" />
+                    <span>{{ i18n.t('auto_webhook_inbound_label') }}</span>
+                  </span>
+                } @else if (getTriggerMode(node) === 'MANUAL') {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="bolt" />
+                    <span>{{ i18n.t('auto_trigger_mode_manual') }}</span>
+                  </span>
+                } @else {
+                  <span class="ae-trigger-acc-chip">
+                    <app-icon name="calendar" />
+                    <span>{{ getScheduleDisplayText(node) }}</span>
+                  </span>
+                }
+              </div>
+            }
+
+            <!-- EXTRACT body: empty hint when no extractions -->
+            @if (node.nodeType === 'EXTRACT' && getExtractions(node).length === 0) {
+              <div class="ae-node-body">
+                <span class="ae-extract-empty">{{ i18n.t('auto_extract_empty') }}</span>
+              </div>
+            }
+
+            <!-- FILTER body: check count -->
+            @if (node.nodeType === 'FILTER') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="filter" />
+                  <span>{{ getFilterChecks(node).length }} {{ i18n.t('auto_filter_checks') }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- CATEGORIZE body: empty hint only -->
+            @if (node.nodeType === 'CATEGORIZE' && getCategoryEntries(node).length === 0) {
+              <div class="ae-node-body">
+                <span class="ae-extract-empty">{{ i18n.t('auto_categorize_empty') }}</span>
+              </div>
+            }
+
+            <!-- DELAY body: delay minutes display -->
+            @if (node.nodeType === 'DELAY') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="clock" />
+                  <span>{{ getDelayMinutes(node) }} min</span>
+                </span>
+              </div>
+            }
+
+            <!-- LABEL body: category dropdown -->
+            @if (node.nodeType === 'LABEL') {
+              <div class="ae-node-body">
+                <select class="ae-node-select" [disabled]="!canEdit()"
+                  (change)="updateLabelCategory(node.id, v($event)); $event.stopPropagation()">
+                  <option value="" [selected]="!getLabelCategoryId(node)">{{ i18n.t('auto_label_select') }}</option>
+                  @for (cat of categories(); track cat.id) {
+                    <option [value]="cat.id" [selected]="cat.id === getLabelCategoryId(node)">{{ cat.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- REMOVE_LABEL body: category dropdown -->
+            @if (node.nodeType === 'REMOVE_LABEL') {
+              <div class="ae-node-body">
+                <select class="ae-node-select" [disabled]="!canEdit()"
+                  (change)="updateRemoveLabelCategory(node.id, v($event)); $event.stopPropagation()">
+                  <option value="" [selected]="!getRemoveLabelCategoryId(node)">{{ i18n.t('auto_remove_label_category') }}</option>
+                  @for (cat of categories(); track cat.id) {
+                    <option [value]="cat.id" [selected]="cat.id === getRemoveLabelCategoryId(node)">{{ cat.name }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <!-- EMAIL_ACTION body: mode-aware summary -->
+            @if (node.nodeType === 'EMAIL_ACTION') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon [name]="getEmailActionIcon(node)" />
+                  <span>{{ getEmailActionSummary(node) }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- SEND_EMAIL body: to address display -->
+            @if (node.nodeType === 'SEND_EMAIL') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="send" />
+                  <span>{{ getSendEmailTo(node) || '...' }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- WEBHOOK body: method + url preview -->
+            @if (node.nodeType === 'WEBHOOK') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="globe" />
+                  <span>{{ getWebhookMethod(node) }} {{ getWebhookUrlPreview(node) || '...' }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- VECTOR_SEARCH body: selected knowledge base -->
+            @if (node.nodeType === 'VECTOR_SEARCH') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="sparkle" />
+                  <span>{{ getVectorSearchKbName(node) || i18n.t('auto_vs_no_kb') }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- NOTIFY body: notification title/message summary -->
+            @if (node.nodeType === 'NOTIFY') {
+              <div class="ae-node-body">
+                <span class="ae-trigger-acc-chip">
+                  <app-icon name="bell" />
+                  <span>{{ getNotifySummary(node) || i18n.t('auto_notify_no_message') }}</span>
+                </span>
+              </div>
+            }
+
+            <!-- Port rows (inline, after body) -->
+            <div class="ae-node-ports">
+              <!-- TRIGGER: mode-aware outputs -->
+              @if (node.nodeType === 'TRIGGER') {
+                @if (getTriggerMode(node) === 'EMAIL') {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_new_email') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'new-email')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_reply') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'reply')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                } @else {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ i18n.t('auto_port_output') }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+              }
+
+              <!-- DELAY: circle input + circle output -->
+              @if (node.nodeType === 'DELAY') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_delayed') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- LABEL: circle input + circle output (shows category name) -->
+              @if (node.nodeType === 'LABEL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ getLabelCategoryName(node) || i18n.t('auto_port_labeled') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- FILTER: input + per-check outputs + fallback -->
+              @if (node.nodeType === 'FILTER') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (check of getFilterChecks(node); track $index; let i = $index) {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ check.label || ('Check ' + (i + 1)) }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'check_' + i)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_filter_fallback') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'fallback')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- EXTRACT: input + outputs per extraction -->
+              @if (node.nodeType === 'EXTRACT') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (ext of getExtractions(node); track ext.parameterSetId) {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ ext.label }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'extraction_' + $index)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+              }
+
+              <!-- CATEGORIZE: circle input + category outputs + uncategorized -->
+              @if (node.nodeType === 'CATEGORIZE') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_any_email') }}</span>
+                </div>
+                @for (entry of getCategoryEntries(node); track entry.categoryId; let i = $index) {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ entry.label }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'category_' + i)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_uncategorized') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'uncategorized')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- EMAIL_ACTION: circle input + circle output -->
+              @if (node.nodeType === 'EMAIL_ACTION') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- SEND_EMAIL: circle input + circle output -->
+              @if (node.nodeType === 'SEND_EMAIL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- WEBHOOK: circle input + one output per response branch (resp_<i>) + pinned unmatched -->
+              @if (node.nodeType === 'WEBHOOK') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                @for (branch of getWebhookBranches(node); track branch.index) {
+                  <div class="ae-port-row ae-port-out-row">
+                    <span class="ae-port-label">{{ branch.name || ('Response ' + (branch.index + 1)) }}</span>
+                    <div fNodeOutput [fOutputId]="getOutputId(node, 'resp_' + branch.index)" [fOutputMultiple]="true"
+                         class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                  </div>
+                }
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_webhook_unmatched') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'unmatched')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- REMOVE_LABEL: circle input + circle output -->
+              @if (node.nodeType === 'REMOVE_LABEL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ getRemoveLabelCategoryName(node) || i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- INPUT (integration entry): output only -->
+              @if (node.nodeType === 'INPUT') {
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_output') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'output')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- OUTPUT (integration return): input only -->
+              @if (node.nodeType === 'OUTPUT') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_result') }}</span>
+                </div>
+              }
+
+              <!-- INTEGRATION_CALL: circle input + done/failure outputs -->
+              @if (node.nodeType === 'INTEGRATION_CALL') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_done') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'done')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_failure') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'failure')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- VECTOR_SEARCH: circle input + success/fail (match / no-match) outputs -->
+              @if (node.nodeType === 'VECTOR_SEARCH') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_success') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'success')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_no_match') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'fail')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
+              <!-- NOTIFY: circle input + success/fail (sent / error) outputs -->
+              @if (node.nodeType === 'NOTIFY') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_success') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'success')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_failure') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'fail')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Connections -->
+        @for (edge of edges(); track edge.id) {
+          <f-connection
+            [fConnectionId]="edge.id"
+            [fOutputId]="edge.outputId"
+            [fInputId]="edge.inputId"
+            [fType]="EFConnectionType.BEZIER">
+            <f-connection-marker-arrow [type]="EFMarkerType.END_ALL_STATES"></f-connection-marker-arrow>
+          </f-connection>
+        }
+
+        <f-connection-for-create [fType]="EFConnectionType.BEZIER"></f-connection-for-create>
+      </f-canvas>
+    </f-flow>
+
+    <!-- Tips overlay -->
+    <div class="ae-tips-wrap f-drag-blocker">
+      <button class="ae-canvas-btn" (click)="tipsOpen.set(!tipsOpen())" [title]="i18n.t('auto_tips')">
+        <app-icon name="help" />
+      </button>
+      @if (tipsOpen()) {
+        <div class="ae-tips-backdrop" (click)="tipsOpen.set(false)"></div>
+        <div class="ae-tips-panel">
+          <div class="ae-tips-title">{{ i18n.t('auto_tips') }}</div>
+          <div class="ae-tips-list">
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_pan_key') }}</span>
+              <span>{{ i18n.t('auto_tips_pan') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_zoom_key') }}</span>
+              <span>{{ i18n.t('auto_tips_zoom') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_connect_key') }}</span>
+              <span>{{ i18n.t('auto_tips_connect') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_delete_key') }}</span>
+              <span>{{ i18n.t('auto_tips_delete_conn') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_menu_key') }}</span>
+              <span>{{ i18n.t('auto_tips_node_menu') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_add_key') }}</span>
+              <span>{{ i18n.t('auto_tips_add_node') }}</span>
+            </div>
+            <div class="ae-tips-item">
+              <span class="ae-tips-key">{{ i18n.t('auto_tips_config_key') }}</span>
+              <span>{{ i18n.t('auto_tips_config') }}</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Canvas zoom controls (bottom-left pill) -->
+    <div class="ae-zoom f-drag-blocker">
+      <button (click)="zoomOut()" [title]="i18n.t('auto_zoom_out')" aria-label="Zoom out">
+        <app-icon name="minus" />
+      </button>
+      <span class="lvl">{{ zoomLevel() }}%</span>
+      <button (click)="zoomIn()" [title]="i18n.t('auto_zoom_in')" aria-label="Zoom in">
+        <app-icon name="plus" />
+      </button>
+      <span class="sep"></span>
+      <button (click)="resetZoom()" [title]="i18n.t('auto_reset_zoom')" aria-label="Reset zoom">
+        <app-icon name="maximize" />
+      </button>
+      <button (click)="focusOnStart()" [title]="i18n.t('auto_focus_start')" aria-label="Focus start">
+        <app-icon name="target" />
+      </button>
+    </div>
+
+    <!-- Legend -->
+    <div class="ae-legend f-drag-blocker" [class.ae-legend-collapsed]="!legendOpen()">
+      <button class="ae-legend-toggle" (click)="legendOpen.set(!legendOpen())">
+        <span class="ae-legend-title">{{ i18n.t('auto_legend') }}</span>
+        <app-icon [name]="legendOpen() ? 'chevronDown' : 'chevronUp'" />
+      </button>
+      @if (legendOpen()) {
+        <div class="ae-legend-items">
+          <div class="ae-legend-item">
+            <span class="ae-legend-shape ae-legend-circle ae-legend-hollow"></span>
+            <span>{{ i18n.t('auto_legend_input') }}</span>
+          </div>
+          <div class="ae-legend-item">
+            <span class="ae-legend-shape ae-legend-circle ae-legend-filled"></span>
+            <span>{{ i18n.t('auto_legend_output') }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Mini status (bottom-right floating card) -->
+    <div class="ae-mini-status f-drag-blocker">
+      <div class="ae-status-menu-wrap">
+        <button class="ae-mini-status-btn" [attr.data-status]="automation()?.status" [disabled]="!canActivate()" (click)="editorStatusMenuOpen.set(!editorStatusMenuOpen())">
+          <span class="grp" [class.paused]="automation()?.status !== 'ACTIVE'" [class.active]="automation()?.status === 'ACTIVE'">
+            {{ automation()?.status === 'ACTIVE' ? i18n.t('auto_status_active') : automation()?.status === 'TESTING' ? i18n.t('auto_status_testing') : i18n.t('auto_status_paused') }}
+          </span>
+        </button>
+        @if (editorStatusMenuOpen() && canActivate()) {
+          <div class="ae-status-dropdown">
+            <button class="ae-status-opt" [attr.data-active]="automation()?.status === 'ACTIVE'" (click)="setEditorStatus('ACTIVE')">
+              <app-icon name="play" /> {{ i18n.t('auto_status_active') }}
+            </button>
+            <button class="ae-status-opt" [attr.data-active]="automation()?.status === 'TESTING'" (click)="setEditorStatus('TESTING')">
+              <app-icon name="beaker" /> {{ i18n.t('auto_status_testing') }}
+            </button>
+            <button class="ae-status-opt" [attr.data-active]="automation()?.status === 'PAUSED'" (click)="setEditorStatus('PAUSED')">
+              <app-icon name="pause" /> {{ i18n.t('auto_status_paused') }}
+            </button>
+          </div>
+        }
+      </div>
+      <span class="sep"></span>
+      <span class="grp"><app-icon name="grid" /> {{ nodes().length }} {{ i18n.t('auto_nodes') }}</span>
+      <span class="grp"><app-icon name="link" /> {{ edges().length }} {{ i18n.t('auto_edges') }}</span>
+    </div>
+
+    <!-- Canvas context menu (right-click on empty canvas) -->
+    @if (ctxMenuOpen() && canEdit()) {
+      <div class="ae-ctx-backdrop" (click)="closeContextMenu()" (contextmenu)="closeContextMenu(); $event.preventDefault()"></div>
+      <div class="ae-ctx-menu" [style.left.px]="ctxMenuPos().x" [style.top.px]="ctxMenuPos().y">
+        @for (item of palette; track item.type) {
+          <button class="ae-ctx-item" (click)="addNodeAt(item.type)">
+            <span class="ae-ctx-icon" [style.--pc]="item.color">
+              <app-icon [name]="item.icon" />
+            </span>
+            <span>{{ i18n.t(item.labelKey) }}</span>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Node context menu (right-click on a node) -->
+    @if (nodeCtxMenuOpen() && canEdit()) {
+      <div class="ae-ctx-backdrop" (click)="closeNodeContextMenu()" (contextmenu)="closeNodeContextMenu(); $event.preventDefault()"></div>
+      <div class="ae-ctx-menu" [style.left.px]="nodeCtxMenuPos().x" [style.top.px]="nodeCtxMenuPos().y">
+        <button class="ae-ctx-item" (click)="copyNode(nodeCtxTarget()!)">
+          <span class="ae-ctx-icon" style="--pc: var(--fg-muted)">
+            <app-icon name="copy" />
+          </span>
+          <span>{{ i18n.t('auto_copy_node') }}</span>
+        </button>
+        <button class="ae-ctx-item ae-ctx-item-danger" (click)="deleteNode(nodeCtxTarget()!); closeNodeContextMenu()">
+          <span class="ae-ctx-icon ae-ctx-icon-danger">
+            <app-icon name="trash" />
+          </span>
+          <span>{{ i18n.t('auto_delete_node') }}</span>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── Config Panel ────────────────────────────────────── -->
+  <!-- ── Config Panel ────────────────────────────────────── -->
+  @if (configPanelOpen() && selectedNode()) {
+    <app-node-config-panel
+      [nodes]="nodes"
+      [edges]="edges"
+      [selectedNodeId]="selectedNodeId"
+      [categories]="categories"
+      [parameterSets]="parameterSets"
+      [templates]="templates"
+      [secrets]="secrets"
+      [sendableAccounts]="sendableAccounts"
+      [automation]="automation"
+      (close)="closePanel()"
+      (compose)="openCompose($event.nodeId, $event.kind)"
+      (error)="error.set($event)" />
+  }
+
+  <!-- ── Tests Panel (right drawer) ─────────────────────── -->
+  @if (editorTab() === 'tests') {
+    <div class="ae-test-panel">
+      <app-automation-test-panel
+        [automationId]="automationId()"
+        [nodes]="testPanelNodes()"
+        [allCategories]="categories()"
+        [isIntegration]="isIntegration()"
+        [triggerMode]="triggerKind()" />
+    </div>
+  }
+
+  <!-- ── Simulations Panel (right drawer) ─────────────────── -->
+  @if (editorTab() === 'simulations') {
+    <div class="ae-test-panel">
+      <app-test-mode-panel [automationId]="automationId()" />
+    </div>
+  }
+
+  <!-- ── Manual compose modal (EMAIL_ACTION/REPLY + SEND_EMAIL) ── -->
+  @if (composeOpen()) {
+    <div class="ae-compose-back" (click)="cancelCompose()" data-testid="compose-backdrop"></div>
+    <div class="ae-compose" data-testid="compose-modal"
+      [style.--pc]="getNodeColor(composeNodeKind() === 'send_email' ? 'SEND_EMAIL' : 'EMAIL_ACTION')">
+      <div class="ae-compose-head">
+        <span class="ae-compose-glyph">
+          <app-icon [name]="composeNodeKind() === 'send_email' ? 'send' : 'reply'" />
+        </span>
+        <div class="ae-compose-head-text">
+          <span class="ae-compose-eyebrow">{{ i18n.t('auto_compose_eyebrow') }}</span>
+          <span class="ae-compose-title">{{ i18n.t('auto_compose_title') }}</span>
+        </div>
+        <button class="ae-compose-x" (click)="cancelCompose()" data-testid="compose-close">
+          <app-icon name="x" />
+        </button>
+      </div>
+
+      <div class="ae-compose-body">
+        <div class="ae-panel-field">
+          <label class="ae-panel-label">{{ i18n.t('auto_compose_subject') }}</label>
+          <input class="ae-panel-input" type="text" data-testid="compose-subject"
+            [value]="composeDraft().subject"
+            (focus)="composeFocus.set('subject')"
+            (input)="updateComposeField('subject', v($event))"
+            [placeholder]="i18n.t('auto_compose_subject')" />
+        </div>
+
+        <div class="ae-panel-field">
+          <label class="ae-panel-label">{{ i18n.t('auto_compose_body') }}</label>
+          <textarea class="ae-panel-input ae-compose-textarea" rows="8" data-testid="compose-body"
+            [value]="composeDraft().body"
+            (focus)="composeFocus.set('body')"
+            (input)="updateComposeField('body', v($event))"
+            [placeholder]="i18n.t('auto_compose_body')"></textarea>
+        </div>
+
+        @if (composeNodeId()) {
+          <div class="ae-varbar">
+            <span class="ae-varbar-label">{{ i18n.t('auto_compose_insert_variable') }}</span>
+            <div class="ae-varbar-chips">
+              @for (group of getAvailableVariables(composeNodeId()!); track group.label) {
+                @for (vr of group.variables; track vr.key) {
+                  <button class="ae-varchip" (click)="insertComposeVariable(vr.key)"
+                    [title]="vr.label" data-testid="compose-varchip">
+                    {{ '{{' + vr.key + '}}' }}
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="ae-compose-foot">
+        <span class="ae-compose-hint">{{ i18n.t('auto_compose_hint') }}</span>
+        <div class="ae-compose-foot-sp"></div>
+        <button class="ae-btn-ghost" (click)="cancelCompose()" data-testid="compose-cancel">
+          {{ i18n.t('auto_compose_cancel') }}
+        </button>
+        <button class="ae-btn-primary" (click)="applyCompose()" data-testid="compose-apply">
+          {{ i18n.t('auto_compose_apply') }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Problems panel (lint issues) ─────────────────────────── -->
+  @if (problemsOpen()) {
+    <div class="ae-problems-back" (click)="problemsOpen.set(false)"></div>
+    <div class="ae-problems-panel" data-testid="automation-problems-panel">
+      <div class="ae-problems-head">
+        <span class="ae-problems-title">
+          <app-icon name="alertTriangle" />
+          {{ i18n.t('auto_lint_problems') }}
+        </span>
+        <div class="ae-problems-summary">
+          @if (lintErrorCount() > 0) {
+            <span class="ae-problems-stat is-error">{{ i18n.t('auto_lint_n_errors', { n: lintErrorCount().toString() }) }}</span>
+          }
+          @if (lintWarningCount() > 0) {
+            <span class="ae-problems-stat is-warning">{{ i18n.t('auto_lint_n_warnings', { n: lintWarningCount().toString() }) }}</span>
+          }
+        </div>
+        <button class="ae-problems-x" (click)="problemsOpen.set(false)" aria-label="Close">
+          <app-icon name="x" />
+        </button>
+      </div>
+      <div class="ae-problems-body">
+        @if (lintIssues().length === 0) {
+          <div class="ae-problems-empty">
+            <app-icon name="check" />
+            <span>{{ i18n.t('auto_lint_no_problems') }}</span>
+          </div>
+        } @else {
+          @for (issue of lintIssues(); track $index) {
+            <button class="ae-problem-item" [attr.data-sev]="issue.severity"
+              (click)="focusIssue(issue)" data-testid="automation-problem-item">
+              <span class="ae-problem-icon" [attr.data-sev]="issue.severity">
+                <app-icon [name]="issue.severity === 'error' ? 'alertTriangle' : 'info'" />
+              </span>
+              <span class="ae-problem-text">
+                <span class="ae-problem-node">{{ issueNodeLabel(issue.nodeId) }}</span>
+                <span class="ae-problem-msg">{{ issue.message }}</span>
+              </span>
+            </button>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Constants / Variables modal ──────────────────────────── -->
+  @if (constantsOpen()) {
+    <app-constants-modal
+      [automationId]="automationId()"
+      [constants]="automation()?.constants ?? []"
+      [nodes]="nodes()"
+      (close)="constantsOpen.set(false)"
+      (stripReferences)="stripConstantReferences($event)"
+      (constantsChanged)="onConstantsChanged($event)" />
+  }
+
+  <!-- ── Manual run dialog (MANUAL trigger) ───────────────────── -->
+  @if (manualRunOpen()) {
+    <app-manual-run-dialog
+      [automationId]="automationId()"
+      [automationName]="automation()?.name ?? ''"
+      (close)="manualRunOpen.set(false)" />
+  }
+</div>

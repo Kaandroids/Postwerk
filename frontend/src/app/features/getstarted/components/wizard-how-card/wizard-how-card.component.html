@@ -1,0 +1,40 @@
+<div
+  class="wh-card"
+  [class.wh-collapsed]="collapsed()"
+  [attr.data-on]="visible() ? '1' : '0'"
+  data-testid="wizard-how-card"
+>
+  <button
+    class="wh-title"
+    (click)="collapsed.set(!collapsed())"
+    [attr.aria-expanded]="!collapsed()"
+    data-testid="wizard-how-toggle"
+  >
+    <app-icon name="sparkles" />
+    <span>{{ i18n.t('wiz_how_title') }}</span>
+    <app-icon class="wh-chevron" [name]="collapsed() ? 'chevronDown' : 'chevronUp'" />
+  </button>
+
+  @if (!collapsed()) {
+    <div class="wh-steps">
+      @for (step of steps(); track step.label; let i = $index) {
+        <div class="wh-step">
+          <span class="wh-num" [attr.data-k]="step.kind">{{ i + 1 }}</span>
+          <div class="wh-step-text">
+            <span class="wh-step-label">{{ step.label }}</span>
+            <span class="wh-step-desc">{{ step.description }}</span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <button
+      class="wh-continue"
+      (click)="continueChat.emit()"
+      data-testid="wizard-cta-continue"
+    >
+      {{ i18n.t('wiz_cta_secondary') }}
+      <app-icon name="arrow-right" />
+    </button>
+  }
+</div>

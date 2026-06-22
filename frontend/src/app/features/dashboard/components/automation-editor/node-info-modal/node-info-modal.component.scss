@@ -1,0 +1,89 @@
+.nim-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, #000 48%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.nim {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 86vh;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.nim-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nim-head-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.nim-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+}
+
+.nim-body {
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.nim-foot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.nim-docs-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent) 22%, var(--bg-2));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nim-scrim {
+    backdrop-filter: none;
+  }
+}

@@ -1,0 +1,640 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* ── Error toast (snackbar, floating bottom-center) ──────── */
+.ae-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 48px));
+  padding: 10px 10px 10px 14px;
+  background: var(--bg);
+  border: 0.5px solid color-mix(in srgb, var(--danger) 38%, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
+  font-size: 13px;
+  color: var(--fg);
+  pointer-events: auto;
+  animation: ae-toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ae-toast-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
+
+.ae-toast-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: ae-status-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.ae-toast-msg {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.ae-toast-close {
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+
+  app-icon { width: 15px; height: 15px; display: inline-flex; }
+
+  &:hover {
+    background: var(--bg-2);
+    color: var(--fg);
+  }
+}
+
+@keyframes ae-toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ae-toast { animation: none; }
+  .ae-toast-dot::after { animation: none; display: none; }
+}
+
+/* ── Problems panel (lint issues) ─────────────────────────── */
+.ae-problems-back {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.ae-problems-panel {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 61;
+  width: 380px;
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.ae-problems-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ae-problems-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  app-icon { width: 15px; height: 15px; color: var(--fg-muted); }
+}
+
+.ae-problems-summary {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ae-problems-stat {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  &.is-error { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--bg-2)); }
+  &.is-warning { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, var(--bg-2)); }
+}
+
+.ae-problems-x {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  &:hover { background: var(--bg-2); color: var(--fg); }
+}
+
+.ae-problems-body {
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.ae-problems-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  app-icon { width: 22px; height: 22px; color: var(--success); }
+}
+
+.ae-problem-item {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  &:hover { background: var(--bg-2); }
+}
+
+.ae-problem-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+  app-icon { width: 13px; height: 13px; }
+  &[data-sev="error"] { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--bg-2)); }
+  &[data-sev="warning"] { color: var(--warning); background: color-mix(in srgb, var(--warning) 14%, var(--bg-2)); }
+}
+
+.ae-problem-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ae-problem-node {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--fg-subtle);
+}
+
+.ae-problem-msg {
+  font-size: 12.5px;
+  color: var(--fg);
+  line-height: 1.4;
+}
+
+/* ── Canvas ───────────────────────────────────────────────── */
+.ae-canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  background: var(--bg-2);
+}
+
+.ae-canvas-wrap.ae-panning {
+  cursor: grabbing;
+}
+
+.ae-canvas-wrap f-flow {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Context menu ────────────────────────────────────────── */
+.ae-ctx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.ae-ctx-menu {
+  position: fixed;
+  z-index: 100;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  animation: ae-ctx-in 0.12s ease-out;
+}
+
+@keyframes ae-ctx-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.ae-ctx-item {
+  appearance: none;
+  border: 0;
+  background: none;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.12s;
+}
+
+.ae-ctx-item:hover {
+  background: var(--bg-2);
+}
+
+.ae-ctx-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: var(--pc);
+  color: white;
+  flex-shrink: 0;
+}
+
+.ae-ctx-item-danger {
+  color: oklch(0.55 0.20 25);
+}
+
+.ae-ctx-icon-danger {
+  background: oklch(0.55 0.20 25 / 0.12);
+  color: oklch(0.55 0.20 25);
+}
+
+/* ── Tips overlay ────────────────────────────────────────── */
+.ae-tips-wrap {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  pointer-events: auto;
+}
+
+.ae-tips-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+.ae-tips-panel {
+  margin-top: 6px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 14px 16px;
+  min-width: 300px;
+  box-shadow: 0 8px 28px rgba(34, 28, 18, 0.12), 0 1px 2px rgba(34, 28, 18, 0.05);
+  animation: ae-ctx-in 0.12s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ae-tips-title {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--fg-subtle);
+}
+
+.ae-tips-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 9px 14px;
+  align-items: center;
+}
+
+.ae-tips-item {
+  display: contents;
+
+  > span:last-child {
+    font-size: 12px;
+    color: var(--fg-muted);
+    line-height: 1.4;
+  }
+}
+
+.ae-tips-key {
+  justify-self: start;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--bg-2);
+  border: 0.5px solid var(--border);
+  border-bottom-width: 1.5px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* ── Canvas overlay buttons (tips, etc.) ─────────────────── */
+.ae-canvas-btn {
+  appearance: none;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  > * { pointer-events: none; }
+}
+
+.ae-canvas-btn:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ── Zoom control pill (bottom-left) ─────────────────────── */
+.ae-zoom {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 20;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 4px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.05);
+
+  button {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    color: var(--fg-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.12s, color 0.12s;
+
+    > * { pointer-events: none; }
+
+    &:hover { background: var(--bg-2); color: var(--fg); }
+  }
+
+  .lvl {
+    padding: 0 8px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--fg-muted);
+    min-width: 42px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
+
+  .sep {
+    width: 0.5px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 2px;
+  }
+}
+
+/* ── Legend ───────────────────────────────────────────────── */
+.ae-legend {
+  position: absolute;
+  bottom: 56px;
+  left: 14px;
+  z-index: 20;
+  pointer-events: auto;
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 2px rgba(34, 28, 18, 0.05);
+}
+
+.ae-legend-collapsed {
+  padding: 0;
+}
+
+.ae-legend-toggle {
+  appearance: none;
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--fg-subtle);
+
+  > * { pointer-events: none; }
+
+  .ae-legend-collapsed & {
+    padding: 8px 12px;
+  }
+
+  app-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--fg-subtle);
+    transition: transform 0.2s;
+  }
+}
+
+.ae-legend-toggle:hover {
+  color: var(--fg-muted);
+
+  app-icon {
+    color: var(--fg-muted);
+  }
+}
+
+.ae-legend-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ae-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ae-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.ae-legend-shape {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.ae-legend-circle {
+  border-radius: 50%;
+}
+
+.ae-legend-hollow {
+  background: transparent;
+  border: 2px solid var(--fg-muted);
+}
+
+.ae-legend-filled {
+  background: var(--fg-muted);
+  border: 2px solid var(--fg-muted);
+}
+
+.ae-legend-triangle {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  border-radius: 0;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  border: none;
+}
+
+.ae-legend-triangle.ae-legend-hollow {
+  background: transparent;
+  border: none;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background: var(--fg-muted);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2.5px;
+    left: 1.5px;
+    width: 7px;
+    height: 7px;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    background: var(--bg);
+  }
+}
+
+.ae-legend-sep {
+  height: 0.5px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+
+/* ── Foblex overrides ─────────────────────────────────────── */
+:host ::ng-deep .f-connection path {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  fill: none;
+}
+
+:host ::ng-deep .f-connection.f-selected path {
+  stroke: var(--accent);
+  /* Keep the SAME width as the unselected line: the arrow marker scales with stroke-width
+     (markerUnits=strokeWidth), so a thicker selected line would enlarge/distort the arrow.
+     Selection is shown by the accent colour instead. */
+  stroke-width: 2;
+}
+
+:host ::ng-deep .f-connection-for-create path {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  fill: none;
+}
+
+/* Connection line-end arrow — a clean SOLID arrowhead (no white halo) in a readable tone, turning
+   accent on hover/selection. The thin same-coloured outline keeps the edges crisp without a light ring. */
+:host ::ng-deep .f-marker {
+  color: var(--fg-muted);
+}
+
+:host ::ng-deep .f-marker circle,
+:host ::ng-deep .f-marker path,
+:host ::ng-deep .f-marker polygon {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 0.75px;
+  transition: color 0.15s;
+}
+
+:host ::ng-deep .f-connection.f-selected .f-marker,
+:host ::ng-deep .f-connection:hover .f-marker {
+  color: var(--accent);
+}
+
+/* Reassign drag-handles — Foblex draws a solid dot/ring at each connection end (r=8) and a second
+   one when selected. Keep them fully transparent in EVERY state (no white circle behind the arrow),
+   but `fill: transparent` (not `none`) leaves them hit-testable so dragging an end to reassign works. */
+:host ::ng-deep .f-connection circle[f-connection-drag-handle-start],
+:host ::ng-deep .f-connection circle[f-connection-drag-handle-end],
+:host ::ng-deep .f-connection.f-selected circle[f-connection-drag-handle-start],
+:host ::ng-deep .f-connection.f-selected circle[f-connection-drag-handle-end] {
+  fill: transparent;
+  stroke: transparent;
+}

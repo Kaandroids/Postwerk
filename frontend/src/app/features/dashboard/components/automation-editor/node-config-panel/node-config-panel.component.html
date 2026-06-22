@@ -1,0 +1,1366 @@
+    <div class="ae-panel" [style.--pc]="getNodeColor(selectedNode()!.nodeType)">
+      <div class="ae-panel-head">
+        <span class="ae-panel-head-icon">
+          <app-icon [name]="getNodeIcon(selectedNode()!.nodeType)" />
+        </span>
+        <div class="ae-panel-head-text">
+          <span class="ae-panel-head-type">{{ getNodeTypeLabel(selectedNode()!.nodeType) }}</span>
+          <span class="ae-panel-title">{{ selectedNode()!.label }}</span>
+        </div>
+        <div class="ae-panel-head-actions">
+          <button class="ae-panel-help" (click)="infoOpen.set(true)" [attr.aria-label]="i18n.t('doc_node_help')"
+            [attr.title]="i18n.t('doc_node_help')">
+            <app-icon name="help" />
+          </button>
+          <button class="ae-panel-close" (click)="close.emit()" aria-label="Close panel">
+            <app-icon name="x" />
+          </button>
+        </div>
+      </div>
+
+      @if (infoOpen()) {
+        <app-node-info-modal [nodeType]="selectedNode()!.nodeType" (close)="infoOpen.set(false)" />
+      }
+      @if (getNodeDescription(selectedNode()!.nodeType)) {
+        <div class="ae-panel-desc" [style.--pc]="getNodeColor(selectedNode()!.nodeType)">
+          {{ getNodeDescription(selectedNode()!.nodeType) }}
+        </div>
+      }
+
+      <div class="ae-panel-body" [attr.inert]="canEdit() ? null : ''">
+        <!-- Label -->
+        <div class="ae-panel-field">
+          <label class="ae-panel-label">{{ i18n.t('auto_node_label') }}</label>
+          <input class="ae-panel-input" type="text"
+            [value]="selectedNode()!.label"
+            (input)="updateNodeLabel(selectedNode()!.id, v($event))" />
+        </div>
+
+        <!-- Supervised execution mode (action nodes only) -->
+        @if (isActionNode(selectedNode()!.nodeType)) {
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_exec_mode') }}</label>
+            <div class="ae-trigger-mode-tabs" data-testid="exec-mode-tabs">
+              <button type="button" class="ae-trigger-mode-tab" [class.active]="getExecutionMode(selectedNode()!) === 'AUTO'"
+                (click)="setExecutionMode(selectedNode()!.id, 'AUTO')">{{ i18n.t('auto_exec_mode_auto') }}</button>
+              <button type="button" class="ae-trigger-mode-tab" [class.active]="getExecutionMode(selectedNode()!) === 'REVIEW'"
+                (click)="setExecutionMode(selectedNode()!.id, 'REVIEW')">{{ i18n.t('auto_exec_mode_review') }}</button>
+              <button type="button" class="ae-trigger-mode-tab" [class.active]="getExecutionMode(selectedNode()!) === 'OFF'"
+                (click)="setExecutionMode(selectedNode()!.id, 'OFF')">{{ i18n.t('auto_exec_mode_off') }}</button>
+            </div>
+            <p class="ae-exec-hint">{{ i18n.t('auto_exec_hint_' + getExecutionMode(selectedNode()!).toLowerCase()) }}</p>
+
+            @if (getExecutionMode(selectedNode()!) === 'REVIEW') {
+              <div class="ae-exec-threshold">
+                <div class="ae-exec-threshold-head">
+                  <label class="ae-panel-label">{{ i18n.t('auto_exec_threshold') }}</label>
+                  <span class="ae-exec-threshold-val">
+                    {{ getReviewThreshold(selectedNode()!) === 0 ? i18n.t('auto_exec_threshold_always') : getReviewThreshold(selectedNode()!) + '%' }}
+                  </span>
+                </div>
+                <input type="range" min="0" max="100" step="5" data-testid="review-threshold"
+                  [value]="getReviewThreshold(selectedNode()!)"
+                  (input)="setReviewThreshold(selectedNode()!.id, +v($event))" />
+                <p class="ae-exec-hint">{{ i18n.t('auto_exec_threshold_hint') }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- TRIGGER config: mode switcher + mode-specific fields -->
+        @if (selectedNode()!.nodeType === 'TRIGGER') {
+          <div class="ae-panel-section">
+            <!-- Mode tabs -->
+            <div class="ae-trigger-mode-tabs">
+              <button class="ae-trigger-mode-tab" [class.active]="getTriggerMode(selectedNode()!) === 'EMAIL'"
+                (click)="setTriggerMode(selectedNode()!.id, 'EMAIL')">
+                <app-icon name="mail" /> Email
+              </button>
+              <button class="ae-trigger-mode-tab" [class.active]="getTriggerMode(selectedNode()!) === 'WEBHOOK'"
+                (click)="setTriggerMode(selectedNode()!.id, 'WEBHOOK')">
+                <app-icon name="globe" /> Webhook
+              </button>
+              <button class="ae-trigger-mode-tab" [class.active]="getTriggerMode(selectedNode()!) === 'CRON'"
+                (click)="setTriggerMode(selectedNode()!.id, 'CRON')">
+                <app-icon name="calendar" /> {{ i18n.t('auto_trigger_mode_cron') }}
+              </button>
+              <button class="ae-trigger-mode-tab" [class.active]="getTriggerMode(selectedNode()!) === 'MANUAL'"
+                (click)="setTriggerMode(selectedNode()!.id, 'MANUAL')" data-testid="trigger-mode-manual">
+                <app-icon name="bolt" /> {{ i18n.t('auto_trigger_mode_manual') }}
+              </button>
+            </div>
+
+            <!-- EMAIL mode -->
+            @if (getTriggerMode(selectedNode()!) === 'EMAIL') {
+              <div class="ae-panel-section-title">{{ i18n.t('auto_trigger_accounts') }}</div>
+              @if (workspaceService.accounts().length === 0) {
+                <span class="ae-trigger-empty">{{ i18n.t('auto_trigger_no_accounts_available') }}</span>
+              }
+              @for (acc of workspaceService.accounts(); track acc.id) {
+                <label class="ae-trigger-account-row"
+                  [class.ae-trigger-account-row-active]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)">
+                  <input type="checkbox"
+                    [checked]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)"
+                    (change)="toggleTriggerAccount(selectedNode()!.id, acc.id)" />
+                  <span class="ae-trigger-account-color" [style.background]="acc.color || '#6366f1'"></span>
+                  <span class="ae-trigger-account-info">
+                    <span class="ae-trigger-account-name">{{ acc.displayName || acc.email }}</span>
+                    @if (acc.displayName) {
+                      <span class="ae-trigger-account-email">{{ acc.email }}</span>
+                    }
+                  </span>
+                </label>
+              }
+            }
+
+            <!-- WEBHOOK mode (INBOUND receiver) -->
+            @if (getTriggerMode(selectedNode()!) === 'WEBHOOK') {
+              <!-- Generated public URL -->
+              @if (selectedNodeConfig()?.webhookToken && webhookEndpoint(); as ep) {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_webhook_inbound_url') }}</label>
+                  <input class="ae-panel-input" type="text" readonly [value]="ep.url"
+                    data-testid="webhook-url" />
+                  <div class="ae-webhook-btn-row">
+                    <button class="ae-btn-secondary" type="button"
+                      (click)="copyWebhookUrl(ep.url)" data-testid="webhook-copy-btn">
+                      <app-icon name="copy" />
+                      {{ i18n.t('auto_webhook_inbound_copy') }}
+                    </button>
+                    <button class="ae-btn-secondary" type="button"
+                      (click)="regenerateWebhookToken()" data-testid="webhook-regenerate-btn">
+                      <app-icon name="refresh" />
+                      {{ i18n.t('auto_webhook_inbound_regenerate') }}
+                    </button>
+                  </div>
+                  <span class="ae-panel-hint ae-panel-hint-sm">{{ i18n.t('auto_webhook_inbound_method_hint') }}</span>
+                </div>
+              } @else {
+                <div class="ae-panel-field">
+                  <span class="ae-trigger-empty" data-testid="webhook-save-hint">
+                    {{ i18n.t('auto_webhook_inbound_save_to_generate') }}
+                  </span>
+                </div>
+              }
+
+              <!-- Account scoping for downstream nodes -->
+              @for (acc of workspaceService.accounts(); track acc.id) {
+                <label class="ae-trigger-account-row"
+                  [class.ae-trigger-account-row-active]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)">
+                  <input type="checkbox"
+                    [checked]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)"
+                    (change)="toggleTriggerAccount(selectedNode()!.id, acc.id)" />
+                  <span class="ae-trigger-account-color" [style.background]="acc.color || '#6366f1'"></span>
+                  <span class="ae-trigger-account-info">
+                    <span class="ae-trigger-account-name">{{ acc.displayName || acc.email }}</span>
+                  </span>
+                </label>
+              }
+
+              <!-- Field mapping -->
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_webhook_inbound_paramset') }}</label>
+                <select class="ae-panel-input"
+                  [value]="selectedNodeConfig()?.parameterSetId || ''"
+                  (change)="updateTriggerWebhookField(selectedNode()!.id, 'parameterSetId', v($event))"
+                  data-testid="webhook-paramset-select">
+                  <option value="">{{ i18n.t('auto_webhook_no_parameterset') }}</option>
+                  @for (ps of parameterSets(); track ps.id) {
+                    <option [value]="ps.id" [selected]="ps.id === selectedNodeConfig()?.parameterSetId">{{ ps.name }}</option>
+                  }
+                </select>
+              </div>
+
+              <!-- Authentication (requires a saved endpoint) -->
+              @if (selectedNodeConfig()?.webhookToken && webhookEndpoint(); as ep) {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_webhook_inbound_auth') }}</label>
+                  <select class="ae-panel-input" [value]="ep.authMode"
+                    (change)="onWebhookAuthModeChange(v($event))" data-testid="webhook-authmode-select">
+                    <option value="NONE">{{ i18n.t('auto_webhook_inbound_auth_none') }}</option>
+                    <option value="API_KEY">{{ i18n.t('auto_webhook_inbound_auth_apikey') }}</option>
+                    <option value="HMAC">{{ i18n.t('auto_webhook_inbound_auth_hmac') }}</option>
+                  </select>
+                </div>
+                @if (ep.authMode === 'API_KEY') {
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_inbound_header_name') }}</label>
+                    <input class="ae-panel-input" type="text"
+                      [value]="ep.authHeaderName || 'X-API-Key'"
+                      (change)="onWebhookHeaderNameChange(v($event))" data-testid="webhook-headername-input" />
+                  </div>
+                }
+                @if (ep.authMode !== 'NONE') {
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_inbound_signing_secret') }}</label>
+                    @if (generatedSecret(); as gs) {
+                      <input class="ae-panel-input" type="text" readonly [value]="gs"
+                        data-testid="webhook-secret-value" />
+                      <span class="ae-panel-hint">{{ i18n.t('auto_webhook_inbound_secret_once') }}</span>
+                    } @else {
+                      <span class="ae-secret-status" [class.ae-secret-status-set]="ep.hasSecret"
+                        data-testid="webhook-secret-state">
+                        <span class="ae-secret-dot"></span>
+                        {{ ep.hasSecret ? i18n.t('auto_webhook_inbound_secret_set') : i18n.t('auto_webhook_inbound_secret_none') }}
+                      </span>
+                    }
+                    <button class="ae-btn-secondary" type="button"
+                      (click)="generateWebhookSecret()" data-testid="webhook-generate-secret-btn">
+                      {{ i18n.t('auto_webhook_inbound_generate_secret') }}
+                    </button>
+                  </div>
+                }
+              }
+            }
+
+            <!-- CRON mode -->
+            @if (getTriggerMode(selectedNode()!) === 'CRON') {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_schedule_frequency') }}</label>
+                <select class="ae-panel-input"
+                  [value]="selectedNodeConfig()?.preset || 'hourly'"
+                  (change)="applySchedulePreset(selectedNode()!.id, v($event))">
+                  @for (preset of cronPresets; track preset.key) {
+                    <option [value]="preset.key">{{ i18n.t(preset.labelKey) }}</option>
+                  }
+                </select>
+              </div>
+              @if ((selectedNodeConfig()?.preset) === 'daily') {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_time') }}</label>
+                  <input class="ae-panel-input" type="time"
+                    [value]="getScheduleTime(selectedNode()!)"
+                    (input)="updateScheduleTime(selectedNode()!.id, v($event))" />
+                </div>
+              }
+              @if ((selectedNodeConfig()?.preset) === 'weekly') {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_day') }}</label>
+                  <div class="ae-schedule-days">
+                    @for (day of weekDays; track day.value) {
+                      <button class="ae-schedule-day-btn"
+                        [class.ae-schedule-day-active]="getScheduleDay(selectedNode()!) === day.value"
+                        (click)="updateScheduleDay(selectedNode()!.id, day.value)">
+                        {{ i18n.t(day.labelKey) }}
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_time') }}</label>
+                  <input class="ae-panel-input" type="time"
+                    [value]="getScheduleTime(selectedNode()!)"
+                    (input)="updateScheduleTime(selectedNode()!.id, v($event))" />
+                </div>
+              }
+              @if ((selectedNodeConfig()?.preset) === 'monthly') {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_day_of_month') }}</label>
+                  <select class="ae-panel-input"
+                    [value]="getScheduleDayOfMonth(selectedNode()!)"
+                    (change)="updateScheduleDayOfMonth(selectedNode()!.id, +v($event))">
+                    @for (d of monthDays; track d) {
+                      <option [value]="d">{{ d }}.</option>
+                    }
+                  </select>
+                </div>
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_time') }}</label>
+                  <input class="ae-panel-input" type="time"
+                    [value]="getScheduleTime(selectedNode()!)"
+                    (input)="updateScheduleTimeMonthly(selectedNode()!.id, v($event))" />
+                </div>
+              }
+              @if ((selectedNodeConfig()?.preset) === 'custom') {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label">{{ i18n.t('auto_schedule_cron_label') }}</label>
+                  <input class="ae-panel-input" type="text"
+                    [value]="selectedNodeConfig()?.cronExpression || ''"
+                    (input)="updateScheduleCron(selectedNode()!.id, v($event))"
+                    placeholder="0 */5 * * *" />
+                </div>
+              }
+              <div class="ae-schedule-summary">
+                <app-icon name="clock" />
+                <span>{{ getScheduleDisplayText(selectedNode()!) }}</span>
+              </div>
+            }
+
+            <!-- MANUAL mode (user-fired via a Run button) -->
+            @if (getTriggerMode(selectedNode()!) === 'MANUAL') {
+              <span class="ae-panel-hint ae-panel-hint-sm">{{ i18n.t('auto_trigger_manual_hint') }}</span>
+
+              <!-- Optional parameter set: its fields become a run-time form → trigger.<field> -->
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_trigger_manual_paramset') }}</label>
+                <select class="ae-panel-input"
+                  [value]="selectedNodeConfig()?.parameterSetId || ''"
+                  (change)="updateTriggerWebhookField(selectedNode()!.id, 'parameterSetId', v($event))"
+                  data-testid="manual-paramset-select">
+                  <option value="">{{ i18n.t('auto_trigger_manual_no_paramset') }}</option>
+                  @for (ps of parameterSets(); track ps.id) {
+                    <option [value]="ps.id" [selected]="ps.id === selectedNodeConfig()?.parameterSetId">{{ ps.name }}</option>
+                  }
+                </select>
+                <span class="ae-panel-hint ae-panel-hint-sm">{{ i18n.t('auto_trigger_manual_paramset_hint') }}</span>
+              </div>
+
+              <!-- Account scoping for downstream email actions (optional) -->
+              <div class="ae-panel-section-title">{{ i18n.t('auto_trigger_accounts') }} <span class="ae-panel-opt">· {{ i18n.t('auto_optional') }}</span></div>
+              <span class="ae-panel-hint ae-panel-hint-sm">{{ i18n.t('auto_trigger_manual_accounts_hint') }}</span>
+              @if (workspaceService.accounts().length === 0) {
+                <span class="ae-trigger-empty">{{ i18n.t('auto_trigger_no_accounts_available') }}</span>
+              }
+              @for (acc of workspaceService.accounts(); track acc.id) {
+                <label class="ae-trigger-account-row"
+                  [class.ae-trigger-account-row-active]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)">
+                  <input type="checkbox"
+                    [checked]="(selectedNodeConfig()?.accountIds || []).includes(acc.id)"
+                    (change)="toggleTriggerAccount(selectedNode()!.id, acc.id)" />
+                  <span class="ae-trigger-account-color" [style.background]="acc.color || '#6366f1'"></span>
+                  <span class="ae-trigger-account-info">
+                    <span class="ae-trigger-account-name">{{ acc.displayName || acc.email }}</span>
+                  </span>
+                </label>
+              }
+            }
+          </div>
+        }
+
+        <!-- DELAY config -->
+        @if (selectedNode()!.nodeType === 'DELAY') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_delay_minutes') }}</label>
+              <input class="ae-panel-input" type="number" min="1"
+                [value]="selectedNodeConfig()?.delayMinutes || 30"
+                (input)="updateDelayMinutes(selectedNode()!.id, +v($event))" />
+            </div>
+          </div>
+        }
+
+        <!-- LABEL config: category selection -->
+        @if (selectedNode()!.nodeType === 'LABEL') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_label_category') }}</label>
+              <select class="ae-panel-input"
+                (change)="updateLabelCategory(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!selectedNodeConfig()?.categoryId">{{ i18n.t('auto_label_select') }}</option>
+                @for (cat of categories(); track cat.id) {
+                  <option [value]="cat.id" [selected]="cat.id === selectedNodeConfig()?.categoryId">{{ cat.name }}</option>
+                }
+              </select>
+            </div>
+            @if (selectedNodeConfig()?.categoryId) {
+              <div class="ae-label-preview">
+                <span class="ae-cat-chip-dot" [style.background]="getLabelCategoryColor(selectedNode()!)"></span>
+                <span>{{ getLabelCategoryName(selectedNode()!) }}</span>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- EXTRACT config -->
+        @if (selectedNode()!.nodeType === 'EXTRACT') {
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_source_variable') }}</label>
+            @for (sv of getSourceVariables(selectedNode()!); track $index) {
+              <div class="ae-source-var-chip"
+                [class.ae-source-var-chip--dangling]="isSourceVariableDangling(selectedNode()!.id, sv)"
+                [title]="isSourceVariableDangling(selectedNode()!.id, sv) ? i18n.t('auto_source_variable_dangling') : ''">
+                @if (isSourceVariableDangling(selectedNode()!.id, sv)) {
+                  <app-icon name="alertTriangle" />
+                }
+                <span>{{ getSourceVariableLabel(selectedNode()!.id, sv) }}</span>
+                <button class="ae-cond-remove-btn" (click)="removeSourceVariable(selectedNode()!.id, $index)">
+                  <app-icon name="x" />
+                </button>
+              </div>
+            }
+            @if (getSourceVariables(selectedNode()!).length === 0) {
+              <div class="ae-source-var-warning">
+                <app-icon name="alertTriangle" />
+                <span>{{ i18n.t('auto_source_variable_empty') }}</span>
+              </div>
+            }
+            <select class="ae-panel-input" (change)="addSourceVariable(selectedNode()!.id, v($event)); $any($event.target).value = ''">
+              <option value="">{{ i18n.t('auto_source_variable_hint') }}</option>
+              @for (sv of getSourceVariableOptions(selectedNode()!.id); track sv.key) {
+                <option [value]="sv.key">{{ sv.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="ae-panel-section">
+            <div class="ae-panel-section-title">{{ i18n.t('auto_extract_sets') }}</div>
+            @for (ext of selectedNodeConfig()?.extractions || []; track $index) {
+              <div class="ae-extract-card">
+                <span>{{ ext.label }}</span>
+                <button class="ae-cond-remove-btn" (click)="removeExtraction(selectedNode()!.id, $index)">
+                  <app-icon name="x" />
+                </button>
+              </div>
+            }
+            <select class="ae-panel-input" (change)="addExtraction(selectedNode()!.id, v($event)); $any($event.target).value = ''">
+              <option value="">{{ i18n.t('auto_extract_select') }}</option>
+              @for (ps of parameterSets(); track ps.id) {
+                <option [value]="ps.id">{{ ps.name }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- FILTER config (multi-check format) -->
+        @if (selectedNode()!.nodeType === 'FILTER') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-section-title">{{ i18n.t('auto_filter_checks') }}</div>
+
+            @for (check of selectedNodeConfig()?.checks || []; track $index; let ki = $index) {
+              <div class="ae-check-card">
+                <button class="ae-check-card-toggle" (click)="toggleCheckCard(ki)">
+                  <span>{{ check.label || ('Check ' + (ki + 1)) }}</span>
+                  <div class="ae-check-card-actions">
+                    <button class="ae-cond-remove-btn" (click)="removeFilterCheck(selectedNode()!.id, ki); $event.stopPropagation()">
+                      <app-icon name="x" />
+                    </button>
+                    <app-icon [name]="isCheckCardOpen(ki) ? 'chevronUp' : 'chevronDown'" />
+                  </div>
+                </button>
+                @if (isCheckCardOpen(ki)) {
+                  <div class="ae-check-card-body">
+                    <input class="ae-check-label-input" type="text"
+                      [value]="check.label || ''"
+                      (input)="updateFilterCheckLabel(selectedNode()!.id, ki, v($event))"
+                      [placeholder]="'Check ' + (ki + 1)" />
+
+                    @for (group of check.groups || []; track $index; let gi = $index) {
+                      @if (gi > 0) {
+                        <div class="ae-or-badge">{{ i18n.t('filter_or') }}</div>
+                      }
+                      <div class="ae-cond-subgroup">
+                        <div class="ae-cond-group-head">
+                          <span>{{ i18n.t('auto_group') }} {{ gi + 1 }}</span>
+                          @if ((check.groups || []).length > 1) {
+                            <button class="ae-cond-remove-btn" (click)="removeFilterGroup(selectedNode()!.id, ki, gi)">
+                              <app-icon name="x" />
+                            </button>
+                          }
+                        </div>
+                        @for (cond of group.conditions || []; track $index; let ci = $index) {
+                          @if (ci > 0) {
+                            <div class="ae-and-text">{{ i18n.t('filter_and') }}</div>
+                          }
+                          <div class="ae-cond-row">
+                            <div class="ae-cond-segment">
+                              <span class="ae-cond-micro-label">{{ i18n.t('filter_field_label') }}</span>
+                              <select class="ae-cond-select"
+                                [value]="cond.field"
+                                (change)="updateFilterField(selectedNode()!.id, ki, gi, ci, v($event))">
+                                @for (f of getFilterVariableFields(selectedNode()!.id); track f.key) {
+                                  <option [value]="f.key" [selected]="f.key === cond.field">{{ f.label }}</option>
+                                }
+                              </select>
+                            </div>
+                            <div class="ae-cond-segment">
+                              <span class="ae-cond-micro-label">{{ i18n.t('filter_operator_label') }}</span>
+                              <select class="ae-cond-select"
+                                [value]="cond.operator"
+                                (change)="updateFilterOperator(selectedNode()!.id, ki, gi, ci, v($event))">
+                                @for (op of getOperatorsForVariableField(cond.field); track op) {
+                                  <option [value]="op" [selected]="op === cond.operator">{{ i18n.t('filter_op_' + op) }}</option>
+                                }
+                              </select>
+                            </div>
+                            @if (cond.operator !== 'IS_TRUE' && cond.operator !== 'IS_FALSE') {
+                              <div class="ae-cond-segment">
+                                <span class="ae-cond-micro-label">{{ i18n.t('filter_value_label') }}</span>
+                                <input class="ae-cond-input" type="text"
+                                  [value]="cond.value"
+                                  (input)="updateFilterValue(selectedNode()!.id, ki, gi, ci, v($event))" />
+                              </div>
+                            }
+                            @if (group.conditions.length > 1) {
+                              <button class="ae-cond-remove-btn" (click)="removeFilterCondition(selectedNode()!.id, ki, gi, ci)">
+                                <app-icon name="x" />
+                              </button>
+                            }
+                          </div>
+                        }
+                        <button class="ae-cond-add-btn" (click)="addFilterCondition(selectedNode()!.id, ki, gi)">
+                          <app-icon name="plus" />
+                          {{ i18n.t('filter_add_condition') }}
+                        </button>
+                      </div>
+                    }
+                    <button class="ae-cond-add-btn ae-cond-add-group" (click)="addFilterGroup(selectedNode()!.id, ki)">
+                      <app-icon name="plus" />
+                      {{ i18n.t('filter_add_group') }}
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+            <button class="ae-cond-add-btn" (click)="addFilterCheck(selectedNode()!.id)">
+              <app-icon name="plus" />
+              {{ i18n.t('auto_filter_add_check') }}
+            </button>
+          </div>
+        }
+
+        <!-- CATEGORIZE config -->
+        @if (selectedNode()!.nodeType === 'CATEGORIZE') {
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_source_variable') }}</label>
+            @for (sv of getSourceVariables(selectedNode()!); track $index) {
+              <div class="ae-source-var-chip"
+                [class.ae-source-var-chip--dangling]="isSourceVariableDangling(selectedNode()!.id, sv)"
+                [title]="isSourceVariableDangling(selectedNode()!.id, sv) ? i18n.t('auto_source_variable_dangling') : ''">
+                @if (isSourceVariableDangling(selectedNode()!.id, sv)) {
+                  <app-icon name="alertTriangle" />
+                }
+                <span>{{ getSourceVariableLabel(selectedNode()!.id, sv) }}</span>
+                <button class="ae-cond-remove-btn" (click)="removeSourceVariable(selectedNode()!.id, $index)">
+                  <app-icon name="x" />
+                </button>
+              </div>
+            }
+            @if (getSourceVariables(selectedNode()!).length === 0) {
+              <div class="ae-source-var-warning">
+                <app-icon name="alertTriangle" />
+                <span>{{ i18n.t('auto_source_variable_empty') }}</span>
+              </div>
+            }
+            <select class="ae-panel-input" (change)="addSourceVariable(selectedNode()!.id, v($event)); $any($event.target).value = ''">
+              <option value="">{{ i18n.t('auto_source_variable_hint') }}</option>
+              @for (sv of getSourceVariableOptions(selectedNode()!.id); track sv.key) {
+                <option [value]="sv.key">{{ sv.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_categorize_threshold') }}</label>
+            <div class="ae-threshold-row">
+              <input type="range" min="0" max="100" step="5"
+                [value]="getCategorizeThreshold(selectedNode()!)"
+                (input)="updateCategorizeThreshold(selectedNode()!.id, +v($event))"
+                class="ae-threshold-slider" />
+              <span class="ae-threshold-value">{{ getCategorizeThreshold(selectedNode()!) }}%</span>
+            </div>
+          </div>
+          <div class="ae-panel-section">
+            <div class="ae-panel-section-title">{{ i18n.t('auto_categorize_categories') }}</div>
+            <div class="ae-cat-chips">
+              @for (entry of getCategoryEntries(selectedNode()!); track entry.categoryId; let i = $index) {
+                <span class="ae-cat-chip" [style.border-color]="entry.color">
+                  <span class="ae-cat-chip-dot" [style.background]="entry.color"></span>
+                  <span class="ae-cat-chip-label">{{ entry.label }}</span>
+                  <button class="ae-cat-chip-remove" type="button"
+                    [attr.aria-label]="'Remove ' + entry.label"
+                    (click)="removeCategory(selectedNode()!.id, i)">
+                    <app-icon name="x" />
+                  </button>
+                </span>
+              }
+            </div>
+            <select class="ae-panel-input" (change)="addCategory(selectedNode()!.id, v($event)); $any($event.target).value = ''">
+              <option value="">{{ i18n.t('auto_categorize_select') }}</option>
+              @for (cat of categories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <!-- EMAIL_ACTION config -->
+        @if (selectedNode()!.nodeType === 'EMAIL_ACTION') {
+          <div class="ae-panel-section">
+            <!-- Mode tabs -->
+            <div class="ae-trigger-mode-tabs">
+              <button class="ae-trigger-mode-tab" [class.active]="getEmailActionMode(selectedNode()!) === 'REPLY'"
+                (click)="setEmailActionMode(selectedNode()!.id, 'REPLY')">
+                <app-icon name="reply" /> {{ i18n.t('auto_node_reply') }}
+              </button>
+              <button class="ae-trigger-mode-tab" [class.active]="getEmailActionMode(selectedNode()!) === 'FORWARD'"
+                (click)="setEmailActionMode(selectedNode()!.id, 'FORWARD')">
+                <app-icon name="forward" /> {{ i18n.t('auto_node_forward') }}
+              </button>
+              <button class="ae-trigger-mode-tab" [class.active]="getEmailActionMode(selectedNode()!) === 'MOVE_FOLDER'"
+                (click)="setEmailActionMode(selectedNode()!.id, 'MOVE_FOLDER')">
+                <app-icon name="archive" /> {{ i18n.t('auto_node_move_folder') }}
+              </button>
+            </div>
+
+            @if (getEmailActionMode(selectedNode()!) === 'REPLY') {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_content') }}</label>
+                <div class="ae-src-tabs">
+                  <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'VORLAGE'"
+                    (click)="setContentSource(selectedNode()!.id, 'VORLAGE')" data-testid="reply-src-template">
+                    <app-icon name="tag" /> {{ i18n.t('auto_content_template') }}
+                  </button>
+                  <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'MANUAL'"
+                    (click)="setContentSource(selectedNode()!.id, 'MANUAL')" data-testid="reply-src-manual">
+                    <app-icon name="edit" /> {{ i18n.t('auto_content_manual') }}
+                  </button>
+                </div>
+              </div>
+              @if (getContentSource(selectedNode()!) === 'VORLAGE') {
+                <div class="ae-panel-field">
+                  <select class="ae-panel-input"
+                    (change)="updateEmailActionField(selectedNode()!.id, 'templateId', v($event))">
+                    <option value="" [selected]="!selectedNodeConfig()?.templateId">{{ i18n.t('auto_select_template') }}</option>
+                    @for (t of templates(); track t.id) {
+                      <option [value]="t.id" [selected]="t.id === selectedNodeConfig()?.templateId">{{ t.name }}</option>
+                    }
+                  </select>
+                  <span class="ae-panel-hint">{{ i18n.t('auto_content_template_hint') }}</span>
+                </div>
+              } @else {
+                <div class="ae-panel-field">
+                  <div class="ae-manual-card" data-testid="reply-manual-card">
+                    <div class="ae-manual-card-top">
+                      <span class="ae-manual-subj">{{ getManualSubject(selectedNode()!) || i18n.t('auto_compose_subject') }}</span>
+                      <button class="ae-manual-edit" (click)="compose.emit({ nodeId: selectedNode()!.id, kind: 'email_action' })" data-testid="reply-manual-edit">
+                        <app-icon name="edit" /> {{ i18n.t('auto_edit') }}
+                      </button>
+                    </div>
+                    @if (getManualBody(selectedNode()!)) {
+                      <p class="ae-manual-snippet">{{ getManualBody(selectedNode()!) }}</p>
+                    } @else {
+                      <p class="ae-manual-snippet ae-manual-empty">{{ i18n.t('auto_content_manual_empty') }}</p>
+                    }
+                  </div>
+                </div>
+              }
+            }
+
+            @if (getEmailActionMode(selectedNode()!) === 'FORWARD') {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_forward_to') }}</label>
+                <input class="ae-panel-input" type="email"
+                  [value]="selectedNodeConfig()?.toAddress || ''"
+                  (input)="updateEmailActionField(selectedNode()!.id, 'toAddress', v($event))"
+                  [placeholder]="i18n.t('auto_forward_placeholder')" />
+              </div>
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_content') }}</label>
+                <div class="ae-src-tabs">
+                  <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'VORLAGE'"
+                    (click)="setContentSource(selectedNode()!.id, 'VORLAGE')" data-testid="forward-src-template">
+                    <app-icon name="tag" /> {{ i18n.t('auto_content_template') }}
+                  </button>
+                  <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'MANUAL'"
+                    (click)="setContentSource(selectedNode()!.id, 'MANUAL')" data-testid="forward-src-manual">
+                    <app-icon name="edit" /> {{ i18n.t('auto_content_manual') }}
+                  </button>
+                </div>
+              </div>
+              @if (getContentSource(selectedNode()!) === 'VORLAGE') {
+                <div class="ae-panel-field">
+                  <select class="ae-panel-input"
+                    (change)="updateEmailActionField(selectedNode()!.id, 'templateId', v($event))">
+                    <option value="" [selected]="!selectedNodeConfig()?.templateId">{{ i18n.t('auto_select_template') }}</option>
+                    @for (t of templates(); track t.id) {
+                      <option [value]="t.id" [selected]="t.id === selectedNodeConfig()?.templateId">{{ t.name }}</option>
+                    }
+                  </select>
+                  <span class="ae-panel-hint">{{ i18n.t('auto_content_template_hint') }}</span>
+                </div>
+              } @else {
+                <div class="ae-panel-field">
+                  <div class="ae-manual-card" data-testid="forward-manual-card">
+                    <div class="ae-manual-card-top">
+                      <span class="ae-manual-subj">{{ getManualSubject(selectedNode()!) || i18n.t('auto_compose_subject') }}</span>
+                      <button class="ae-manual-edit" (click)="compose.emit({ nodeId: selectedNode()!.id, kind: 'email_action' })" data-testid="forward-manual-edit">
+                        <app-icon name="edit" /> {{ i18n.t('auto_edit') }}
+                      </button>
+                    </div>
+                    @if (getManualBody(selectedNode()!)) {
+                      <p class="ae-manual-snippet">{{ getManualBody(selectedNode()!) }}</p>
+                    } @else {
+                      <p class="ae-manual-snippet ae-manual-empty">{{ i18n.t('auto_content_manual_empty') }}</p>
+                    }
+                  </div>
+                </div>
+              }
+            }
+
+            @if (getEmailActionMode(selectedNode()!) === 'MOVE_FOLDER') {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_move_folder') }}</label>
+                <input class="ae-panel-input" type="text"
+                  [value]="selectedNodeConfig()?.folder || ''"
+                  (input)="updateEmailActionField(selectedNode()!.id, 'folder', v($event))"
+                  [placeholder]="i18n.t('auto_folder_placeholder')" />
+              </div>
+            }
+          </div>
+        }
+
+        <!-- SEND_EMAIL config -->
+        @if (selectedNode()!.nodeType === 'SEND_EMAIL') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_send_email_sender_account') }}</label>
+              <select class="ae-panel-input" data-testid="send-email-sender"
+                (change)="updateSendEmailField(selectedNode()!.id, 'senderAccountId', v($event))">
+                <option value="" [selected]="!selectedNodeConfig()?.senderAccountId">{{ i18n.t('auto_send_email_select_account') }}</option>
+                @for (acc of sendableAccounts(); track acc.id) {
+                  <option [value]="acc.id" [selected]="acc.id === selectedNodeConfig()?.senderAccountId">{{ acc.displayName || acc.email }}</option>
+                }
+              </select>
+              <span class="ae-panel-hint">{{ i18n.t('auto_send_email_sender_hint') }}</span>
+            </div>
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('compose_to') }}</label>
+              <input class="ae-panel-input" type="text" data-testid="send-email-to"
+                [value]="selectedNodeConfig()?.to || ''"
+                (input)="updateSendEmailField(selectedNode()!.id, 'to', v($event))"
+                placeholder="recipient@example.com" />
+            </div>
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('compose_cc') }}</label>
+              <input class="ae-panel-input" type="text" data-testid="send-email-cc"
+                [value]="selectedNodeConfig()?.cc || ''"
+                (input)="updateSendEmailField(selectedNode()!.id, 'cc', v($event))" />
+            </div>
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('compose_bcc') }}</label>
+              <input class="ae-panel-input" type="text" data-testid="send-email-bcc"
+                [value]="selectedNodeConfig()?.bcc || ''"
+                (input)="updateSendEmailField(selectedNode()!.id, 'bcc', v($event))" />
+            </div>
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_content') }}</label>
+              <div class="ae-src-tabs">
+                <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'VORLAGE'"
+                  (click)="setContentSource(selectedNode()!.id, 'VORLAGE')" data-testid="send-email-src-template">
+                  <app-icon name="tag" /> {{ i18n.t('auto_content_template') }}
+                </button>
+                <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'MANUAL'"
+                  (click)="setContentSource(selectedNode()!.id, 'MANUAL')" data-testid="send-email-src-manual">
+                  <app-icon name="edit" /> {{ i18n.t('auto_content_manual') }}
+                </button>
+              </div>
+            </div>
+            @if (getContentSource(selectedNode()!) === 'VORLAGE') {
+              <div class="ae-panel-field">
+                <select class="ae-panel-input" data-testid="send-email-template"
+                  (change)="updateSendEmailField(selectedNode()!.id, 'templateId', v($event))">
+                  <option value="" [selected]="!selectedNodeConfig()?.templateId">{{ i18n.t('auto_select_template') }}</option>
+                  @for (t of templates(); track t.id) {
+                    <option [value]="t.id" [selected]="t.id === selectedNodeConfig()?.templateId">{{ t.name }}</option>
+                  }
+                </select>
+                <span class="ae-panel-hint">{{ i18n.t('auto_content_template_hint') }}</span>
+              </div>
+            } @else {
+              <div class="ae-panel-field">
+                <div class="ae-manual-card" data-testid="send-email-manual-card">
+                  <div class="ae-manual-card-top">
+                    <span class="ae-manual-subj">{{ getManualSubject(selectedNode()!) || i18n.t('auto_compose_subject') }}</span>
+                    <button class="ae-manual-edit" (click)="compose.emit({ nodeId: selectedNode()!.id, kind: 'send_email' })" data-testid="send-email-manual-edit">
+                      <app-icon name="edit" /> {{ i18n.t('auto_edit') }}
+                    </button>
+                  </div>
+                  @if (getManualBody(selectedNode()!)) {
+                    <p class="ae-manual-snippet">{{ getManualBody(selectedNode()!) }}</p>
+                  } @else {
+                    <p class="ae-manual-snippet ae-manual-empty">{{ i18n.t('auto_content_manual_empty') }}</p>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- WEBHOOK config -->
+        @if (selectedNode()!.nodeType === 'WEBHOOK') {
+          <div class="ae-panel-section" style="gap: 8px;">
+
+            <!-- Request section -->
+            <div class="ae-wh-section" [class.ae-wh-section-open]="isWebhookSectionOpen('request')">
+              <button class="ae-wh-section-toggle" (click)="toggleWebhookSection('request')" data-testid="webhook-sec-request">
+                <app-icon name="chevronDown" />
+                <span>{{ i18n.t('auto_webhook_sec_request') }}</span>
+              </button>
+              @if (isWebhookSectionOpen('request')) {
+                <div class="ae-wh-section-body">
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_method') }}</label>
+                    <select class="ae-panel-input" data-testid="webhook-method-select"
+                      (change)="updateWebhookMethod(selectedNode()!.id, v($event))">
+                      @for (m of ['GET','POST','PUT','PATCH','DELETE']; track m) {
+                        <option [value]="m" [selected]="(selectedNodeConfig()?.method || 'POST') === m">{{ m }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_url') }}</label>
+                    <input class="ae-panel-input" type="url" data-testid="webhook-url-input"
+                      [value]="selectedNodeConfig()?.url || ''"
+                      (input)="updateWebhookUrl(selectedNode()!.id, v($event))"
+                      [placeholder]="i18n.t('auto_webhook_url_placeholder')" />
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Auth section -->
+            <div class="ae-wh-section" [class.ae-wh-section-open]="isWebhookSectionOpen('auth')">
+              <button class="ae-wh-section-toggle" (click)="toggleWebhookSection('auth')" data-testid="webhook-sec-auth">
+                <app-icon name="chevronDown" />
+                <span>{{ i18n.t('auto_webhook_sec_auth') }}</span>
+              </button>
+              @if (isWebhookSectionOpen('auth')) {
+                <div class="ae-wh-section-body">
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_auth') }}</label>
+                    <select class="ae-panel-input" data-testid="webhook-auth-select"
+                      (change)="updateWebhookAuthType(selectedNode()!.id, v($event))">
+                      <option value="NONE" [selected]="(selectedNodeConfig()?.authType || 'NONE') === 'NONE'">{{ i18n.t('auto_webhook_auth_none') }}</option>
+                      <option value="BEARER" [selected]="selectedNodeConfig()?.authType === 'BEARER'">{{ i18n.t('auto_webhook_auth_bearer') }}</option>
+                      <option value="BASIC" [selected]="selectedNodeConfig()?.authType === 'BASIC'">{{ i18n.t('auto_webhook_auth_basic') }}</option>
+                      <option value="API_KEY" [selected]="selectedNodeConfig()?.authType === 'API_KEY'">{{ i18n.t('auto_webhook_auth_apikey') }}</option>
+                    </select>
+                  </div>
+                  @if (selectedNodeConfig()?.authType !== 'NONE' && selectedNodeConfig()?.authType) {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_use_secret') }}</label>
+                      <select class="ae-panel-input" data-testid="webhook-secret-select"
+                        (change)="updateWebhookSecret(selectedNode()!.id, v($event))">
+                        <option value="" [selected]="!selectedNodeConfig()?.authSecretId">{{ i18n.t('auto_webhook_select_secret') }}</option>
+                        @for (secret of secrets(); track secret.id) {
+                          <option [value]="secret.id" [selected]="selectedNodeConfig()?.authSecretId === secret.id">{{ secret.name }}</option>
+                        }
+                      </select>
+                    </div>
+                  }
+                  @if (selectedNodeConfig()?.authType === 'BEARER' && !selectedNodeConfig()?.authSecretId) {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_token') }}</label>
+                      <input class="ae-panel-input" type="password" data-testid="webhook-auth-token"
+                        [value]="selectedNodeConfig()?.authToken || ''"
+                        (input)="updateWebhookField(selectedNode()!.id, 'authToken', v($event))" />
+                    </div>
+                  }
+                  @if (selectedNodeConfig()?.authType === 'BASIC') {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_username') }}</label>
+                      <input class="ae-panel-input" type="text" data-testid="webhook-auth-username"
+                        [value]="selectedNodeConfig()?.authUsername || ''"
+                        (input)="updateWebhookField(selectedNode()!.id, 'authUsername', v($event))" />
+                    </div>
+                    @if (!selectedNodeConfig()?.authSecretId) {
+                      <div class="ae-panel-field">
+                        <label class="ae-panel-label">{{ i18n.t('auto_webhook_password') }}</label>
+                        <input class="ae-panel-input" type="password" data-testid="webhook-auth-password"
+                          [value]="selectedNodeConfig()?.authPassword || ''"
+                          (input)="updateWebhookField(selectedNode()!.id, 'authPassword', v($event))" />
+                      </div>
+                    }
+                  }
+                  @if (selectedNodeConfig()?.authType === 'API_KEY') {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_header_name') }}</label>
+                      <input class="ae-panel-input" type="text" data-testid="webhook-auth-header-name"
+                        [value]="selectedNodeConfig()?.authHeaderName || 'X-API-Key'"
+                        (input)="updateWebhookField(selectedNode()!.id, 'authHeaderName', v($event))" />
+                    </div>
+                    @if (!selectedNodeConfig()?.authSecretId) {
+                      <div class="ae-panel-field">
+                        <label class="ae-panel-label">{{ i18n.t('auto_webhook_token') }}</label>
+                        <input class="ae-panel-input" type="password" data-testid="webhook-apikey-token"
+                          [value]="selectedNodeConfig()?.authToken || ''"
+                          (input)="updateWebhookField(selectedNode()!.id, 'authToken', v($event))" />
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Body & Headers section -->
+            <div class="ae-wh-section" [class.ae-wh-section-open]="isWebhookSectionOpen('body')">
+              <button class="ae-wh-section-toggle" (click)="toggleWebhookSection('body')" data-testid="webhook-sec-body">
+                <app-icon name="chevronDown" />
+                <span>{{ i18n.t('auto_webhook_sec_body') }}</span>
+              </button>
+              @if (isWebhookSectionOpen('body')) {
+                <div class="ae-wh-section-body">
+                  @if (['POST','PUT','PATCH'].includes(selectedNodeConfig()?.method || 'POST')) {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_body') }}</label>
+                      <textarea class="ae-panel-input ae-panel-textarea" data-testid="webhook-body-input"
+                        rows="4"
+                        [value]="selectedNodeConfig()?.body || ''"
+                        (input)="updateWebhookBody(selectedNode()!.id, v($event))"></textarea>
+                    </div>
+                  }
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_headers') }}</label>
+                    @for (header of selectedNodeConfig()?.headers || []; track $index; let hi = $index) {
+                      <div class="ae-cond-row">
+                        <div class="ae-cond-segment">
+                          <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_header_key') }}</span>
+                          <input class="ae-cond-input" type="text"
+                            [value]="header.key"
+                            (input)="updateWebhookHeader(selectedNode()!.id, hi, 'key', v($event))" />
+                        </div>
+                        <div class="ae-cond-segment">
+                          <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_header_value') }}</span>
+                          <input class="ae-cond-input" type="text"
+                            [value]="header.value"
+                            (input)="updateWebhookHeader(selectedNode()!.id, hi, 'value', v($event))" />
+                        </div>
+                        <button class="ae-cond-remove-btn" (click)="removeWebhookHeader(selectedNode()!.id, hi)">
+                          <app-icon name="x" />
+                        </button>
+                      </div>
+                    }
+                    <button class="ae-cond-add-btn" (click)="addWebhookHeader(selectedNode()!.id)">
+                      <app-icon name="plus" />
+                      {{ i18n.t('auto_webhook_add_header') }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Response Schema section -->
+            <div class="ae-wh-section" [class.ae-wh-section-open]="isWebhookSectionOpen('response')">
+              <button class="ae-wh-section-toggle" (click)="toggleWebhookSection('response')" data-testid="webhook-sec-response">
+                <app-icon name="chevronDown" />
+                <span>{{ i18n.t('auto_webhook_sec_response') }}</span>
+              </button>
+              @if (isWebhookSectionOpen('response')) {
+                <div class="ae-wh-section-body">
+                  <div class="ae-panel-hint">{{ i18n.t('auto_webhook_response_schema_hint') }}</div>
+                  @for (schema of selectedNodeConfig()?.responseSchemas || []; track $index) {
+                    @if (!isUnmatchedCondition(schema.condition)) {
+                      <div class="ae-resp-schema-row" data-testid="webhook-resp-schema-row">
+                        <div class="ae-resp-schema-fields">
+                          <div class="ae-cond-segment">
+                            <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_schema_name') }}</span>
+                            <input class="ae-cond-input" [value]="schema.name || ''"
+                              data-testid="webhook-resp-name"
+                              [placeholder]="i18n.t('auto_webhook_schema_name_placeholder')"
+                              (input)="updateResponseSchemaName(selectedNode()!.id, $index, v($event))" />
+                          </div>
+                          <div class="ae-cond-segment">
+                            <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_status_condition') }}</span>
+                            <input class="ae-cond-input" [value]="schema.condition" placeholder="2xx"
+                              data-testid="webhook-resp-condition"
+                              (input)="updateResponseSchemaCondition(selectedNode()!.id, $index, v($event))" />
+                          </div>
+                        </div>
+                        <div class="ae-resp-schema-fields">
+                          <div class="ae-cond-segment">
+                            <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_parameter_set') }}</span>
+                            <select class="ae-cond-select" data-testid="webhook-resp-ps"
+                              [value]="schema.parameterSetId"
+                              (change)="updateResponseSchemaParameterSet(selectedNode()!.id, $index, v($event))">
+                              <option value="">—</option>
+                              @for (ps of parameterSets(); track ps.id) {
+                                <option [value]="ps.id" [selected]="ps.id === schema.parameterSetId">{{ ps.name }}</option>
+                              }
+                            </select>
+                          </div>
+                          <button class="ae-cond-remove-btn" data-testid="webhook-resp-remove"
+                            (click)="removeResponseSchema(selectedNode()!.id, $index)">
+                            <app-icon name="x" />
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+                  <button class="ae-schema-add-btn" data-testid="webhook-add-resp-schema"
+                    (click)="addResponseSchema(selectedNode()!.id)">
+                    <app-icon name="plus" />
+                    {{ i18n.t('auto_webhook_add_schema') }}
+                  </button>
+                  <!-- Pinned unmatched branch: always present, cannot be removed; only its parameter set is editable.
+                       Full-width vertical stack: name → short hint → parameter set. -->
+                  <div class="ae-resp-schema-row ae-resp-schema-unmatched" data-testid="webhook-resp-unmatched">
+                    <div class="ae-resp-unmatched-head">
+                      <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_unmatched') }}</span>
+                      <p class="ae-resp-unmatched-hint">{{ i18n.t('auto_webhook_unmatched_hint') }}</p>
+                    </div>
+                    <div class="ae-cond-segment">
+                      <span class="ae-cond-micro-label">{{ i18n.t('auto_webhook_parameter_set') }}</span>
+                      <select class="ae-cond-select" data-testid="webhook-resp-unmatched-ps"
+                        [value]="unmatchedParameterSetId()"
+                        (change)="updateUnmatchedParameterSet(selectedNode()!.id, v($event))">
+                        <option value="">—</option>
+                        @for (ps of parameterSets(); track ps.id) {
+                          <option [value]="ps.id" [selected]="ps.id === unmatchedParameterSetId()">{{ ps.name }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Retry section -->
+            <div class="ae-wh-section" [class.ae-wh-section-open]="isWebhookSectionOpen('retry')">
+              <button class="ae-wh-section-toggle" (click)="toggleWebhookSection('retry')" data-testid="webhook-sec-retry">
+                <app-icon name="chevronDown" />
+                <span>{{ i18n.t('auto_webhook_sec_retry') }}</span>
+              </button>
+              @if (isWebhookSectionOpen('retry')) {
+                <div class="ae-wh-section-body">
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_timeout') }}</label>
+                    <input class="ae-panel-input" type="number" min="1" max="60" data-testid="webhook-timeout-input"
+                      [value]="selectedNodeConfig()?.timeout || 30"
+                      (input)="updateWebhookField(selectedNode()!.id, 'timeout', +v($event))" />
+                  </div>
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ i18n.t('auto_webhook_retry_count') }}</label>
+                    <input class="ae-panel-input" type="number" min="0" max="3" data-testid="webhook-retry-count"
+                      [value]="selectedNodeConfig()?.retryCount || 0"
+                      (input)="updateWebhookRetryCount(selectedNode()!.id, +v($event))" />
+                  </div>
+                  @if ((selectedNodeConfig()?.retryCount || 0) > 0) {
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_retry_delay') }}</label>
+                      <input class="ae-panel-input" type="number" min="1000" max="30000" step="1000" data-testid="webhook-retry-delay"
+                        [value]="selectedNodeConfig()?.retryDelayMs || 3000"
+                        (input)="updateWebhookRetryDelay(selectedNode()!.id, +v($event))" />
+                    </div>
+                    <div class="ae-panel-field">
+                      <label class="ae-panel-label">{{ i18n.t('auto_webhook_retry_on') }}</label>
+                      <div class="ae-checkbox-group">
+                        <label class="ae-checkbox-label">
+                          <input type="checkbox" data-testid="webhook-retry-5xx"
+                            [checked]="(selectedNodeConfig()?.retryOn || []).includes('5xx')"
+                            (change)="toggleRetryCondition(selectedNode()!.id, '5xx')" />
+                          5xx
+                        </label>
+                        <label class="ae-checkbox-label">
+                          <input type="checkbox" data-testid="webhook-retry-429"
+                            [checked]="(selectedNodeConfig()?.retryOn || []).includes('429')"
+                            (change)="toggleRetryCondition(selectedNode()!.id, '429')" />
+                          429
+                        </label>
+                        <label class="ae-checkbox-label">
+                          <input type="checkbox" data-testid="webhook-retry-network"
+                            [checked]="(selectedNodeConfig()?.retryOn || []).includes('network_error')"
+                            (change)="toggleRetryCondition(selectedNode()!.id, 'network_error')" />
+                          {{ i18n.t('auto_webhook_retry_network') }}
+                        </label>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+          </div>
+        }
+
+        <!-- REMOVE_LABEL config -->
+        @if (selectedNode()!.nodeType === 'REMOVE_LABEL') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_remove_label_category') }}</label>
+              <select class="ae-panel-input"
+                (change)="updateRemoveLabelCategory(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!selectedNodeConfig()?.categoryId">{{ i18n.t('auto_label_select') }}</option>
+                @for (cat of categories(); track cat.id) {
+                  <option [value]="cat.id" [selected]="cat.id === selectedNodeConfig()?.categoryId">{{ cat.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        }
+
+        <!-- INPUT config: parameter set defining the integration's input shape -->
+        @if (selectedNode()!.nodeType === 'INPUT') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_input_parameter_set') }}</label>
+              <select class="ae-panel-input"
+                (change)="updateNodeParameterSet(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!getNodeParameterSetId(selectedNode()!)">{{ i18n.t('auto_io_select_set') }}</option>
+                @for (ps of parameterSets(); track ps.id) {
+                  <option [value]="ps.id" [selected]="ps.id === getNodeParameterSetId(selectedNode()!)">{{ ps.name }}</option>
+                }
+              </select>
+            </div>
+            @if (getNodeParameterSetFields(selectedNode()!).length) {
+              <div class="ae-panel-hint">{{ i18n.t('auto_input_exposes') }}</div>
+              @for (f of getNodeParameterSetFields(selectedNode()!); track f) {
+                <div class="ae-extract-card"><code>{{ 'input.' + f }}</code></div>
+              }
+            }
+          </div>
+        }
+
+        <!-- OUTPUT config: parameter set + per-field source expressions -->
+        @if (selectedNode()!.nodeType === 'OUTPUT') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_output_parameter_set') }}</label>
+              <select class="ae-panel-input"
+                (change)="updateNodeParameterSet(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!getNodeParameterSetId(selectedNode()!)">{{ i18n.t('auto_io_select_set') }}</option>
+                @for (ps of parameterSets(); track ps.id) {
+                  <option [value]="ps.id" [selected]="ps.id === getNodeParameterSetId(selectedNode()!)">{{ ps.name }}</option>
+                }
+              </select>
+            </div>
+            @if (getNodeParameterSetFields(selectedNode()!).length) {
+              <div class="ae-panel-section-title">{{ i18n.t('auto_output_mappings') }}</div>
+              @for (f of getNodeParameterSetFields(selectedNode()!); track f) {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label"><code>{{ f }}</code></label>
+                  <app-variable-combobox
+                    [value]="getOutputMapping(selectedNode()!, f)"
+                    [variables]="getSourceVariableOptions(selectedNode()!.id)"
+                    [placeholder]="i18n.t('auto_output_mapping_hint')"
+                    [searchPlaceholder]="i18n.t('auto_var_search')"
+                    [emptyText]="i18n.t('auto_var_search_empty')"
+                    (valueChange)="updateOutputMapping(selectedNode()!.id, f, $event)" />
+                </div>
+              }
+            }
+          </div>
+        }
+
+        <!-- INTEGRATION_CALL config: integration picker + two-zone mapper -->
+        @if (selectedNode()!.nodeType === 'INTEGRATION_CALL') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_call_integration') }}</label>
+              <select class="ae-panel-input"
+                (change)="selectIntegration(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!getIntegrationId(selectedNode()!)">{{ i18n.t('auto_call_select') }}</option>
+                @for (it of integrations(); track it.id) {
+                  <option [value]="it.id" [selected]="it.id === getIntegrationId(selectedNode()!)">{{ it.name }}</option>
+                }
+              </select>
+            </div>
+
+            @if (getIntegrationId(selectedNode()!)) {
+              <!-- Zone 1: dynamic inputs mapped from caller variables -->
+              <div class="ae-panel-section-title">{{ i18n.t('auto_call_dynamic_inputs') }}</div>
+              @for (f of getCallInputFields(selectedNode()!); track f) {
+                <div class="ae-panel-field">
+                  <label class="ae-panel-label"><code>{{ f }}</code></label>
+                  <app-variable-combobox
+                    [value]="getCallInputMapping(selectedNode()!, f)"
+                    [variables]="getSourceVariableOptions(selectedNode()!.id)"
+                    [placeholder]="i18n.t('auto_call_input_hint')"
+                    [searchPlaceholder]="i18n.t('auto_var_search')"
+                    [emptyText]="i18n.t('auto_var_search_empty')"
+                    (valueChange)="updateCallInputMapping(selectedNode()!.id, f, $event)" />
+                </div>
+              }
+              @if (getCallInputFields(selectedNode()!).length === 0) {
+                <div class="ae-panel-hint">{{ i18n.t('auto_call_no_inputs') }}</div>
+              }
+
+              <!-- Zone 2: instance settings (internal constants like API_KEY) -->
+              @if (getCallInstanceSettingKeys(selectedNode()!).length) {
+                <div class="ae-panel-section-title">{{ i18n.t('auto_call_instance_settings') }}</div>
+                @for (k of getCallInstanceSettingKeys(selectedNode()!); track k) {
+                  <div class="ae-panel-field">
+                    <label class="ae-panel-label">{{ k }}</label>
+                    <input class="ae-panel-input" type="text"
+                      [value]="getCallInstanceSetting(selectedNode()!, k)"
+                      [placeholder]="i18n.t('auto_call_setting_hint')"
+                      (input)="updateCallInstanceSetting(selectedNode()!.id, k, v($event))" />
+                  </div>
+                }
+              }
+            }
+          </div>
+        }
+
+        <!-- VECTOR_SEARCH config: knowledge-base picker + query + topK + confidence threshold -->
+        @if (selectedNode()!.nodeType === 'VECTOR_SEARCH') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_vs_kb') }}</label>
+              <select class="ae-panel-input"
+                (change)="selectVsKb(selectedNode()!.id, v($event))">
+                <option value="" [selected]="!selectedNodeConfig()?.knowledgeBaseId">{{ i18n.t('auto_vs_choose_kb') }}</option>
+                @for (kb of knowledgeBases(); track kb.id) {
+                  <option [value]="kb.id" [selected]="kb.id === selectedNodeConfig()?.knowledgeBaseId">{{ kb.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_vs_query') }}</label>
+              <app-variable-combobox
+                [value]="selectedNodeConfig()?.queryVariable || ''"
+                [variables]="getSourceVariableOptions(selectedNode()!.id)"
+                [placeholder]="i18n.t('auto_vs_query_hint')"
+                [searchPlaceholder]="i18n.t('auto_var_search')"
+                [emptyText]="i18n.t('auto_var_search_empty')"
+                (valueChange)="setVsField(selectedNode()!.id, 'queryVariable', $event)" />
+            </div>
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_vs_topk') }}</label>
+              <input class="ae-panel-input" type="number" min="1" max="10"
+                [value]="selectedNodeConfig()?.topK ?? 5"
+                (input)="setVsField(selectedNode()!.id, 'topK', +v($event))" />
+            </div>
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_vs_threshold') }}</label>
+              <input class="ae-panel-input" type="number" min="0" max="100"
+                [value]="selectedNodeConfig()?.confidenceThreshold ?? 90"
+                (input)="setVsField(selectedNode()!.id, 'confidenceThreshold', +v($event))" />
+              <div class="ae-panel-hint">{{ i18n.t('auto_vs_threshold_hint') }}</div>
+            </div>
+          </div>
+        }
+
+        <!-- NOTIFY config: in-app notification recipient + title/message + severity/category + link -->
+        @if (selectedNode()!.nodeType === 'NOTIFY') {
+          <div class="ae-panel-section">
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_notify_recipient') }}</label>
+              <select class="ae-panel-input"
+                (change)="setNotifyField(selectedNode()!.id, 'recipientType', v($event))">
+                <option value="USER" [selected]="(selectedNodeConfig()?.recipientType ?? 'USER') === 'USER'">{{ i18n.t('auto_notify_recipient_user') }}</option>
+                <option value="OWNER" [selected]="selectedNodeConfig()?.recipientType === 'OWNER'">{{ i18n.t('auto_notify_recipient_owner') }}</option>
+                <option value="ADMINS" [selected]="selectedNodeConfig()?.recipientType === 'ADMINS'">{{ i18n.t('auto_notify_recipient_admins') }}</option>
+              </select>
+            </div>
+
+            @if ((selectedNodeConfig()?.recipientType ?? 'USER') === 'USER') {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_notify_recipient_member') }}</label>
+                <select class="ae-panel-input"
+                  (change)="setNotifyField(selectedNode()!.id, 'recipientUserId', v($event))">
+                  <option value="" [selected]="!selectedNodeConfig()?.recipientUserId">{{ i18n.t('auto_notify_choose_member') }}</option>
+                  @for (m of orgMembers(); track m.userId) {
+                    <option [value]="m.userId" [selected]="m.userId === selectedNodeConfig()?.recipientUserId">{{ m.fullName || m.email }}</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_content') }}</label>
+              <div class="ae-src-tabs">
+                <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'VORLAGE'"
+                  (click)="setContentSource(selectedNode()!.id, 'VORLAGE')" data-testid="notify-src-template">
+                  <app-icon name="tag" /> {{ i18n.t('auto_content_template') }}
+                </button>
+                <button class="ae-src-tab" [class.active]="getContentSource(selectedNode()!) === 'MANUAL'"
+                  (click)="setContentSource(selectedNode()!.id, 'MANUAL')" data-testid="notify-src-manual">
+                  <app-icon name="edit" /> {{ i18n.t('auto_content_manual') }}
+                </button>
+              </div>
+            </div>
+
+            @if (getContentSource(selectedNode()!) === 'VORLAGE') {
+              <div class="ae-panel-field">
+                <select class="ae-panel-input" data-testid="notify-template"
+                  (change)="setNotifyField(selectedNode()!.id, 'templateId', v($event))">
+                  <option value="" [selected]="!selectedNodeConfig()?.templateId">{{ i18n.t('auto_select_template') }}</option>
+                  @for (t of templates(); track t.id) {
+                    <option [value]="t.id" [selected]="t.id === selectedNodeConfig()?.templateId">{{ t.name }}</option>
+                  }
+                </select>
+                <span class="ae-panel-hint">{{ i18n.t('auto_notify_template_hint') }}</span>
+              </div>
+            } @else {
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_notify_title') }}</label>
+                <app-variable-combobox
+                  [value]="selectedNodeConfig()?.title || ''"
+                  [variables]="getSourceVariableOptions(selectedNode()!.id)"
+                  [placeholder]="i18n.t('auto_notify_title_hint')"
+                  [searchPlaceholder]="i18n.t('auto_var_search')"
+                  [emptyText]="i18n.t('auto_var_search_empty')"
+                  (valueChange)="setNotifyField(selectedNode()!.id, 'title', $event)" />
+              </div>
+
+              <div class="ae-panel-field">
+                <label class="ae-panel-label">{{ i18n.t('auto_notify_message') }}</label>
+                <app-variable-combobox
+                  [value]="selectedNodeConfig()?.message || ''"
+                  [variables]="getSourceVariableOptions(selectedNode()!.id)"
+                  [placeholder]="i18n.t('auto_notify_message_hint')"
+                  [searchPlaceholder]="i18n.t('auto_var_search')"
+                  [emptyText]="i18n.t('auto_var_search_empty')"
+                  (valueChange)="setNotifyField(selectedNode()!.id, 'message', $event)" />
+              </div>
+            }
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_notify_severity') }}</label>
+              <select class="ae-panel-input"
+                (change)="setNotifyField(selectedNode()!.id, 'severity', v($event))">
+                <option value="INFO" [selected]="(selectedNodeConfig()?.severity ?? 'INFO') === 'INFO'">{{ i18n.t('auto_notify_severity_info') }}</option>
+                <option value="WARNING" [selected]="selectedNodeConfig()?.severity === 'WARNING'">{{ i18n.t('auto_notify_severity_warning') }}</option>
+                <option value="CRITICAL" [selected]="selectedNodeConfig()?.severity === 'CRITICAL'">{{ i18n.t('auto_notify_severity_critical') }}</option>
+              </select>
+            </div>
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_notify_category') }}</label>
+              <select class="ae-panel-input"
+                (change)="setNotifyField(selectedNode()!.id, 'category', v($event))">
+                <option value="AUTOMATION" [selected]="selectedNodeConfig()?.category === 'AUTOMATION'">{{ i18n.t('auto_notify_category_automation') }}</option>
+                <option value="APPROVAL" [selected]="selectedNodeConfig()?.category === 'APPROVAL'">{{ i18n.t('auto_notify_category_approval') }}</option>
+                <option value="QUOTA" [selected]="selectedNodeConfig()?.category === 'QUOTA'">{{ i18n.t('auto_notify_category_quota') }}</option>
+                <option value="MAILBOX" [selected]="selectedNodeConfig()?.category === 'MAILBOX'">{{ i18n.t('auto_notify_category_mailbox') }}</option>
+                <option value="TEAM" [selected]="selectedNodeConfig()?.category === 'TEAM'">{{ i18n.t('auto_notify_category_team') }}</option>
+                <option value="MARKETPLACE" [selected]="selectedNodeConfig()?.category === 'MARKETPLACE'">{{ i18n.t('auto_notify_category_marketplace') }}</option>
+                <option value="SYSTEM" [selected]="(selectedNodeConfig()?.category ?? 'SYSTEM') === 'SYSTEM'">{{ i18n.t('auto_notify_category_system') }}</option>
+              </select>
+            </div>
+
+            <div class="ae-panel-field">
+              <label class="ae-panel-label">{{ i18n.t('auto_notify_link') }}</label>
+              <input class="ae-panel-input" type="text"
+                [value]="selectedNodeConfig()?.linkUrl || ''"
+                [placeholder]="i18n.t('auto_notify_link_hint')"
+                (input)="setNotifyField(selectedNode()!.id, 'linkUrl', v($event))" />
+            </div>
+          </div>
+        }
+
+        <!-- Available Variables (all node types) -->
+        <div class="ae-vars-block">
+          <span class="ae-vars-title">{{ i18n.t('auto_vars_available') }}</span>
+          @for (group of getAvailableVariables(selectedNode()!.id); track group.label) {
+            <div class="ae-vars-section" [class.open]="isVarsGroupOpen(group.label)">
+              <button class="ae-vars-section-header" (click)="toggleVarsGroup(group.label)">
+                <span class="ae-vars-section-icon" [style.--vc]="group.color">
+                  <app-icon [name]="group.icon" />
+                </span>
+                <span class="ae-vars-section-name">{{ group.label }}</span>
+                <span class="ae-vars-section-count">{{ group.variables.length }}</span>
+                <app-icon class="ae-vars-section-chevron" [name]="isVarsGroupOpen(group.label) ? 'chevronUp' : 'chevronDown'" />
+              </button>
+              @if (isVarsGroupOpen(group.label)) {
+                <div class="ae-vars-section-body">
+                  @for (v of group.variables; track v.key) {
+                    <div class="ae-vars-item">
+                      <code class="ae-vars-key">{{ '{{' + v.key + '}}' }}</code>
+                      <span class="ae-vars-label">{{ v.label }}</span>
+                      @if (v.description) {
+                        <span class="ae-vars-desc">{{ v.description }}</span>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+          @if (getAvailableVariables(selectedNode()!.id).length === 0) {
+            <span class="ae-vars-empty">{{ i18n.t('auto_vars_note') }}</span>
+          }
+        </div>
+      </div>
+    </div>

@@ -1,0 +1,17 @@
+# Local .terraform working dirs
+**/.terraform/*
+
+# State files (only relevant if you fall back to local state) — NEVER commit
+*.tfstate
+*.tfstate.*
+
+# Crash logs
+crash.log
+crash.*.log
+
+# tfvars may hold environment-specific / sensitive values
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# DO commit .terraform.lock.hcl (provider lock) — it is intentionally NOT ignored.

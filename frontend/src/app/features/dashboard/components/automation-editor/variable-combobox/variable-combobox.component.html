@@ -1,0 +1,32 @@
+<div class="ae-vcombo">
+  <input #field class="ae-panel-input ae-vcombo-input" type="text"
+    [value]="value()"
+    [placeholder]="placeholder()"
+    (input)="onInput(field.value); syncCaret(field)"
+    (keyup)="syncCaret(field)"
+    (click)="syncCaret(field)" />
+  <button type="button" class="ae-vcombo-btn" [class.open]="open()" [attr.aria-expanded]="open()" (click)="toggle()">
+    <app-icon name="plus" />
+    <app-icon class="ae-vcombo-caret" name="chevronDown" />
+  </button>
+
+  @if (open()) {
+    <div class="ae-vcombo-pop">
+      <input class="ae-vcombo-search" type="text"
+        [value]="query()"
+        [placeholder]="searchPlaceholder()"
+        (input)="query.set(v($event))" />
+      <div class="ae-vcombo-list">
+        @for (o of filtered(); track o.key) {
+          <button type="button" class="ae-vcombo-item" (click)="pick(o)">
+            <code>{{ '{{' + o.key + '}}' }}</code>
+            <span>{{ o.label }}</span>
+          </button>
+        }
+        @if (filtered().length === 0) {
+          <div class="ae-vcombo-empty">{{ emptyText() }}</div>
+        }
+      </div>
+    </div>
+  }
+</div>

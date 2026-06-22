@@ -1,0 +1,559 @@
+/* ── Page shell ───────────────────────────────────────────────── */
+.tpl-page {
+  animation: enter-up-6 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+
+.tpl-page-head { margin-bottom: 24px; }
+
+/* ── Head actions ─────────────────────────────────────────────── */
+.tpl-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tpl-action-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.tpl-action-btn:hover {
+  background: var(--hover);
+  transform: translateY(-1px);
+}
+
+/* ── Add button ──────────────────────────────────────────────── */
+.tpl-add-btn {
+  appearance: none;
+  border: 0;
+  background: var(--fg);
+  color: var(--bg);
+  padding: 0 18px;
+  height: 38px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.tpl-add-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Card list ───────────────────────────────────────────────── */
+.tpl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tpl-card {
+  background: var(--bg);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  animation: enter-up-6 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+
+.tpl-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.tpl-card-body { flex: 1; min-width: 0; }
+
+.tpl-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 4px;
+}
+
+.tpl-card-subject {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin-bottom: 4px;
+}
+
+.tpl-card-snippet {
+  font-size: 12.5px;
+  color: var(--fg-subtle);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.tpl-card-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tpl-param-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: oklch(0.60 0.16 250 / 0.10);
+  color: oklch(0.50 0.16 250);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 0.5px solid oklch(0.60 0.16 250 / 0.20);
+}
+
+.tpl-card-actions {
+  display: flex;
+  gap: 6px;
+  opacity: 0.5;
+  transition: opacity 0.18s;
+}
+
+.tpl-card:hover .tpl-card-actions { opacity: 1; }
+
+.tpl-icon-btn {
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  border: 0.5px solid var(--border);
+  background: var(--bg);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tpl-icon-btn:hover {
+  background: var(--bg-2);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+
+.tpl-icon-btn-danger:hover {
+  color: oklch(0.55 0.20 25);
+  border-color: oklch(0.55 0.20 25 / 0.4);
+  background: oklch(0.55 0.20 25 / 0.06);
+}
+
+.lock-btn {
+  opacity: 0.5;
+  &.locked {
+    opacity: 1;
+    color: var(--warning);
+  }
+}
+
+.tpl-btn {
+  appearance: none;
+  border: 0;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tpl-btn-primary {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.tpl-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+/* ── Editor ──────────────────────────────────────────────────── */
+.tpl-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.tpl-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: flex-start;
+}
+
+@media (max-width: 1100px) {
+  .tpl-editor-grid { grid-template-columns: 1fr; }
+}
+
+.tpl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tpl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tpl-field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.tpl-field-aux {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+
+.tpl-input, .tpl-textarea {
+  appearance: none;
+  width: 100%;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--field-bg);
+  color: var(--field-fg);
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.tpl-input { height: 44px; }
+
+.tpl-textarea {
+  resize: vertical;
+  min-height: 200px;
+  line-height: 1.5;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.tpl-input:focus, .tpl-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.tpl-input[data-error="1"], .tpl-textarea[data-error="1"] {
+  border-color: var(--danger);
+}
+
+/* ── Insight panel ───────────────────────────────────────────── */
+.tpl-insight-col {
+  position: sticky;
+  top: 84px;
+}
+
+.tpl-insight {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tpl-ins-card {
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  background: var(--bg);
+  animation: enter-up-8 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.tpl-ins-card:nth-child(1) { animation-delay: 0.04s; }
+.tpl-ins-card:nth-child(2) { animation-delay: 0.10s; }
+.tpl-ins-card:nth-child(3) { animation-delay: 0.16s; }
+
+
+.tpl-ins-card[data-tone="blue"] {
+  background: linear-gradient(180deg, oklch(0.60 0.16 250 / 0.05) 0%, var(--bg) 100%);
+  border-color: oklch(0.60 0.16 250 / 0.18);
+}
+
+.tpl-ins-card[data-tone="green"] {
+  background: linear-gradient(180deg, oklch(0.55 0.14 150 / 0.05) 0%, var(--bg) 100%);
+  border-color: oklch(0.55 0.14 150 / 0.18);
+}
+
+.tpl-ins-card[data-tone="amber"] {
+  background: linear-gradient(180deg, oklch(0.72 0.16 70 / 0.06) 0%, var(--bg) 100%);
+  border-color: oklch(0.72 0.16 70 / 0.18);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tpl-ins-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tpl-ins-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.tpl-ins-card[data-tone="blue"] .tpl-ins-icon {
+  background: oklch(0.60 0.16 250 / 0.16);
+  color: oklch(0.50 0.16 250);
+}
+
+.tpl-ins-card[data-tone="green"] .tpl-ins-icon {
+  background: oklch(0.55 0.14 150 / 0.16);
+  color: oklch(0.50 0.14 150);
+}
+
+.tpl-ins-card[data-tone="amber"] .tpl-ins-icon {
+  background: oklch(0.72 0.16 70 / 0.16);
+  color: oklch(0.55 0.16 70);
+}
+
+.tpl-ins-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+
+.tpl-ins-body { flex: 1; min-width: 0; }
+
+.tpl-ins-text {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  line-height: 1.55;
+  margin-top: 4px;
+}
+
+.tpl-preview {
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg);
+}
+
+.tpl-preview-subject {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 8px;
+}
+
+.tpl-preview-body {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  line-height: 1.6;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+
+  h1, h2, h3 {
+    font-weight: 600;
+    margin: 0.5em 0 0.25em;
+  }
+
+  h1 { font-size: 1.3em; }
+  h2 { font-size: 1.15em; }
+  h3 { font-size: 1.05em; }
+
+  p { margin: 0 0 0.4em; }
+
+  ul, ol {
+    padding-left: 1.2em;
+    margin: 0.4em 0;
+  }
+
+  a { color: var(--accent); text-decoration: underline; }
+}
+
+.tpl-params-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── Editor mode tabs ────────────────────────────────────────── */
+.tpl-mode-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-2);
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+
+.tpl-mode-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tpl-mode-tab:hover {
+  color: var(--fg);
+}
+
+.tpl-mode-tab-active {
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── HTML textarea ───────────────────────────────────────────── */
+.tpl-textarea-html {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-height: 250px;
+}
+
+/* ── Parameter set toggle ────────────────────────────────────── */
+.tpl-ps-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.tpl-ps-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.tpl-ps-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.tpl-ps-params {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tpl-ps-params-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+  font-weight: 500;
+}
+
+.tpl-ps-params-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tpl-ps-params-list-sm {
+  margin-top: 6px;
+}
+
+.tpl-param-chip-sm {
+  font-size: 10.5px;
+  padding: 1px 6px;
+}
+
+.tpl-field-label-sm {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+
+.tpl-select {
+  cursor: pointer;
+}
+
+/* ── Card parameter set badge ────────────────────────────────── */
+.tpl-card-ps-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: oklch(0.55 0.18 285);
+  background: oklch(0.62 0.18 285 / 0.08);
+  border: 0.5px solid oklch(0.62 0.18 285 / 0.20);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* ── Violet tone for insight card ────────────────────────────── */
+.tpl-ins-card[data-tone="violet"] {
+  background: linear-gradient(180deg, oklch(0.62 0.18 285 / 0.05) 0%, var(--bg) 100%);
+  border-color: oklch(0.62 0.18 285 / 0.18);
+}
+
+.tpl-ins-icon-violet {
+  background: oklch(0.62 0.18 285 / 0.16);
+  color: oklch(0.55 0.18 285);
+}
+
+.tpl-ins-card[data-tone="violet"] .tpl-ins-icon {
+  background: oklch(0.62 0.18 285 / 0.16);
+  color: oklch(0.55 0.18 285);
+}
+
+/* ── nth-child for 4th insight card ──────────────────────────── */
+.tpl-ins-card:nth-child(4) { animation-delay: 0.22s; }
+
+/* ── Editor footer ───────────────────────────────────────────── */
+.tpl-editor-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px 0 0;
+  border-top: 0.5px solid var(--border);
+  margin-top: 8px;
+}
+
+.tpl-editor-foot ::ng-deep .btn {
+  width: auto;
+  min-width: 120px;
+}
