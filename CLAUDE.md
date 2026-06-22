@@ -71,6 +71,15 @@ Postwerk/
 - `.env.example` documents required variables
 - Docker Compose reads `.env` automatically
 
+## Deployment (production)
+- **Live at https://postwerk.io** — open beta on a single **GCP Compute Engine VM** (Frankfurt, `europe-west3`) running `docker-compose.prod.yml`.
+- **Front door = Caddy** (`docker/caddy/Caddyfile`): reverse-proxy (`/api/*`→backend, `/*`→frontend) + automatic Let's Encrypt HTTPS. Replaces nginx in prod; Postgres/Redis/backend/frontend have NO published host ports.
+- **Deploy:** `deploy/deploy.sh` on the VM — `git fetch && git reset --hard origin/main` → pull secrets from **Google Secret Manager** (keyless via the VM service account) → generate `.env` → `docker compose -f docker-compose.prod.yml up -d --build`. Flyway auto-migrates on boot.
+- **Secrets live ONLY in Google Secret Manager + the VM `.env`** (generated, gitignored) — NEVER in the repo.
+- **IaC:** Terraform in `terraform/` (VM, reserved static IP, firewall 22/80/443, dedicated service account).
+- **Backend MUST stay single-instance** — `@Scheduled` IMAP sync / GDPR jobs / KB embedding worker / delayed-email send have no idempotency yet, so do NOT scale the backend horizontally.
+- **CI/CD (GitHub Actions): PLANNED, not built yet.**
+
 ## AI Prompt Templates (`backend/src/main/resources/prompts/`)
 
 All AI system prompts are externalized into template files, loaded by `PromptService`.
@@ -130,7 +139,7 @@ All AI system prompts are externalized into template files, loaded by `PromptSer
 - `Role` enum: `USER`, `ADMIN` — stored in JWT, checked via `TokenService.isAdmin()`
 - Admin routes: `/api/v1/admin/**` protected with `hasRole("ADMIN")`
 - Frontend: `adminGuard`, `AdminService`, admin pages under `/dashboard/admin/*`
-- Plans: STARTER (AI disabled), PRO (€5 cap), ENTERPRISE (unlimited) — no payment integration yet
+- Plans (monthly `costLimitCents`): STARTER (€0.10, effectively AI-off), PRO (€5), BUSINESS (€20), ENTERPRISE (unlimited) — no payment integration yet
 
 ### AI Assistant Chat
 - **Backend:** `AiAssistantController` → `AiAssistantServiceImpl` → `AiToolRegistry` → Google Gemini API
@@ -144,6 +153,10 @@ All AI system prompts are externalized into template files, loaded by `PromptSer
 - Phases: `chatting` → `building` → `ready`
 - Custom read-only canvas (no Foblex Flow) with email packet animations
 - Must converse 2+ exchanges before building
+
+### Integrations (callable, trigger-less automations)
+- Second automation `kind`: `AUTOMATION` (default) vs `INTEGRATION` — a trigger-less reusable "function": `INPUT` (exactly 1, entry) → flow → `OUTPUT` (0/1, return), invoked from automations via the `INTEGRATION_CALL` node. Reuses the whole execution engine via the `kind` discriminator (migration **V60**).
+- Page `/dashboard/integrations`; the automation editor is reused with `INPUT`/`OUTPUT`/`INTEGRATION_CALL` nodes.
 
 ## Theme System & CSS Variables
 - **Definition:** `frontend/src/styles/_themes.scss`
@@ -235,10 +248,7 @@ Five surfaces under `features/marketplace/`: **Discover · Detail · Publish · 
   follows the org the install was made from (NOT the buyer's personal org). Duplicate-install guard + acquisition
   + cloned resources (`MarketplaceResourceCloner`) are all org-scoped on that active org.
   `saveAcquisitionConstants` rejects non-publishable names and encrypts secret values.
-- Controller `/api/v1/marketplace/...`: `GET/POST /listings`, `GET /listings/{id}`,
-  `POST /listings/{id}/install`, `DELETE /listings/{id}` (unpublish), `GET /library`,
-  `PUT /acquisitions/{id}/constants`, `PUT /acquisitions/{id}/accounts`,
-  `POST /acquisitions/{id}/activate`, `GET/POST /listings/{id}/reviews`.
+- Controller `MarketplaceController` (`/api/v1/marketplace/...`): listings CRUD + install, library, acquisition constants/accounts/activate, reviews (see the controller for exact routes).
 
 ### Frontend
 - `core/services/marketplace.service.ts` + `models/marketplace.model.ts`. All `mkt_*` i18n keys (DE+EN).
@@ -250,3 +260,6 @@ Five surfaces under `features/marketplace/`: **Discover · Detail · Publish · 
 ## Git
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`
 - Feature branches: `feature/<name>`, bugfix: `fix/<name>`
+- **Commit frequently while building** — make small, logical, self-contained commits as you go (one per working step / file group), each one compiling/passing, instead of a single giant end-of-feature commit. Keeps the branch reviewable and easy to revert or bisect.
+- **`main` is PROTECTED (GitHub ruleset "Main Protection"): direct pushes are rejected.** NEVER `git push` to `main`. For EVERY change — even one-line/docs/hotfix — branch first (`feature/*`, `fix/*`, `docs/*`), commit there, push the branch, then open a PR to merge into `main`. Required approvals = 0 (solo), so the author can merge their own PR after checks pass.
+- Remotes: `origin` → `github.com/Kaandroids/Postwerk.git` (the live/public repo). The production VM deploys by pulling `main`.
