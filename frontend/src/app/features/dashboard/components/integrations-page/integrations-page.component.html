@@ -33,6 +33,10 @@
               [value]="searchQuery()"
               (input)="searchQuery.set(v($event))" />
           </div>
+          <button class="auto-add-mobile" type="button" (click)="showAddForm()"
+            [attr.aria-label]="i18n.t('intg_list_add')">
+            <app-icon name="plus" />
+          </button>
         </div>
 
         @if (filtered().length === 0) {

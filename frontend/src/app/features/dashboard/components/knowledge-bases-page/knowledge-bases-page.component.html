@@ -1,5 +1,5 @@
 <app-page-content>
-  <div class="dash-page-head">
+  <div class="dash-page-head" [class.dash-head-compact]="screen() === 'list'">
     <div>
       <div class="dash-eyebrow">{{ i18n.t('kb_eyebrow') }}</div>
       <h1 class="dash-title">{{ i18n.t('kb_title') }}</h1>

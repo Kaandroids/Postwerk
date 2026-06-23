@@ -85,6 +85,19 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/
         align-items: stretch;
         gap: 16px;
       }
+      /* Opt-in compact header (list pages with no search/filter): drop the big
+         title block and collapse the action buttons to icons, leaving a thin
+         toolbar row. Pages add the dash-head-compact class to their list head. */
+      .dash-head-compact {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .dash-head-compact > :first-child { display: none; }
+      /* Hide only the button's own label span (the icon lives in app-icon > span). */
+      .dash-head-compact button > span { display: none; }
     }
   `,
 })

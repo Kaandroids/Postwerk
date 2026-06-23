@@ -10,6 +10,7 @@ import { PageContentComponent } from '../page-content/page-content.component';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { ClickOutsideDirective } from '../../../../shared/directives/click-outside.directive';
 import { FormsModule } from '@angular/forms';
+import { ViewportService } from '../../../../core/services/viewport.service';
 import { ComposePanelComponent } from '../compose-panel/compose-panel.component';
 import { EmailDetailComponent } from '../email-detail/email-detail.component';
 import { relativeTime } from '../../../../shared/utils/relative-time.util';
@@ -29,7 +30,16 @@ export class EmailsPageComponent implements OnInit, OnDestroy {
   private emailService = inject(EmailService);
   private confirmDialog = inject(ConfirmDialogService);
   private route = inject(ActivatedRoute);
+  protected viewport = inject(ViewportService);
   private querySub?: Subscription;
+
+  // On phones the four filter dropdowns collapse into a single button + bottom sheet.
+  protected filterSheetOpen = signal(false);
+  protected activeFilterCount = computed(() =>
+    (this.dateFilter() !== 'all' ? 1 : 0) +
+    (this.categoryFilter().length > 0 ? 1 : 0) +
+    (this.readFilter() !== 'all' ? 1 : 0) +
+    (this.automationFilter() !== 'all' ? 1 : 0));
 
   protected currentFolder = signal<string>('INBOX');
   protected emails = signal<EmailListItem[]>([]);
