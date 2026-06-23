@@ -58,6 +58,7 @@ test('a11y scan of all dashboard surfaces', async ({ authenticatedPage: page }) 
     ...topRules,
     '',
   ].join('\n');
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, md);
 
   // Report-first: the scan completing over every surface is the assertion here; the
