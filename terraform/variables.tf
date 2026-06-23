@@ -53,7 +53,23 @@ variable "network" {
 }
 
 variable "ssh_source_ranges" {
-  description = "CIDRs allowed to reach SSH (port 22). TIGHTEN to your-ip/32 for production."
+  description = <<-EOT
+    CIDRs allowed to reach SSH (port 22) DIRECTLY (bypassing IAP). IAP traffic is
+    allowed separately via the allow_ssh_iap rule. Once IAP is verified working,
+    set this to [] (or your-ip/32 as break-glass) so SSH is not internet-exposed.
+  EOT
   type        = list(string)
   default     = ["0.0.0.0/0"]
+}
+
+variable "github_repo" {
+  description = "owner/repo permitted to impersonate the deployer SA via WIF."
+  type        = string
+  default     = "Kaandroids/Postwerk"
+}
+
+variable "ar_repo_id" {
+  description = "Artifact Registry Docker repository ID."
+  type        = string
+  default     = "postwerk"
 }

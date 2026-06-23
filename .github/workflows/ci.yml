@@ -6,9 +6,44 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel superseded runs on the same PR/branch (saves minutes on rapid pushes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write   # for the JaCoCo coverage PR comment
+
 jobs:
+  # ---------------------------------------------------------------------------
+  # Detect WHICH areas changed so we only run the heavy jobs that are relevant.
+  # A docs-only change (README, doc/**) leaves both outputs 'false' → the build
+  # and test jobs are skipped, and the `ci-ok` gate below still goes green.
+  # ---------------------------------------------------------------------------
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
   backend-test:
     name: Backend Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -61,6 +96,8 @@ jobs:
 
   frontend-build:
     name: Frontend Build
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -83,6 +120,8 @@ jobs:
 
   frontend-e2e:
     name: Frontend E2E Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -114,3 +153,24 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # The SINGLE required status check for branch protection.
+  # It waits for every area job and is green when none FAILED — skipped jobs
+  # (docs-only change) are acceptable. This avoids the classic "skipped but
+  # required" trap where a path-filtered required check leaves the PR stuck on
+  # "Expected — Waiting for status to be reported" forever.
+  # ---------------------------------------------------------------------------
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [changes, backend-test, frontend-build, frontend-e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          echo "::error::A required CI job failed or was cancelled."
+          exit 1
+      - name: Success
+        run: echo "CI passed. (Skipped jobs from path filtering are acceptable.)"
