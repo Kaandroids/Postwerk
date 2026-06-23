@@ -112,7 +112,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        # `npm ci` is strict; the committed lock omits Linux-only optional deps
+        # (e.g. @emnapi/*) because it was last resolved on Windows. Fall back to
+        # `npm install` on Linux — same pragmatic approach as frontend/Dockerfile.
+        run: npm ci || npm install --no-audit --no-fund
 
       - name: Build
         working-directory: frontend
@@ -136,7 +139,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        # `npm ci` is strict; the committed lock omits Linux-only optional deps
+        # (e.g. @emnapi/*) because it was last resolved on Windows. Fall back to
+        # `npm install` on Linux — same pragmatic approach as frontend/Dockerfile.
+        run: npm ci || npm install --no-audit --no-fund
 
       - name: Install Playwright browsers
         working-directory: frontend
