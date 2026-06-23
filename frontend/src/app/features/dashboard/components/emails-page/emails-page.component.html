@@ -1,12 +1,14 @@
 <app-page-content>
   <div class="dash-page-head ib-page-head">
     <div>
-      <div class="ib-mobile-context">
-        <span class="ib-mobile-folder">{{ folderTitle() }}</span>
-        @if (activeAccount()) {
-          <span class="ib-mobile-email">{{ activeAccount()!.email }}</span>
-        }
-      </div>
+      @if (viewport.isMobile()) {
+        <div class="ib-mobile-context">
+          <span class="ib-mobile-folder">{{ folderTitle() }}</span>
+          @if (activeAccount()) {
+            <span class="ib-mobile-email">{{ activeAccount()!.email }}</span>
+          }
+        </div>
+      }
       @if (activeAccount()) {
         <div class="dash-eyebrow">{{ i18n.t('inbox_pretitle', { email: activeAccount()!.email }) }}</div>
       }
