@@ -1,0 +1,106 @@
+name: Deploy
+
+# Fully-automatic deploy: every push to main (that touches app code) builds
+# images ONCE, pushes them to Artifact Registry, then deploys to the VM over an
+# IAP tunnel. Auth to GCP is keyless via Workload Identity Federation — no
+# long-lived service-account key is stored in GitHub.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'doc/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'terraform/**'   # infra is applied with `terraform apply`, not this pipeline
+
+# Never run two production deploys at once; queue them instead of cancelling.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write   # REQUIRED so the WIF action can mint the OIDC token
+
+env:
+  GCP_PROJECT: postwerk
+  GCP_ZONE: europe-west3-a
+  VM_NAME: postwerk-beta
+  AR: ${{ vars.GCP_AR }}
+  IMAGE_TAG: sha-${{ github.sha }}
+
+jobs:
+  # Build BOTH images every run (registry layer cache makes the unchanged one
+  # near-instant) so they always exist at the SAME git SHA — clean pinning + rollback.
+  build:
+    name: Build & push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (keyless / WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker europe-west3-docker.pkg.dev --quiet
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.AR }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}
+            ${{ env.AR }}/${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Scan image (Trivy — report only, non-blocking)
+        uses: aquasecurity/trivy-action@0.28.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.AR }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+  deploy:
+    name: Deploy to VM (over IAP)
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      VM_USER: ${{ secrets.VM_SSH_USER }}
+      VM_APP_DIR: ${{ vars.VM_APP_DIR }}
+    steps:
+      - name: Authenticate to GCP (keyless / WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      # gcloud pushes an EPHEMERAL SSH key to instance metadata for this run,
+      # tunnels in over IAP (port 22 need not be open to the internet), runs the
+      # on-VM deploy script as $VM_USER. The script pulls the pinned images and
+      # health-checks with auto-rollback.
+      - name: Deploy over IAP tunnel
+        run: |
+          gcloud compute ssh "${VM_USER}@${VM_NAME}" \
+            --project="$GCP_PROJECT" --zone="$GCP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command="set -e; cd '${VM_APP_DIR}' && git pull --ff-only origin main && IMAGE_TAG='${IMAGE_TAG}' ./deploy/deploy.sh"

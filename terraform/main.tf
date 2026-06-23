@@ -51,6 +51,22 @@ resource "google_compute_firewall" "allow_ssh" {
   }
 }
 
+# IAP TCP forwarding range — lets `gcloud compute ssh --tunnel-through-iap`
+# reach port 22 WITHOUT exposing SSH to the internet. This is what the keyless
+# CI/CD deploy uses. Keep this even after dropping 0.0.0.0/0 from allow_ssh.
+resource "google_compute_firewall" "allow_ssh_iap" {
+  name          = "${var.instance_name}-allow-ssh-iap"
+  network       = var.network
+  direction     = "INGRESS"
+  source_ranges = ["35.235.240.0/20"]
+  target_tags   = ["ssh"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+}
+
 # ---------------------------------------------------------------------------
 # The VM — runs the existing docker-compose stack (Postgres+pgvector, Redis,
 # backend, frontend, Caddy). App state lives in Docker volumes on this disk;
