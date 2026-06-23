@@ -17,6 +17,7 @@
 
 <p>
   <a href="https://github.com/Kaandroids/Postwerk/actions/workflows/ci.yml"><img src="https://github.com/Kaandroids/Postwerk/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/Kaandroids/Postwerk/actions/workflows/deploy.yml"><img src="https://github.com/Kaandroids/Postwerk/actions/workflows/deploy.yml/badge.svg" alt="Deploy" /></a>
   <a href="https://codecov.io/gh/Kaandroids/Postwerk"><img src="https://codecov.io/gh/Kaandroids/Postwerk/branch/main/graph/badge.svg" alt="Coverage" /></a>
 </p>
 
@@ -88,6 +89,8 @@ Postwerk is a full-stack SaaS platform that lets users connect their email accou
   → [`KnowledgeBaseSearchServiceImpl`](backend/src/main/java/com/postwerk/service/impl/KnowledgeBaseSearchServiceImpl.java)
 - **One lint catalog, enforced on both sides** — backend (Java) and frontend (TypeScript) can't share code, so they share an issue-**code** vocabulary; the same validation rules gate the editor UI and block activation/publish server-side.
   → [`AutomationValidator`](backend/src/main/java/com/postwerk/service/AutomationValidator.java) (Java) · `automation-lint.service.ts` (TS)
+- **Keyless, build-once CI/CD** — GitHub Actions builds each image once and ships it to production on merge with **zero long-lived cloud credentials**: it authenticates to GCP via Workload Identity Federation (OIDC), pushes to Artifact Registry, and deploys over an Identity-Aware Proxy SSH tunnel with health-gated auto-rollback.
+  → [`deploy.yml`](.github/workflows/deploy.yml) · [`terraform/wif.tf`](terraform/wif.tf)
 
 ## Architecture
 
@@ -127,12 +130,14 @@ Postwerk is a full-stack SaaS platform that lets users connect their email accou
 | **Observability** | Spring Boot Actuator, Micrometer, Prometheus, Structured JSON Logging |
 | **Resilience** | Resilience4j (circuit breaker, retry, rate limiter) |
 | **Infrastructure** | Docker Compose, Caddy (automatic HTTPS), GCP Compute Engine, Terraform, Google Secret Manager, Cloudflare DNS, Flyway |
+| **CI / CD** | GitHub Actions (path-filtered CI · keyless deploy), Artifact Registry, Workload Identity Federation (OIDC), Identity-Aware Proxy |
 | **Testing** | JUnit 5, Testcontainers, Playwright E2E, Vitest |
 
 ## Project Structure
 
 ```
 Postwerk/
+├── .github/workflows/          # CI + keyless deploy pipelines (GitHub Actions)
 ├── backend/                    # Spring Boot application
 │   └── src/main/java/com/postwerk/
 │       ├── config/             # Security, Redis, CORS, rate limiting
@@ -217,21 +222,44 @@ cd frontend && npx playwright test
 cd frontend && ng lint
 ```
 
-## Deployment
+## CI/CD & Deployment
 
-Production runs on a single Google Compute Engine VM (Frankfurt) via Docker Compose behind Caddy, with infrastructure managed as code.
+Every push runs CI; every merge to `main` ships to production automatically — with **no long-lived cloud credentials stored in GitHub**. Production runs on a single Google Compute Engine VM (Frankfurt) via Docker Compose behind Caddy.
 
-- **Infrastructure as Code** — `terraform/` provisions the VM, a reserved static IP, a locked-down firewall (only 80/443/22), and a least-privilege service account; Terraform state is stored remotely in GCS.
-- **Automatic HTTPS** — Caddy obtains and renews Let's Encrypt certificates; security headers (HSTS, CSP, X-Frame-Options) are enforced at the edge.
-- **Keyless secrets** — secrets live in Google Secret Manager and are read at deploy time via the VM's service account — none in the repo or baked into images.
-- **One-command deploy** — `deploy/deploy.sh` pulls the latest code, materializes `.env` from Secret Manager, then runs `docker compose -f docker-compose.prod.yml up -d --build`.
+```
+ Pull request ─► CI (path-filtered) ─► CI OK gate ─► merge to main
+                 backend · frontend                       │
+                 tests · coverage · e2e                   │
+                                                          ▼
+     ┌──────────────────────────────────────────────────────────────┐
+     │  Deploy — GitHub Actions, keyless via Workload Identity Fed.   │
+     │                                                                │
+     │  build  ─► images built ONCE ─► Artifact Registry             │
+     │           (SHA-pinned + latest, layer-cached)                 │
+     │  deploy ─► IAP-tunnelled SSH ─► VM pulls the pinned images    │
+     │           ─► .env from Secret Manager ─► docker compose up    │
+     │           ─► /api/v1/health ─► auto-rollback if unhealthy     │
+     └──────────────────────────────────────────────────────────────┘
+```
+
+**CI** ([`ci.yml`](.github/workflows/ci.yml)) — path filters run only the affected area, so a docs-only change skips the heavy jobs; a single **`CI OK`** aggregate job is the one required status check, so path-skipped jobs never leave a PR stuck "waiting". Covers backend unit + Testcontainers integration tests, JaCoCo coverage, the Angular build, and Playwright E2E.
+
+**CD** ([`deploy.yml`](.github/workflows/deploy.yml)) — fully automatic on merge to `main`:
+
+- **Keyless auth** — GitHub authenticates to GCP with a short-lived OIDC token via **Workload Identity Federation**; no service-account key lives in the repo or in GitHub secrets.
+- **Build once, deploy that exact artifact** — backend and frontend images are built in CI and pushed to **Artifact Registry**, SHA-pinned; the VM only ever *pulls* (it never builds), so deploys are fast, reproducible, and trivially rolled back.
+- **No public SSH** — the runner reaches the VM through an **Identity-Aware Proxy** tunnel, so port 22 need not be exposed to the internet.
+- **Safe rollout** — [`deploy/deploy.sh`](deploy/deploy.sh) materializes `.env` from Secret Manager, brings the stack up, polls `/api/v1/health`, and **auto-rolls-back** to the last-good image if the new one is unhealthy.
+
+**Infrastructure as Code** — `terraform/` provisions the VM, a reserved static IP, a locked-down firewall, Artifact Registry, the Workload Identity pool/provider, and least-privilege service accounts; Terraform state lives remotely in GCS. Caddy terminates TLS with auto-renewed Let's Encrypt certificates and enforces security headers (HSTS, CSP, X-Frame-Options) at the edge.
 
 ```bash
-# provision infrastructure (once)
+# provision / update infrastructure
 cd terraform && terraform init && terraform apply
 
-# deploy / update (on the VM)
-./deploy/deploy.sh
+# deploys happen automatically on merge to main;
+# to roll out a specific build by hand (on the VM):
+IMAGE_TAG=sha-<git-sha> ./deploy/deploy.sh
 ```
 
 ## API Overview
