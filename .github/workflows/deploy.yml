@@ -68,15 +68,6 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-      - name: Scan image (Trivy — report only, non-blocking)
-        uses: aquasecurity/trivy-action@0.28.0
-        continue-on-error: true
-        with:
-          image-ref: ${{ env.AR }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}
-          format: table
-          severity: HIGH,CRITICAL
-          exit-code: '0'
-
   deploy:
     name: Deploy to VM (over IAP)
     needs: build
