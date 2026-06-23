@@ -144,8 +144,10 @@
   font-size: 14.5px;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
   transition: border-color 0.15s, background 0.15s;
 }
+.lp2-cta-ghost svg { color: var(--accent); }
 .lp2-cta-ghost:hover { border-color: var(--fg-subtle); background: var(--bg-2); }
 .lp2-trust {
   display: flex;
@@ -392,26 +394,46 @@
 }
 .lp2-ticker-cell {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
   padding: 26px 28px;
   border-left: 0.5px solid var(--border);
 }
 .lp2-ticker-cell:first-child { border-left: 0; padding-left: 0; }
-.lp2-ticker-num {
+.lp2-ticker-lead {
   font-family: var(--font-serif);
-  font-size: 34px;
-  line-height: 1;
+  font-size: 21px;
+  line-height: 1.15;
   letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  color: var(--fg);
 }
-.lp2-ticker-num em { font-style: italic; color: var(--accent); }
-.lp2-ticker-label { font-size: 12px; color: var(--fg-muted); line-height: 1.4; }
+.lp2-ticker-label { font-size: 12.5px; color: var(--fg-muted); line-height: 1.45; }
 
 @media (max-width: 980px) {
   .lp2-wrap { padding: 0 24px; }
-  .lp2-hero-grid { grid-template-columns: 1fr; gap: 44px; padding: 64px 0 56px; }
+  /* minmax(0,1fr) — not 1fr — so the column can shrink below the console's
+     min-content width; otherwise the nowrap console rows force the track wider
+     than the viewport and the card gets clipped by .lp2 overflow-x:hidden. */
+  .lp2-hero-grid { grid-template-columns: minmax(0, 1fr); gap: 44px; padding: 64px 0 56px; }
   .lp2-ticker-inner { grid-template-columns: 1fr 1fr; padding: 0 24px; }
   .lp2-ticker-cell:nth-child(odd) { border-left: 0; padding-left: 0; }
+}
+
+/* Phone tier: tighten the page gutter so content gets a touch more room, and
+   shrink the off-canvas hero glow so it doesn't waste space behind the fold. */
+@media (max-width: 640px) {
+  .lp2-wrap { padding: 0 18px; }
+  .lp2-ticker-inner { padding: 0 18px; }
+  .lp2-hero::before { width: 520px; height: 460px; left: -200px; top: -200px; }
+
+  /* The autopilot console is sized for the desktop column; on a full-width
+     phone card its head count + row tags overflow the padding and get clipped
+     by overflow:hidden. Trim the inner gutters and the head label tracking so
+     everything fits. */
+  .lp2-console-head { padding: 12px 14px; gap: 8px; }
+  .lp2-console-head .label { letter-spacing: 0.06em; font-size: 10px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lp2-console-head .count { font-size: 10.5px; flex-shrink: 0; }
+  .lp2-incoming { padding: 14px; }
+  .lp2-done { padding: 8px 14px 14px; }
 }

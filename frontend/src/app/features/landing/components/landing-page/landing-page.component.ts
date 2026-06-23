@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/
 import { LandingNavComponent } from '../landing-nav/landing-nav.component';
 import { LandingHeroComponent } from '../landing-hero/landing-hero.component';
 import { LandingTickerComponent } from '../landing-ticker/landing-ticker.component';
-import { LandingLogosComponent } from '../landing-logos/landing-logos.component';
 import { LandingPillarsComponent } from '../landing-pillars/landing-pillars.component';
 import { LandingChatDemoComponent } from '../landing-chat-demo/landing-chat-demo.component';
 import { LandingHowComponent } from '../landing-how/landing-how.component';
@@ -21,7 +20,6 @@ import { LandingFooterComponent } from '../landing-footer/landing-footer.compone
     LandingNavComponent,
     LandingHeroComponent,
     LandingTickerComponent,
-    LandingLogosComponent,
     LandingPillarsComponent,
     LandingChatDemoComponent,
     LandingHowComponent,
@@ -36,7 +34,6 @@ import { LandingFooterComponent } from '../landing-footer/landing-footer.compone
       <app-landing-nav />
       <app-landing-hero />
       <app-landing-ticker />
-      <app-landing-logos />
       <app-landing-pillars />
       <app-landing-chat-demo />
       <app-landing-how />

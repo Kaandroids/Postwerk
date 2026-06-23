@@ -34,15 +34,14 @@ interface HeadlineWord {
                 {{ i18n.t('lp_cta_start') }}
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
               </a>
-              <button class="lp2-cta-ghost">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                {{ i18n.t('lp_cta_demo') }}
-              </button>
+              <a class="lp2-cta-ghost" routerLink="/getstarted">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7v8l10-12h-7z"/></svg>
+                {{ i18n.t('p2_cta_try') }}
+              </a>
             </div>
             <div class="lp2-trust lp2-fade-up" [style.--d]="'0.6s'">
               <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>{{ i18n.t('p2_trust1') }}</span>
               <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>{{ i18n.t('p2_trust2') }}</span>
-              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>{{ i18n.t('p2_trust3') }}</span>
             </div>
           </div>
           <app-landing-console />

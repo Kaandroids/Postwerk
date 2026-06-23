@@ -38,39 +38,6 @@
   text-wrap: pretty;
 }
 
-/* ── Logo marquee ────────────────────────────────────────────────── */
-.lp2-logos { padding: 64px 0 0; }
-.lp2-logos-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fg-subtle);
-  margin-bottom: 24px;
-}
-.lp2-marquee {
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 10%, #000 90%, transparent);
-}
-.lp2-marquee-track {
-  display: flex;
-  gap: 72px;
-  width: max-content;
-  animation: lp2-marquee 30s linear infinite;
-}
-.lp2-marquee:hover .lp2-marquee-track { animation-play-state: paused; }
-@keyframes lp2-marquee { to { transform: translateX(-50%); } }
-@media (prefers-reduced-motion: reduce) { .lp2-marquee-track { animation: none; } }
-.lp2-marquee-track span {
-  font-family: var(--font-serif);
-  font-size: 20px;
-  color: var(--fg-subtle);
-  white-space: nowrap;
-  transition: color 0.2s;
-}
-.lp2-marquee-track span:hover { color: var(--fg); }
-
 /* ── How it works: sticky rail + tall visuals ────────────────────── */
 .lp2-how-grid {
   display: grid;
@@ -196,24 +163,22 @@
 .lp2-scan i[data-w="2"] { width: 68%; }
 .lp2-scan i[data-w="3"] { width: 81%; }
 .lp2-scan i[data-w="4"] { width: 55%; }
-/* panel 3: action chips cascade */
-.lp2-chips { display: flex; flex-wrap: wrap; gap: 9px; }
-.lp2-chips span {
+/* panel 3: "runs by itself" live status */
+.lp2-running {
+  display: flex;
+  align-items: center;
+  gap: 11px;
   font-family: var(--font-mono);
-  font-size: 12px;
-  border: 0.5px solid var(--border-strong);
-  border-radius: 999px;
-  padding: 6px 13px;
+  font-size: 13px;
   color: var(--fg-muted);
-  background: var(--bg-2);
 }
-.lp2-how-panel[data-active="1"] .lp2-chips span {
-  animation: lp2-chip-rise 0.5s cubic-bezier(0.22,1,0.36,1) both;
-  animation-delay: calc(var(--i) * 0.07s);
-}
-@keyframes lp2-chip-rise {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: none; }
+.lp2-running-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+  animation: lp2-pulse 2.2s ease-in-out infinite;
 }
 
 /* ── Rule studio (interactive builder) ───────────────────────────── */
@@ -384,11 +349,22 @@
 
 @media (max-width: 980px) {
   .lp2-section { padding: 76px 0; }
-  .lp2-how-grid { grid-template-columns: 1fr; gap: 40px; }
+  .lp2-how-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .lp2-how-rail { position: static; }
-  .lp2-studio { grid-template-columns: 1fr; }
+  .lp2-studio { grid-template-columns: minmax(0, 1fr); }
   .lp2-studio-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 0.5px solid var(--border); }
   .lp2-studio-side .cap { width: 100%; }
   .lp2-cta-frame { padding: 48px 32px; }
   .lp2-cta-frame .mark { font-size: 220px; bottom: -60px; }
+}
+
+/* Phone: the row-wrap template pills overflow the studio card (each pill is
+   content-sized, two wide ones exceed the width and get clipped by the card's
+   overflow:hidden). Stack them full-width like the desktop rail, and tighten
+   the output padding so the generated rows fit. */
+@media (max-width: 640px) {
+  .lp2-studio-side { flex-direction: column; }
+  .lp2-rule-pill { width: 100%; }
+  .lp2-studio-out { padding: 20px 18px 18px; }
+  .lp2-out-prompt { font-size: 15px; }
 }

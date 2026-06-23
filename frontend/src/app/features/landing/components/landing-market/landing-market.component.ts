@@ -25,25 +25,14 @@ import { LandingInstallBtnComponent } from './landing-install-btn.component';
             <div class="lp2-mcard" appReveal [style.--rv-d]="delay(i)">
               <div class="lp2-mcard-top">
                 <span class="lp2-mcard-cat">{{ c.cat }}</span>
-                <span class="lp2-mcard-rating">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2H22l-6 4.4 2.4 7.2L12 16.4 5.6 20.8 8 13.6 2 9.2h7.6z"/></svg>{{ c.rating }}
-                </span>
               </div>
               <h3>{{ pick(c.title) }}</h3>
               <p class="desc">{{ pick(c.desc) }}</p>
               <div class="lp2-mcard-meta">
                 <span class="av" [style.background]="c.grad">{{ c.av }}</span>
                 {{ c.by }}
-                <span [style.margin-left]="'auto'">{{ c.installs }} {{ i18n.t('p2_mkt_installs') }}</span>
               </div>
               <div class="lp2-mcard-foot">
-                <span class="lp2-mcard-price">
-                  @if (c.price === 0) {
-                    {{ i18n.t('p2_mkt_free') }}
-                  } @else {
-                    {{ c.price }} € <small>/ {{ i18n.lang() === 'de' ? 'Monat' : 'mo' }}</small>
-                  }
-                </span>
                 <app-landing-install-btn />
               </div>
             </div>

@@ -19,7 +19,6 @@ type Phase = 'arrive' | 'scan' | 'classify' | 'act' | 'ok' | 'leave';
       <div class="lp2-console-head">
         <span class="live"></span>
         <span class="label">{{ i18n.t('p2_console_label') }}</span>
-        <span class="count"><b>{{ countLabel() }}</b> {{ i18n.t('p2_console_done') }}</span>
       </div>
       <div class="lp2-incoming">
         @for (k of [idx()]; track k) {
@@ -74,7 +73,6 @@ export class LandingConsoleComponent {
   protected idx = signal(0);
   protected phase = signal<Phase>('arrive');
   protected doneList = signal<number[]>([2, 3]);
-  protected count = signal(247);
 
   protected rx = signal('0deg');
   protected ry = signal('0deg');
@@ -82,9 +80,6 @@ export class LandingConsoleComponent {
   protected run = computed(() => this.runs[this.idx()]);
   protected showChip = computed(() => ['classify', 'act', 'ok', 'leave'].includes(this.phase()));
   protected showAct = computed(() => ['act', 'ok', 'leave'].includes(this.phase()));
-  protected countLabel = computed(() =>
-    this.count().toLocaleString(this.i18n.lang() === 'de' ? 'de-DE' : 'en-US'),
-  );
 
   protected pick = (v: { de: string; en: string }) => pickLang(v, this.i18n.lang());
   protected viaKey = (v: keyof typeof VIA_KEY) => VIA_KEY[v];
@@ -111,7 +106,6 @@ export class LandingConsoleComponent {
           const i = this.idx();
           this.doneList.update((d) => [i, ...d].slice(0, 3));
           this.idx.set((i + 1) % this.runs.length);
-          this.count.update((c) => c + 1);
           step('arrive');
         }, reduced ? 60 : 460);
       }

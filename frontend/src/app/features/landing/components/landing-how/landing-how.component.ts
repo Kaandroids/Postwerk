@@ -55,10 +55,9 @@ import { RevealDirective } from '../../reveal.directive';
             </div>
             <div class="lp2-how-panel" appReveal [attr.data-active]="active() === 2 ? '1' : '0'">
               <span class="cap">{{ i18n.t('p2_how3_t') }}</span>
-              <div class="lp2-chips">
-                @for (c of chips; track c; let i = $index) {
-                  <span [style.--i]="i">{{ c }}</span>
-                }
+              <div class="lp2-running">
+                <span class="lp2-running-dot"></span>
+                <span>{{ i18n.t('p2_how3_run') }}</span>
               </div>
             </div>
           </div>
@@ -73,7 +72,6 @@ export class LandingHowComponent {
   private visuals = viewChild.required<ElementRef<HTMLElement>>('visuals');
 
   protected active = signal(0);
-  protected chips = ['E-Mail', 'Slack', 'Notion', 'HubSpot', 'Shopify', 'Kalender', 'DATEV', 'Webhook'];
 
   constructor() {
     afterNextRender(() => this.bind());
