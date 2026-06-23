@@ -207,12 +207,19 @@ class AdminControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void me_asUser_returns403() throws Exception {
+    void me_asUser_returnsNullStaffRoleAndNoPermissions() throws Exception {
         String token = registerAndGetToken("user-me@example.com");
 
+        // /admin/me is allowlisted for ANY authenticated user (see SecurityConfig + the
+        // endpoint Javadoc): a non-staff caller gets 200 with staffRole=null and empty
+        // permissions so the UI can hide admin features. (NOT 403 — that was the
+        // pre-RBAC behaviour; this assertion was stale and only surfaced once CI began
+        // actually running the integration tests.)
         mockMvc.perform(get("/api/v1/admin/me")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.staffRole").isEmpty())
+                .andExpect(jsonPath("$.permissions", hasSize(0)));
     }
 
     @Test
