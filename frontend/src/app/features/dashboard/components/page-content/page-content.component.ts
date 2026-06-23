@@ -44,7 +44,7 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/
     .dash-title {
       font-family: var(--font-serif);
       font-weight: 400;
-      font-size: 38px;
+      font-size: clamp(28px, 6vw, 38px);
       letter-spacing: -0.02em;
       margin: 0;
       line-height: 1.05;
@@ -73,6 +73,18 @@ import { ChangeDetectionStrategy, Component, ViewEncapsulation } from '@angular/
     .dash-back:hover {
       color: var(--fg);
       transform: translateX(-2px);
+    }
+
+    /* Phones/small tablets: tighten padding and stack the header so the title
+       and the action buttons don't fight for one row (and the wide "+ Add"
+       button isn't cut off). Applies to every page using app-page-content. */
+    @media (max-width: 767.98px) {
+      .dash-content { padding: 20px 16px 48px; }
+      .dash-page-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+      }
     }
   `,
 })

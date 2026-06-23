@@ -1,3 +1,5 @@
+@use '../../../../../styles/breakpoints' as bp;
+
 /* ── Page shell ───────────────────────────────────────────────── */
 .auto-page {
   animation: enter-up-6 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -673,4 +675,133 @@
 .auto-btn-primary:hover:not(:disabled) {
   opacity: 0.88;
   transform: translateY(-1px);
+}
+
+/* ── Mobile filter button + bottom sheet (base styles; the activating @media
+   block is at the END of the file so its overrides win the cascade) ── */
+.auto-filter-btn {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  app-icon { color: var(--fg-subtle); flex-shrink: 0; }
+  span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 110px; }
+}
+
+/* Mobile primary "+" add button (replaces the header's "Automation erstellen"). */
+.auto-add-mobile {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: var(--fg);
+  color: var(--bg);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+
+  &:hover { opacity: 0.88; transform: translateY(-1px); }
+}
+
+.auto-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.4);
+  animation: auto-sheet-fade 0.15s ease;
+}
+
+.auto-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 201;
+  background: var(--bg);
+  border-top: 0.5px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  padding: 6px 12px max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
+  animation: auto-sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.auto-sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-strong);
+  margin: 6px auto 8px;
+}
+
+.auto-sheet-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-subtle);
+  padding: 4px 10px 6px;
+}
+
+.auto-sheet-opt {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+
+  &:hover { background: var(--bg-2); }
+  &.active { color: var(--accent); font-weight: 600; }
+
+  .auto-sheet-opt-label { flex: 1; }
+  app-icon { color: var(--accent); flex-shrink: 0; }
+}
+
+@keyframes auto-sheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes auto-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-sheet-scrim,
+  .auto-sheet { animation: none; }
+}
+
+/* ── Mobile layout (LAST in the file so these overrides win over the base
+   display:none on the filter/add buttons). Hides the big page header and lays
+   out one compact toolbar: search (flex) + filter button + add button. ── */
+@include bp.mobile {
+  .auto-page .auto-page-head { display: none; }
+  .auto-filterbar { flex-wrap: nowrap; gap: 8px; }
+  .auto-filter-tabs { display: none; }
+  .auto-search { flex: 1; min-width: 0; }
+  .auto-search-input { min-width: 0; }
+  .auto-filter-btn { display: inline-flex; }
+  .auto-add-mobile { display: inline-flex; }
 }

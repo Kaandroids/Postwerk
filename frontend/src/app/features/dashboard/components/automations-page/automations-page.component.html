@@ -58,6 +58,15 @@
               [value]="searchQuery()"
               (input)="searchQuery.set(v($event))" />
           </div>
+          <button class="auto-filter-btn" type="button" (click)="filterSheetOpen.set(true)"
+            [attr.aria-label]="i18n.t('auto_filter_label')">
+            <app-icon name="sliders" />
+            <span>{{ i18n.t(activeFilterLabelKey()) }}</span>
+          </button>
+          <button class="auto-add-mobile" type="button" (click)="showAddForm()"
+            [attr.aria-label]="i18n.t('auto_list_add')">
+            <app-icon name="plus" />
+          </button>
         </div>
 
         @if (filteredAutomations().length === 0) {
@@ -167,6 +176,22 @@
         </div>
       }
     </div>
+
+    @if (filterSheetOpen()) {
+      <div class="auto-sheet-scrim" (click)="filterSheetOpen.set(false)"></div>
+      <div class="auto-sheet" role="dialog" aria-modal="true">
+        <div class="auto-sheet-handle"></div>
+        <div class="auto-sheet-title">{{ i18n.t('auto_filter_label') }}</div>
+        @for (opt of filterOptions(); track opt.value) {
+          <button class="auto-sheet-opt" [class.active]="statusFilter() === opt.value"
+            (click)="pickFilter(opt.value)">
+            <span class="auto-sheet-opt-label">{{ i18n.t(opt.labelKey) }}</span>
+            <span class="auto-filter-count">{{ opt.count }}</span>
+            @if (statusFilter() === opt.value) { <app-icon name="check" /> }
+          </button>
+        }
+      </div>
+    }
   } @else {
     <div class="auto-page">
       <div class="dash-page-head auto-page-head">
