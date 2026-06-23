@@ -118,6 +118,23 @@ Postwerk is a full-stack SaaS platform that lets users connect their email accou
 └─────────────────────────────────────────────────────────┘
 ```
 
+## Concurrency — current limitation
+
+There's no queue or broker yet. Background work runs on Spring `@Scheduled` jobs, and
+production is a single backend instance, so the jobs can't double-fire today. The hot path —
+claiming an email and running its automations — is already idempotent on `(emailId, automationId)`
+and the poller holds a Redis lock, but a couple of the lighter jobs have no such guard, so a race
+becomes possible the moment a second instance exists. A conscious trade-off for an open beta,
+not an oversight.
+
+**If it needs to scale:** move the cron triggers to an external scheduler and let workers claim
+each email row atomically in Postgres (a short lease / `SELECT … FOR UPDATE SKIP LOCKED`),
+turning the DB into a competing-consumer queue — no broker to operate. Every layer here is
+*at-least-once* on its own (the scheduler retries; a lease can be re-handed when a worker looks
+dead but is only slow), so the idempotency key is what upgrades the **effect** to *exactly-once*.
+True exactly-once delivery is impossible over SMTP/HTTP — at-least-once plus idempotency is how
+you get there in practice.
+
 ## Tech Stack
 
 | Layer | Technology |
