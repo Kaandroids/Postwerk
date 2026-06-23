@@ -345,6 +345,12 @@
   margin-top: 4px;
 }
 
+/* footer that carries only the action buttons (e.g. integration cards, where the
+   node-count meta was dropped) — keep the actions right-aligned. */
+.auto-card-footer--actions-only {
+  justify-content: flex-end;
+}
+
 .auto-card-meta {
   display: flex;
   gap: 16px;
