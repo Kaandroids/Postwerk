@@ -1,2 +1,9 @@
 # Keep shell scripts LF so they run on the Linux VM (avoids "bad interpreter ^M").
 *.sh text eol=lf
+
+# The Maven wrapper has no .sh extension, so the rule above misses it. On Windows
+# (core.autocrlf) it would otherwise check out CRLF, and the Alpine build image's
+# BusyBox sh then can't run it ("./mvnw: not found"). Force LF for the POSIX
+# launcher; keep the Windows .cmd as CRLF. Linux/CI already used LF — unchanged.
+mvnw text eol=lf
+mvnw.cmd text eol=crlf
