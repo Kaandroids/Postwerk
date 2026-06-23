@@ -103,3 +103,15 @@
   .lp2-nav-inner { padding: 0 24px; }
   .lp2-nav-links { display: none; }
 }
+
+/* Phone: the brand + prefs + sign-in + CTA row no longer fits, so the CTA
+   button clips off the right edge. Drop the most dispensable items (theme
+   toggle + sign-in link) and tighten spacing so the primary CTA stays whole.
+   Language switch is kept — it's meaningful on a DE/EN product landing. */
+@media (max-width: 640px) {
+  .lp2-nav-inner { padding: 0 16px; gap: 12px; }
+  .lp2-nav-right { gap: 10px; }
+  .lp2-nav .lp2-nav-prefs app-theme-toggle { display: none; }
+  .lp2-signin { display: none; }
+  .lp2-nav-btn { padding: 0 13px; }
+}

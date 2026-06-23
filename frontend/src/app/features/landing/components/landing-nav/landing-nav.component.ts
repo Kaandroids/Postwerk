@@ -17,11 +17,6 @@ import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle
     <nav class="lp2-nav" [attr.data-scrolled]="scrolled() ? '1' : '0'">
       <div class="lp2-nav-inner">
         <a routerLink="/landing"><app-brand /></a>
-        <div class="lp2-nav-links">
-          <a routerLink="/landing" fragment="pillars">{{ i18n.t('p2_nav_product') }}</a>
-          <a routerLink="/landing" fragment="market">{{ i18n.t('p2_nav_market') }}</a>
-          <a routerLink="/landing" fragment="studio">{{ i18n.t('p2_nav_pricing') }}</a>
-        </div>
         <div class="lp2-nav-right">
           <div class="lp2-nav-prefs">
             <app-lang-switcher />

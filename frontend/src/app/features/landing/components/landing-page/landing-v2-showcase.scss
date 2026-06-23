@@ -735,10 +735,10 @@
 
 @media (max-width: 980px) {
   .lp2-pillars {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .lp2-chatdemo {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .lp2-chat {
     border-right: 0;
@@ -746,13 +746,19 @@
     min-height: 0;
   }
   .lp2-mkt-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .lp2-exp-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 40px;
   }
   .lp2-exp-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Phone tier: lift the install button to a comfortable touch target (≥44px is
+   ideal; 40px with the card padding keeps it tappable without looking chunky). */
+@media (max-width: 640px) {
+  .lp2-install { height: 40px; min-width: 116px; font-size: 13px; }
 }
