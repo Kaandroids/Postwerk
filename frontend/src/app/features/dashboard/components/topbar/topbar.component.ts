@@ -73,7 +73,7 @@ import { NotificationCenterComponent } from '../../../notifications/notification
             <app-icon name="shield" />
           </button>
         }
-        <button class="dash-icon-btn" [class.dash-ai-locked]="aiDisabled()" aria-label="AI Assistant" (click)="toggleAi()" [attr.data-active]="chat.isOpen() ? '1' : '0'" data-testid="topbar-ai-btn">
+        <button class="dash-icon-btn dash-ai-btn" [class.dash-ai-locked]="aiDisabled()" aria-label="AI Assistant" (click)="toggleAi()" [attr.data-active]="chat.isOpen() ? '1' : '0'" data-testid="topbar-ai-btn">
           <app-icon name="sparkle" />
           @if (aiDisabled()) {
             <span class="dash-lock-badge"><app-icon name="lock" /></span>

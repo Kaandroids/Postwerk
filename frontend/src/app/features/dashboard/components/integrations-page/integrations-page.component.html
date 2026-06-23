@@ -58,13 +58,7 @@
                   <div class="auto-card-desc">{{ a.description }}</div>
                 }
 
-                <div class="auto-card-footer">
-                  <div class="auto-card-meta">
-                    <span class="auto-meta-item">
-                      <app-icon name="cube" />
-                      {{ a.nodeCount }} {{ i18n.t('auto_stat_nodes') }}
-                    </span>
-                  </div>
+                <div class="auto-card-footer auto-card-footer--actions-only">
                   <div class="auto-card-actions">
                     <button class="auto-icon-btn" [title]="i18n.t('auto_open_editor')" (click)="openEditor(a)">
                       <app-icon name="edit" />

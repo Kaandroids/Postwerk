@@ -46,6 +46,15 @@
   gap: 12px;
 }
 
+// Below 520px the assistant identity + model switcher + actions crowd the header.
+// Hide the "Postwerk-Assistent" identity block; space-between then left-aligns the
+// model (Flash/Pro) switcher while the action buttons stay on the right.
+// NOTE: must come AFTER the base .chat-header-left rule — a media query adds no
+// specificity, so an earlier display:none would lose to the later display:flex.
+@media (max-width: 520px) {
+  .chat-header-left { display: none; }
+}
+
 .chat-avatar {
   width: 38px;
   height: 38px;
@@ -820,7 +829,11 @@
   max-height: 140px;
   line-height: 1.45;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
   transition: border-color 0.15s, height 0.1s ease;
+
+  &::-webkit-scrollbar { display: none; } /* Chromium / Safari */
 
   &::placeholder {
     color: var(--fg-subtle);
