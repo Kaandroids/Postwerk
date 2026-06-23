@@ -212,14 +212,20 @@
 // Below md the topbar is tight (hamburger + workspace switchers + actions),
 // so drop the decorative search field and the AI-limit gauge, and tighten
 // spacing. The switchers and action buttons stay reachable.
-// Below the desktop rail (tablet + phone): drop the search field and move the
-// theme toggle into the drawer (see sidebar) so the header isn't overcrowded.
+// Below the desktop rail (tablet + phone): move the theme toggle into the
+// drawer (see sidebar) so the header isn't overcrowded.
 @include bp.tablet-down {
-  .dash-search {
+  .dash-hide-lg {
     display: none;
   }
+}
 
-  .dash-hide-lg {
+// The search field needs ~360px and only fits alongside the switchers, AI gauge
+// and action buttons once the viewport is wide enough (~1365px with the sidebar
+// open). Below that it pushes the notification bell off the right edge, so hide
+// it until there's room.
+@media (max-width: 1364.98px) {
+  .dash-search {
     display: none;
   }
 }
