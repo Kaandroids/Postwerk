@@ -1,4 +1,5 @@
 /* Config panel, per-node config sections & compose modal — split from automation-editor.component.scss for per-file style budget. */
+@use 'breakpoints' as bp;
 
 /* ── Config panel ─────────────────────────────────────────── */
 /* Host wrapper collapses so .ae-panel becomes a direct flex child of .ae-main
@@ -27,6 +28,21 @@ app-node-config-panel { display: contents; }
 @keyframes ae-panel-in {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Below lg (tablet + phone): the config panel floats in from the right as a sheet over the
+   full-width canvas instead of taking an inline column. On phones the panel body is `inert`
+   (the child gates editing on viewport), so this doubles as the read-only node inspector. */
+@include bp.tablet-down {
+  .ae-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    width: min(380px, 86vw);
+    box-shadow: -22px 0 48px -24px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* ── Studio banner header (node-color tinted) ────────────── */

@@ -9,6 +9,7 @@ import { WebhookEndpointService } from '../../../../../core/services/webhook-end
 import { AutomationService } from '../../../../../core/services/automation.service';
 import { KnowledgeBaseService } from '../../../../../core/services/knowledge-base.service';
 import { OrganizationService } from '../../../../../core/services/organization.service';
+import { ViewportService } from '../../../../../core/services/viewport.service';
 import { VariableGraphService } from '../variable-graph.service';
 import {
   Automation,
@@ -100,6 +101,7 @@ export class NodeConfigPanelComponent {
   private automationService = inject(AutomationService);
   private knowledgeBaseService = inject(KnowledgeBaseService);
   private organizationService = inject(OrganizationService);
+  private viewport = inject(ViewportService);
   private variableGraph = inject(VariableGraphService);
 
   // Parent signals passed by reference — read/write stays byte-for-byte identical.
@@ -120,10 +122,11 @@ export class NodeConfigPanelComponent {
   readonly cronPresets = CRON_PRESETS;
 
   /**
-   * Whether the active-org role may edit automations. When false (viewers), the panel body is made
+   * Whether the active-org role may edit automations AND the viewport allows editing. When false
+   * (viewers, or any role on a phone where the editor is view-only), the panel body is made
    * {@code inert} so the node config is inspectable but not editable; close/help still work.
    */
-  readonly canEdit = computed(() => this.organizationService.can('AUTOMATION_EDIT'));
+  readonly canEdit = computed(() => this.organizationService.can('AUTOMATION_EDIT') && !this.viewport.isMobile());
 
   /** Whether the in-editor node help modal is open. */
   protected readonly infoOpen = signal(false);

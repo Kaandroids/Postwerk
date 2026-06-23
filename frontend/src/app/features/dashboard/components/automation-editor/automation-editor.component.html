@@ -13,13 +13,13 @@
     }
   </div>
   <div class="ae-toolbar-right">
-    @if (!canEdit()) {
+    @if (!canEdit() && !viewOnly()) {
       <span class="ae-status-pill" data-status="VIEW" data-testid="automation-readonly-pill" [title]="i18n.t('auto_readonly_hint')">
         <app-icon name="lock" />
         <span class="ae-status-label">{{ i18n.t('auto_readonly') }}</span>
       </span>
     }
-    @if (canEdit()) {
+    @if (editable()) {
       <button class="ae-toolbar-btn ae-btn-lock" [class.locked]="automation()?.locked"
         (click)="toggleLock()" data-testid="automation-lock-btn"
         [title]="automation()?.locked ? i18n.t('locked_by_user') : i18n.t('lock_resource')">
@@ -59,7 +59,7 @@
         <span class="ae-problems-count">{{ lintIssues().length }}</span>
       }
     </button>
-    @if (canEdit()) {
+    @if (editable()) {
       <button class="ae-toolbar-btn ae-btn-vars" (click)="openConstants()"
         data-testid="automation-constants-btn" [title]="i18n.t('auto_constants_title')">
         <app-icon name="code" />
@@ -70,7 +70,7 @@
         {{ saving() ? i18n.t('auto_saving') : i18n.t('auto_save') }}
       </button>
     }
-    @if (canActivate() && triggerKind() === 'MANUAL') {
+    @if (canActivate() && triggerKind() === 'MANUAL' && !viewOnly()) {
       <button class="ae-toolbar-btn ae-btn-run" (click)="runManually()" data-testid="editor-run-btn">
         <app-icon name="play" />
         {{ i18n.t('auto_run') }}
@@ -93,7 +93,7 @@
 <!-- ── Main Area ───────────────────────────────────────────── -->
 <div class="ae-main">
   <!-- ── Tool library rail (Bausteine) ───────────────────── -->
-  @if (editorTab() === 'canvas' && canEdit()) {
+  @if (editorTab() === 'canvas' && editable()) {
     <aside class="ae-toolrail" [class.collapsed]="railCollapsed()">
       <div class="ae-toolrail-head">
         <span class="ae-toolrail-mark"><app-icon name="grid" /></span>
@@ -184,6 +184,32 @@
     [class.ae-panning]="panning()"
     (contextmenu)="onCanvasContextMenu($event)"
     (mousedown)="onCanvasMouseDown($event)">
+
+    <!-- Phone view-only badge — floats at the canvas top-left (out of the cramped toolbar) -->
+    @if (viewOnly()) {
+      <div class="ae-viewonly-badge f-drag-blocker" data-testid="automation-viewonly-badge"
+        [title]="i18n.t('auto_view_only_hint')">
+        <app-icon name="eye" />
+        <span>{{ i18n.t('auto_view_only') }}</span>
+      </div>
+    }
+
+    <!-- Phone: lock + AI assistant float at the canvas top-right (their toolbar buttons are hidden) -->
+    @if (canEdit()) {
+      <div class="ae-canvas-actions f-drag-blocker">
+        <button class="ae-btn-lock" [class.locked]="automation()?.locked"
+          (click)="toggleLock()" data-testid="editor-lock-fab"
+          [title]="automation()?.locked ? i18n.t('locked_by_user') : i18n.t('lock_resource')">
+          <app-icon [name]="automation()?.locked ? 'lock' : 'unlock'" />
+        </button>
+        <button class="ae-btn-ai" [attr.data-active]="aiChat.isOpen() ? '1' : '0'"
+          (click)="aiChat.toggleOpen()" data-testid="editor-ai-fab"
+          [title]="i18n.t('auto_ai_assistant')">
+          <app-icon name="sparkle" />
+        </button>
+      </div>
+    }
+
     <f-flow fDraggable
       [fCanvasMoveTrigger]="disableCanvasDrag"
       (fSelectionChange)="onSelectionChanged($event)"
@@ -200,11 +226,13 @@
           <div fNode
             [fNodeId]="node.id"
             [fNodePosition]="node.position"
+            [fNodeDraggingDisabled]="!editable()"
             class="ae-node"
             [class.ae-node--error]="nodeSeverity(node.id) === 'error'"
             [class.ae-node--warning]="nodeSeverity(node.id) === 'warning'"
             [attr.data-type]="node.nodeType"
             [style.--nc]="getNodeColor(node.nodeType)"
+            (click)="onNodeClick(node.id)"
             (dblclick)="selectNode(node.id)">
 
             <div class="ae-node-header" fDragHandle
@@ -293,7 +321,7 @@
             <!-- LABEL body: category dropdown -->
             @if (node.nodeType === 'LABEL') {
               <div class="ae-node-body">
-                <select class="ae-node-select" [disabled]="!canEdit()"
+                <select class="ae-node-select" [disabled]="!editable()"
                   (change)="updateLabelCategory(node.id, v($event)); $event.stopPropagation()">
                   <option value="" [selected]="!getLabelCategoryId(node)">{{ i18n.t('auto_label_select') }}</option>
                   @for (cat of categories(); track cat.id) {
@@ -306,7 +334,7 @@
             <!-- REMOVE_LABEL body: category dropdown -->
             @if (node.nodeType === 'REMOVE_LABEL') {
               <div class="ae-node-body">
-                <select class="ae-node-select" [disabled]="!canEdit()"
+                <select class="ae-node-select" [disabled]="!editable()"
                   (change)="updateRemoveLabelCategory(node.id, v($event)); $event.stopPropagation()">
                   <option value="" [selected]="!getRemoveLabelCategoryId(node)">{{ i18n.t('auto_remove_label_category') }}</option>
                   @for (cat of categories(); track cat.id) {
@@ -740,8 +768,17 @@
       <span class="grp"><app-icon name="link" /> {{ edges().length }} {{ i18n.t('auto_edges') }}</span>
     </div>
 
+    <!-- Phone: constants live here (bottom-right) since the toolbar button is hidden on phones -->
+    @if (canEdit()) {
+      <button class="ae-constants-fab f-drag-blocker" (click)="openConstants()"
+        data-testid="editor-constants-fab" [title]="i18n.t('auto_constants_title')">
+        <app-icon name="code" />
+        <span>{{ i18n.t('auto_constants_btn') }}</span>
+      </button>
+    }
+
     <!-- Canvas context menu (right-click on empty canvas) -->
-    @if (ctxMenuOpen() && canEdit()) {
+    @if (ctxMenuOpen() && editable()) {
       <div class="ae-ctx-backdrop" (click)="closeContextMenu()" (contextmenu)="closeContextMenu(); $event.preventDefault()"></div>
       <div class="ae-ctx-menu" [style.left.px]="ctxMenuPos().x" [style.top.px]="ctxMenuPos().y">
         @for (item of palette; track item.type) {
@@ -756,7 +793,7 @@
     }
 
     <!-- Node context menu (right-click on a node) -->
-    @if (nodeCtxMenuOpen() && canEdit()) {
+    @if (nodeCtxMenuOpen() && editable()) {
       <div class="ae-ctx-backdrop" (click)="closeNodeContextMenu()" (contextmenu)="closeNodeContextMenu(); $event.preventDefault()"></div>
       <div class="ae-ctx-menu" [style.left.px]="nodeCtxMenuPos().x" [style.top.px]="nodeCtxMenuPos().y">
         <button class="ae-ctx-item" (click)="copyNode(nodeCtxTarget()!)">
@@ -778,6 +815,8 @@
   <!-- ── Config Panel ────────────────────────────────────── -->
   <!-- ── Config Panel ────────────────────────────────────── -->
   @if (configPanelOpen() && selectedNode()) {
+    <!-- Tablet/phone: scrim behind the config sheet (taps close it; inert on desktop via CSS) -->
+    <div class="ae-panel-scrim" (click)="closePanel()" data-testid="editor-panel-scrim"></div>
     <app-node-config-panel
       [nodes]="nodes"
       [edges]="edges"
