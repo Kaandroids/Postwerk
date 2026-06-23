@@ -63,3 +63,20 @@ $breakpoints: (
 
 /// Desktop and up — lg (1024px) and wider.
 @mixin desktop { @include from(lg) { @content; } }
+
+// ── Responsive layout helpers ────────────────────────────────────────────
+
+/// Collapse a horizontal filter/toolbar row into a full-width vertical stack:
+/// direct children span the full width and may shrink (overriding their
+/// `min-width`). Apply inside a `mobile`/`until()` block on the row container:
+///   @include mobile { .my-filterbar { @include filterbar-stack; } }
+@mixin filterbar-stack {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+
+  > * {
+    min-width: 0;
+    width: 100%;
+  }
+}

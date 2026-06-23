@@ -44,6 +44,23 @@ export class AutomationsPageComponent extends CrudPageBase {
   testingCount = computed(() => this.automations().filter(a => a.status === 'TESTING').length);
   pausedCount = computed(() => this.automations().filter(a => a.status === 'PAUSED').length);
 
+  // On phones the segmented status tabs collapse into a single button that opens
+  // a bottom sheet (the "Simulationsmodus" label is too wide for a phone row).
+  filterSheetOpen = signal(false);
+  filterOptions = computed<{ value: 'ALL' | AutomationStatus; labelKey: string; count: number }[]>(() => [
+    { value: 'ALL', labelKey: 'auto_filter_all', count: this.automations().length },
+    { value: 'ACTIVE', labelKey: 'auto_status_active', count: this.activeCount() },
+    { value: 'TESTING', labelKey: 'auto_status_testing', count: this.testingCount() },
+    { value: 'PAUSED', labelKey: 'auto_status_paused', count: this.pausedCount() },
+  ]);
+  activeFilterLabelKey = computed(() =>
+    this.filterOptions().find(o => o.value === this.statusFilter())?.labelKey ?? 'auto_filter_all');
+
+  pickFilter(value: 'ALL' | AutomationStatus): void {
+    this.statusFilter.set(value);
+    this.filterSheetOpen.set(false);
+  }
+
   filteredAutomations = computed(() => {
     const status = this.statusFilter();
     const q = this.searchQuery().trim().toLowerCase();

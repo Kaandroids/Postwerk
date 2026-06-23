@@ -1,3 +1,5 @@
+@use '../../../../../styles/breakpoints' as bp;
+
 .ib-compose-btn {
   display: inline-flex;
   align-items: center;
@@ -605,4 +607,10 @@
 
 @media (max-width: 900px) {
   .ib-dd-group { flex-wrap: wrap; }
+}
+
+/* On phones, stack the filter row: full-width search on top, the dropdown
+   group (which already wraps below 900px) full-width beneath it. */
+@include bp.mobile {
+  .ib-filters-row { @include bp.filterbar-stack; }
 }
