@@ -1,3 +1,5 @@
+@use '../../../../../styles/breakpoints' as bp;
+
 :host {
   display: flex;
   flex-direction: column;
@@ -637,4 +639,139 @@
 :host ::ng-deep .f-connection.f-selected circle[f-connection-drag-handle-end] {
   fill: transparent;
   stroke: transparent;
+}
+
+/* ════════════════════════════════════════════════════════════
+   Responsive (Phase 4) — touch tablet + view-only phone.
+   Desktop (≥lg) is unchanged; these only kick in below lg.
+   ════════════════════════════════════════════════════════════ */
+
+/* Give the role read-only pill an intentional accent. */
+.ae-status-pill[data-status='VIEW'] { --sc: var(--accent); }
+
+@keyframes ae-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Phone view-only badge — floats at the canvas top-left (only rendered when viewOnly()). */
+.ae-viewonly-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 22;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  border: 0.5px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.3);
+
+  app-icon { width: 15px; height: 15px; }
+}
+
+/* The config sheet's scrim is rendered on desktop too (panel opens there) — keep it hidden until
+   the panel goes full-sheet below lg. */
+.ae-panel-scrim { display: none; }
+
+/* Constants opener — on desktop/tablet it lives in the toolbar, so this floating canvas variant
+   only appears on a phone (where the toolbar button is gated out). Shown in bp.mobile below. */
+.ae-constants-fab { display: none; }
+
+/* Lock + AI cluster — same story as the constants opener: toolbar on desktop/tablet, floating
+   top-right on a phone. Hidden until bp.mobile. */
+.ae-canvas-actions { display: none; }
+
+/* ── Tablet + phone (below lg): the canvas chrome adapts for touch ── */
+@include bp.tablet-down {
+  /* Keyboard-shortcut tips are desktop-only — declutter on touch. */
+  .ae-tips-wrap { display: none; }
+
+  /* Declutter the header: drop the status badge (the mini-status still reports it) and move the
+     lock + AI buttons onto the canvas — this also frees room so the automation name shows again. */
+  .ae-status-pill[data-testid='automation-status-pill'] { display: none; }
+  .ae-toolbar .ae-btn-lock,
+  .ae-toolbar .ae-btn-ai { display: none; }
+
+  /* Lock + AI assistant — floating cluster at the canvas top-right (reuses the toolbar button
+     styles, bumped to a touch size with a drop shadow so they read as canvas chrome). */
+  .ae-canvas-actions {
+    display: flex;
+    gap: 8px;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 22;
+
+    .ae-btn-lock,
+    .ae-btn-ai {
+      width: 38px;
+      height: 38px;
+      box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Config panel becomes a right-anchored sheet with a dimmed scrim. */
+  .ae-panel-scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 65;
+    background: rgba(0, 0, 0, 0.34);
+    animation: ae-scrim-in 0.2s ease;
+  }
+}
+
+/* ── Phone (<md): view-only — strip editing chrome, keep pan/zoom + inspect ── */
+@include bp.mobile {
+  .ae-toolbar {
+    height: 52px;
+    padding: 0 10px;
+  }
+  .ae-toolbar-right { gap: 6px; }
+
+  /* Keep all three view tabs reachable, but icon-only — the active one keeps its label so the
+     user always knows where they are. Saves the room three full labels would need. */
+  .ae-tab {
+    padding: 0 9px;
+    span { display: none; }
+    &.active span { display: inline; }
+  }
+
+  /* Activation/overview chrome lives elsewhere on a phone. */
+  .ae-legend,
+  .ae-mini-status { display: none; }
+
+  /* Problems button: icon + count only (drop the word to save the narrow bar). */
+  .ae-btn-problems { padding: 0 10px; gap: 0; font-size: 0; }
+  .ae-btn-problems app-icon { font-size: 12.5px; }
+  .ae-problems-count { font-size: 10px; }
+
+  /* Constants — floating bottom-right (mirrors where the mini-status used to sit). */
+  .ae-constants-fab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 22;
+    height: 38px;
+    padding: 0 15px 0 12px;
+    border-radius: 999px;
+    border: 0.5px solid var(--border);
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.3);
+
+    app-icon { width: 15px; height: 15px; }
+    &:active { background: var(--bg-2); }
+  }
 }

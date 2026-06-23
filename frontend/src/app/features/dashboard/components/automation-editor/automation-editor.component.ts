@@ -18,6 +18,7 @@ import { TemplateService } from '../../../../core/services/template.service';
 import { CategoryService } from '../../../../core/services/category.service';
 import { ParameterSetService } from '../../../../core/services/parameter-set.service';
 import { OrganizationService } from '../../../../core/services/organization.service';
+import { ViewportService } from '../../../../core/services/viewport.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import {
   AutomationDetail,
@@ -116,6 +117,7 @@ export class AutomationEditorComponent implements AfterViewInit {
   private lintService = inject(AutomationLintService);
   protected aiChat = inject(AiChatService);
   private org = inject(OrganizationService);
+  protected viewport = inject(ViewportService);
 
   /**
    * Whether the active-org role may BUILD automations (Editor+). Members/Viewers get a read-only
@@ -128,6 +130,16 @@ export class AutomationEditorComponent implements AfterViewInit {
    * so the status menu and the manual-run button are gated on this, not on {@link canEdit}.
    */
   readonly canActivate = computed(() => this.org.can('AUTOMATION_ACTIVATE'));
+
+  /**
+   * Phones (<md) get a view-only editor regardless of role: pan/zoom + tap-to-inspect a node's
+   * config (read-only), but no palette, drag, connect, add/delete or save/run. Touch-drag node
+   * editing on a phone is intentionally unsupported.
+   */
+  readonly viewOnly = computed(() => this.viewport.isMobile());
+
+  /** Whether the user may manipulate the canvas right now — has the role AND is not on a phone. */
+  readonly editable = computed(() => this.canEdit() && !this.viewOnly());
 
   @ViewChild(FFlowComponent) fFlow!: FFlowComponent;
   @ViewChild(FCanvasComponent) fCanvas!: FCanvasComponent;
@@ -379,8 +391,21 @@ export class AutomationEditorComponent implements AfterViewInit {
     });
   }
 
-  // Disable left-click canvas panning — only middle mouse should pan
-  disableCanvasDrag = (_event: MouseEvent | TouchEvent) => false;
+  // Canvas pan trigger. Mouse: never pan via drag (left-click selects; middle-mouse pans through
+  // onCanvasMouseDown). Touch/pen: there is no middle button, so a one-finger drag pans the canvas.
+  disableCanvasDrag = (event: MouseEvent | TouchEvent): boolean => {
+    if (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) return true;
+    const pt = (event as Partial<PointerEvent>).pointerType;
+    return pt === 'touch' || pt === 'pen';
+  };
+
+  /**
+   * Single-tap on a node. On touch viewports (tablet + phone) a tap opens the config panel —
+   * desktop keeps the double-click affordance so a single click can still select/drag.
+   */
+  onNodeClick(nodeId: string): void {
+    if (this.viewport.isTabletDown()) this.selectNode(nodeId);
+  }
 
   ngAfterViewInit(): void {
   }
@@ -430,7 +455,7 @@ export class AutomationEditorComponent implements AfterViewInit {
 
   // ── Connection events ──────────────────────
   onConnectionCreated(event: FCreateConnectionEvent): void {
-    if (!this.canEdit()) return;
+    if (!this.editable()) return;
     if (!event.targetId) return;
     if (!this.isConnectionValid(event.sourceId, event.targetId)) return;
     const id = `edge-${Date.now()}`;
@@ -452,7 +477,7 @@ export class AutomationEditorComponent implements AfterViewInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (!this.canEdit()) return;
+    if (!this.editable()) return;
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
@@ -465,7 +490,7 @@ export class AutomationEditorComponent implements AfterViewInit {
   }
 
   onNodeMoved(event: FMoveNodesEvent): void {
-    if (!this.canEdit()) return;
+    if (!this.editable()) return;
     const updates = event.nodes;
     this.nodes.update(list =>
       list.map(n => {
