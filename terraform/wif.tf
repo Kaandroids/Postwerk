@@ -59,3 +59,12 @@ resource "google_project_iam_member" "deployer_roles" {
   role    = each.value
   member  = "serviceAccount:${google_service_account.github_deployer.email}"
 }
+
+# `gcloud compute ssh` writes an ephemeral key to the instance's metadata; because
+# the VM RUNS AS postwerk-beta-sa, the caller must be allowed to "act as" that SA.
+# Scoped to just the VM's SA (not project-wide) for least privilege.
+resource "google_service_account_iam_member" "deployer_actas_vm" {
+  service_account_id = google_service_account.vm.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.github_deployer.email}"
+}
