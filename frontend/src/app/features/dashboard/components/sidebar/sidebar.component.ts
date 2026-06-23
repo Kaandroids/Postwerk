@@ -13,6 +13,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
 import { BrandComponent } from '../../../../shared/components/brand/brand.component';
+import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle/theme-toggle.component';
 import { humanizeError } from '../../../../shared/utils/error.util';
 import { NavItem } from '../../models/dashboard.models';
 
@@ -26,7 +27,7 @@ interface AdminNavGroup { sectionKey: string; items: AdminNavItem[]; }
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, BrandComponent],
+  imports: [IconComponent, BrandComponent, ThemeToggleComponent],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
 })

@@ -390,3 +390,16 @@
   border-radius: 6px;
   &:hover { color: var(--fg); background: var(--bg-2); }
 }
+
+// Theme toggle lives in the topbar on desktop; below the desktop rail (tablet +
+// phone) it's hidden there and surfaces here in the drawer footer instead, so
+// the header stays uncluttered. Matches the topbar's .dash-hide-lg threshold.
+.side-theme-sm {
+  display: none;
+}
+
+@media (max-width: 1023.98px) {
+  .side-theme-sm {
+    display: inline-flex;
+  }
+}

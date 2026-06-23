@@ -1,3 +1,5 @@
+@use '../../../../../styles/breakpoints' as bp;
+
 .dash-topbar {
   display: flex;
   align-items: center;
@@ -126,6 +128,7 @@
   flex-direction: column;
   gap: 4px;
   min-width: 120px;
+  flex-shrink: 0;
   padding: 6px 12px;
   border: 0.5px solid var(--border);
   border-radius: 8px;
@@ -148,6 +151,7 @@
   font-weight: 500;
   color: var(--fg-muted);
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .ai-limiter-value {
@@ -202,4 +206,47 @@
   border-radius: 2px;
   transition: width 0.4s ease, background 0.3s;
   min-width: 2px;
+}
+
+// ── Mobile: reclaim horizontal space ─────────────────────────────────────
+// Below md the topbar is tight (hamburger + workspace switchers + actions),
+// so drop the decorative search field and the AI-limit gauge, and tighten
+// spacing. The switchers and action buttons stay reachable.
+// Below the desktop rail (tablet + phone): drop the search field and move the
+// theme toggle into the drawer (see sidebar) so the header isn't overcrowded.
+@include bp.tablet-down {
+  .dash-search {
+    display: none;
+  }
+
+  .dash-hide-lg {
+    display: none;
+  }
+}
+
+// Phone-only (below md): also drop the AI-limit gauge and the dead Help button,
+// and tighten spacing. The switchers compact themselves to an icon + type label
+// (handled inside org-switcher / account-switcher).
+@include bp.mobile {
+  .dash-topbar {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .ai-limiter {
+    display: none;
+  }
+
+  .dash-workspace-group {
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .dash-hide-md {
+    display: none;
+  }
+
+  .dash-topbar-actions {
+    gap: 6px;
+  }
 }

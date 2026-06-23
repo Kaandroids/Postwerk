@@ -203,6 +203,7 @@
         <span class="dash-role-pill">{{ roleLabel() }}</span>
       }
     </div>
+    <app-theme-toggle class="side-theme-sm" />
     <button class="logout-btn" data-testid="logout-btn" (click)="logout()" [attr.aria-label]="i18n.t('dash_signout')">
       <app-icon name="logout" />
     </button>

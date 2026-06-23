@@ -14,6 +14,7 @@ import { humanizeError } from '../../utils/error.util';
   template: `
     <button class="org-switcher" type="button" [attr.aria-expanded]="open()" aria-label="Switch organization" (click)="toggle($event)" data-testid="org-switcher">
       <div class="org-current">
+        <span class="org-typelabel"><app-icon name="building" /><span>{{ i18n.t('switcher_org') }}</span></span>
         @if (org.activeOrg(); as active) {
           <span class="org-mono">{{ monogram(active.name) }}</span>
           <div class="org-label">
@@ -130,6 +131,24 @@ import { humanizeError } from '../../utils/error.util';
     .org-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
     .org-role { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-subtle); }
     .org-empty { color: var(--fg-muted); }
+
+    /* Compact mobile pill: replace the monogram + org name with an icon + "Org"
+       type label (the active org is shown in the dropdown / elsewhere). */
+    .org-typelabel { display: none; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 600; color: var(--fg); }
+    @media (max-width: 639.98px) {
+      /* Narrow phones only (< sm): the full name/monogram of two pills won't
+         fit, so collapse to an icon + short type label. From 640px up there's
+         room for the normal switcher. */
+      .org-current { min-width: 0; height: 34px; padding: 0 9px; gap: 8px; }
+      .org-mono, .org-label, .org-empty { display: none; }
+      .org-typelabel { display: inline-flex; }
+      .org-typelabel app-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 16%, var(--bg-2));
+      }
+    }
 
     .org-dropdown {
       position: absolute; top: calc(100% + 6px); left: 0; min-width: 240px;
