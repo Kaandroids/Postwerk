@@ -79,8 +79,8 @@ import { NotificationCenterComponent } from '../../../notifications/notification
             <span class="dash-lock-badge"><app-icon name="lock" /></span>
           }
         </button>
-        <app-theme-toggle />
-        <button class="dash-icon-btn" aria-label="Help"><app-icon name="help" /></button>
+        <app-theme-toggle class="dash-hide-lg" />
+        <button class="dash-icon-btn dash-hide-md" aria-label="Help"><app-icon name="help" /></button>
         <app-notification-center />
       </div>
     </div>

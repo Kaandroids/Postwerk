@@ -13,6 +13,7 @@ import { IconComponent } from '../icon/icon.component';
   template: `
     <button class="acct-switcher" type="button" [attr.aria-expanded]="open()" aria-label="Switch account" (click)="toggle($event)">
       <div class="acct-current">
+        <span class="acct-typelabel"><app-icon name="inbox" /><span>{{ i18n.t('switcher_mailbox') }}</span></span>
         @if (workspace.activeAccount(); as acct) {
           <span class="acct-dot" [style.background]="acct.color"></span>
           <div class="acct-label">
@@ -111,6 +112,24 @@ import { IconComponent } from '../icon/icon.component';
 
     .acct-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent); }
     .acct-empty { color: var(--fg-muted); }
+
+    /* Compact mobile pill: replace the colour dot + account name with an icon +
+       "Postfach" type label (the active mailbox is shown in the page header). */
+    .acct-typelabel { display: none; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; color: var(--fg); }
+    @media (max-width: 639.98px) {
+      /* Narrow phones only (< sm): the full account name of two pills won't fit,
+         so collapse to an icon + short type label. From 640px up there's room
+         for the normal switcher. */
+      .acct-current { min-width: 0; height: 34px; padding: 0 9px; gap: 8px; }
+      .acct-dot, .acct-label, .acct-email { display: none; }
+      .acct-typelabel { display: inline-flex; }
+      .acct-typelabel app-icon {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+        color: var(--accent);
+        background: color-mix(in srgb, var(--accent) 16%, var(--bg-2));
+      }
+    }
 
     .acct-dropdown {
       position: absolute;

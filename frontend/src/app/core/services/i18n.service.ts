@@ -869,6 +869,10 @@ const DICT: Record<Lang, Record<string, string>> = {
     email_account_none: 'Kein Konto verbunden',
     email_account_add: 'Konto hinzufügen',
 
+    // Compact mobile labels for the topbar switchers (icon + short type label)
+    switcher_org: 'Team',
+    switcher_mailbox: 'Postfach',
+
     // Organization switcher / multi-tenant (#4)
     org_none: 'Keine Organisation',
     org_personal: 'Persönlicher Arbeitsbereich',
@@ -4450,6 +4454,10 @@ const DICT: Record<Lang, Record<string, string>> = {
 
     email_account_none: 'No account connected',
     email_account_add: 'Add account',
+
+    // Compact mobile labels for the topbar switchers (icon + short type label)
+    switcher_org: 'Team',
+    switcher_mailbox: 'Mailbox',
 
     // Organization switcher / multi-tenant (#4)
     org_none: 'No organization',

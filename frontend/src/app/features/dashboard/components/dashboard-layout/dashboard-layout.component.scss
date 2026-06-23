@@ -1,3 +1,5 @@
+@use '../../../../../styles/breakpoints' as bp;
+
 .dash {
   display: grid;
   grid-template-columns: 240px 1fr;
@@ -13,7 +15,7 @@
   grid-template-columns: 0 1fr;
 }
 
-.dash[data-sidebar="0"] :host ::ng-deep app-sidebar {
+.dash[data-sidebar="0"] ::ng-deep app-sidebar {
   transform: translateX(-100%);
 }
 
@@ -29,6 +31,47 @@
   overflow-y: auto;
 }
 
-@media (max-width: 760px) {
-  .dash { grid-template-columns: 0 1fr; }
+// Scrim is position:fixed (out of grid flow) and hidden until the drawer opens.
+.dash-scrim {
+  display: none;
+}
+
+// ── Below the desktop rail: the sidebar becomes an overlay drawer ────────
+@include bp.tablet-down {
+  // Content always spans the full width; the sidebar floats above it.
+  .dash,
+  .dash[data-sidebar="0"] {
+    grid-template-columns: 1fr;
+  }
+
+  :host ::ng-deep app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 60;
+    width: 264px;
+    max-width: 84vw;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .dash[data-sidebar="1"] ::ng-deep app-sidebar {
+    transform: translateX(0);
+  }
+
+  .dash[data-sidebar="1"] .dash-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(0, 0, 0, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash,
+  :host ::ng-deep app-sidebar {
+    transition: none;
+  }
 }

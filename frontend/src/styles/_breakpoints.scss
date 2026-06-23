@@ -1,0 +1,65 @@
+// Responsive breakpoint system — Postwerk design system
+//
+// Canonical scale (single source of truth, mirrored in core/services/viewport.service.ts):
+//   sm 640  ·  md 768  ·  lg 1024  ·  xl 1280
+//
+// The codebase is desktop-first, so `until()` (max-width) is the default tool.
+// Use `from()` for the rarer mobile-first additive rule.
+//
+// Usage:
+//   @use '../../../../styles/breakpoints' as bp;   // adjust depth per file
+//   .grid { grid-template-columns: 1fr 1fr; @include bp.mobile { grid-template-columns: 1fr; } }
+//   .col  { @include bp.from(lg) { position: sticky; } }
+
+@use 'sass:map';
+@use 'variables' as *;
+
+$breakpoints: (
+  sm: $breakpoint-sm,   // 640
+  md: $breakpoint-md,   // 768
+  lg: $breakpoint-lg,   // 1024
+  xl: $breakpoint-xl,   // 1280
+);
+
+/// Apply @content below a named breakpoint (desktop-first, max-width).
+/// `@include until(md)` → matches viewports narrower than 768px.
+@mixin until($name) {
+  $bp: map.get($breakpoints, $name);
+  @if $bp == null {
+    @error "Unknown breakpoint `#{$name}`. Use one of: #{map.keys($breakpoints)}.";
+  }
+  // -0.02px keeps until(x) and from(x) from both matching at exactly x px.
+  @media (max-width: ($bp - 0.02px)) { @content; }
+}
+
+/// Apply @content at/above a named breakpoint (mobile-first, min-width).
+/// `@include from(lg)` → matches viewports 1024px and wider.
+@mixin from($name) {
+  $bp: map.get($breakpoints, $name);
+  @if $bp == null {
+    @error "Unknown breakpoint `#{$name}`. Use one of: #{map.keys($breakpoints)}.";
+  }
+  @media (min-width: $bp) { @content; }
+}
+
+/// Apply @content between two named breakpoints [from, until).
+@mixin between($from, $to) {
+  $lo: map.get($breakpoints, $from);
+  $hi: map.get($breakpoints, $to);
+  @media (min-width: $lo) and (max-width: ($hi - 0.02px)) { @content; }
+}
+
+// ── Semantic aliases (match ViewportService intent) ──────────────────────
+// Keep these in sync with viewport.service.ts.
+
+/// Phone + portrait tablet layout — below md (768px).
+@mixin mobile { @include until(md) { @content; } }
+
+/// Anything below the desktop rail — below lg (1024px). Phones and tablets.
+@mixin tablet-down { @include until(lg) { @content; } }
+
+/// Tablet band only — md (768) up to lg (1024).
+@mixin tablet { @include between(md, lg) { @content; } }
+
+/// Desktop and up — lg (1024px) and wider.
+@mixin desktop { @include from(lg) { @content; } }
