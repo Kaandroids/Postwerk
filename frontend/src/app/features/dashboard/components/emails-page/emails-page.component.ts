@@ -31,6 +31,14 @@ export class EmailsPageComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private querySub?: Subscription;
 
+  // On phones the four filter dropdowns collapse into a single button + bottom sheet.
+  protected filterSheetOpen = signal(false);
+  protected activeFilterCount = computed(() =>
+    (this.dateFilter() !== 'all' ? 1 : 0) +
+    (this.categoryFilter().length > 0 ? 1 : 0) +
+    (this.readFilter() !== 'all' ? 1 : 0) +
+    (this.automationFilter() !== 'all' ? 1 : 0));
+
   protected currentFolder = signal<string>('INBOX');
   protected emails = signal<EmailListItem[]>([]);
   protected loading = signal(false);

@@ -1,6 +1,12 @@
 <app-page-content>
-  <div class="dash-page-head">
+  <div class="dash-page-head ib-page-head">
     <div>
+      <div class="ib-mobile-context">
+        <span class="ib-mobile-folder">{{ folderTitle() }}</span>
+        @if (activeAccount()) {
+          <span class="ib-mobile-email">{{ activeAccount()!.email }}</span>
+        }
+      </div>
       @if (activeAccount()) {
         <div class="dash-eyebrow">{{ i18n.t('inbox_pretitle', { email: activeAccount()!.email }) }}</div>
       }
@@ -21,14 +27,14 @@
       @if (activeAccount()?.writeEnabled) {
         <button type="button" class="ib-compose-btn" data-testid="compose-btn" (click)="openCompose()">
           <app-icon name="edit" />
-          {{ i18n.t('compose_verfassen') }}
+          <span class="ib-compose-label">{{ i18n.t('compose_verfassen') }}</span>
         </button>
       }
     </div>
   </div>
 
   <!-- Filter row -->
-  <div class="ib-filters-row">
+  <div class="ib-filters-row" [class.ib-sheet-open]="filterSheetOpen()">
     <div class="ib-search-wrap">
       <span class="ib-search-icon"><app-icon name="search" /></span>
       <input
@@ -40,7 +46,24 @@
       />
     </div>
 
+    <button class="ib-filter-btn" type="button" (click)="filterSheetOpen.set(true)"
+      [attr.aria-label]="i18n.t('auto_filter_label')">
+      <app-icon name="sliders" />
+      <span>{{ i18n.t('auto_filter_label') }}</span>
+      @if (activeFilterCount() > 0) {
+        <span class="ib-filter-count">{{ activeFilterCount() }}</span>
+      }
+    </button>
+
+    <div class="ib-sheet-scrim" (click)="filterSheetOpen.set(false)"></div>
+
     <div class="ib-dd-group">
+      <div class="ib-sheet-head">
+        <span class="ib-sheet-title">{{ i18n.t('auto_filter_label') }}</span>
+        <button type="button" class="ib-sheet-done" (click)="filterSheetOpen.set(false)">
+          {{ i18n.t('inbox_filter_done') }}
+        </button>
+      </div>
       <!-- Date -->
       <div class="ib-dd" (clickOutside)="dateOpen.set(false)">
         <button type="button" class="ib-dd-trigger"
