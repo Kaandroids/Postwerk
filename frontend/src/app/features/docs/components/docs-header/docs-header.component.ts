@@ -21,7 +21,7 @@ import { DocsService } from '../../docs.service';
   imports: [RouterLink, IconComponent, BrandComponent, LangSwitcherComponent, ThemeToggleComponent],
   template: `
     <header class="doc-head">
-      <button class="doc-head-menu" (click)="menu.emit()" aria-label="Menu">
+      <button class="doc-head-menu" (click)="menu.emit()" [attr.aria-label]="i18n.t('lp_nav_menu')">
         <app-icon name="menu" />
       </button>
 

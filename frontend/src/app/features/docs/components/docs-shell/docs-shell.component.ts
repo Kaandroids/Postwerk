@@ -3,6 +3,9 @@ import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } fro
 import { filter } from 'rxjs/operators';
 import { I18nService } from '../../../../core/services/i18n.service';
 import { IconComponent } from '../../../../shared/components/icon/icon.component';
+import { BrandComponent } from '../../../../shared/components/brand/brand.component';
+import { LangSwitcherComponent } from '../../../../shared/components/lang-switcher/lang-switcher.component';
+import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle/theme-toggle.component';
 import { DocsHeaderComponent } from '../docs-header/docs-header.component';
 import { getNodeColor, NodeType } from '../../../../models/automation.model';
 import { DocsService } from '../../docs.service';
@@ -13,7 +16,7 @@ import { DocsSearchComponent } from '../docs-search/docs-search.component';
   selector: 'app-docs-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, DocsHeaderComponent, DocsSearchComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, IconComponent, BrandComponent, LangSwitcherComponent, ThemeToggleComponent, DocsHeaderComponent, DocsSearchComponent],
   templateUrl: './docs-shell.component.html',
   styleUrl: './docs-shell.component.scss',
 })
