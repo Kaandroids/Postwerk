@@ -10,7 +10,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     // Docs / Help Center
     doc_tag: 'Docs',
     doc_overview: 'Übersicht',
-    doc_search_placeholder: 'Dokumentation durchsuchen …',
+    doc_search_placeholder: 'Dokumentation durchsuchen',
     doc_back_to_app: 'Zurück zu Postwerk',
     doc_to_dashboard: 'Dashboard',
     doc_home_title: 'Hilfe-Center',
@@ -162,6 +162,10 @@ const DICT: Record<Lang, Record<string, string>> = {
     lp_nav_customers: 'Referenzen',
     lp_nav_signin: 'Anmelden',
     lp_nav_start: 'Kostenlos starten',
+    lp_nav_home: 'Startseite',
+    lp_nav_docs: 'Docs',
+    lp_nav_menu: 'Menü öffnen',
+    lp_nav_close: 'Menü schließen',
 
     // Landing v2
     p2_nav_product: 'Produkt',
@@ -3606,7 +3610,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     // Docs / Help Center
     doc_tag: 'Docs',
     doc_overview: 'Overview',
-    doc_search_placeholder: 'Search the docs …',
+    doc_search_placeholder: 'Search the docs',
     doc_back_to_app: 'Back to Postwerk',
     doc_to_dashboard: 'Dashboard',
     doc_home_title: 'Help Center',
@@ -3758,6 +3762,10 @@ const DICT: Record<Lang, Record<string, string>> = {
     lp_nav_customers: 'Customers',
     lp_nav_signin: 'Sign in',
     lp_nav_start: 'Start free',
+    lp_nav_home: 'Home',
+    lp_nav_docs: 'Docs',
+    lp_nav_menu: 'Open menu',
+    lp_nav_close: 'Close menu',
 
     // Landing v2
     p2_nav_product: 'Product',

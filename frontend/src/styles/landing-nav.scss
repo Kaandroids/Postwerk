@@ -36,7 +36,9 @@
   align-items: center;
   gap: 36px;
 }
+.lp2-nav-brand { display: inline-flex; align-items: center; text-decoration: none; flex: 0 0 auto; }
 .lp2-nav-links { display: flex; gap: 24px; font-size: 13px; }
+.lp2-nav-links a.is-on { color: var(--fg); }
 .lp2-nav-links a {
   color: var(--fg-muted);
   font-weight: 500;
@@ -99,19 +101,139 @@
 }
 .lp2-nav-btn:hover { opacity: 0.85; }
 
-@media (max-width: 980px) {
-  .lp2-nav-inner { padding: 0 24px; }
-  .lp2-nav-links { display: none; }
+/* Hamburger — only shown once the inline links collapse into the drawer. */
+.lp2-nav-burger {
+  display: none;
+  appearance: none;
+  width: 38px; height: 38px;
+  place-items: center;
+  border: 0.5px solid var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.lp2-nav-burger:hover { background: var(--bg-2); }
+
+/* ── Mobile drawer ─────────────────────────────────────────────────
+   Slides in from the right with the full nav (Home/Docs + auth + prefs).
+   Sits above the nav (60) and the scroll-progress line (90). It's a root
+   sibling of .lp2-nav so the nav's backdrop-filter (a containing block for
+   fixed children) never traps the fixed drawer. */
+.lp2-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  visibility: hidden;
+  pointer-events: none;
+}
+.lp2-drawer.is-open { visibility: visible; pointer-events: auto; }
+
+.lp2-drawer-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.lp2-drawer.is-open .lp2-drawer-scrim { opacity: 1; }
+
+.lp2-drawer-panel {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: min(320px, 86vw);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 24px;
+  background: var(--bg);
+  border-right: 0.5px solid var(--border);
+  box-shadow: 22px 0 60px -34px rgba(0, 0, 0, 0.55);
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow-y: auto;
+}
+.lp2-drawer.is-open .lp2-drawer-panel { transform: translateX(0); }
+
+.lp2-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  margin-bottom: 12px;
+  padding-bottom: 14px;
+  border-bottom: 0.5px solid var(--border);
+}
+.lp2-drawer-x {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s;
+}
+.lp2-drawer-x:hover { background: var(--bg-2); color: var(--fg); }
+
+.lp2-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+.lp2-drawer-nav a {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg);
+  text-decoration: none;
+  transition: background 0.14s, color 0.14s;
+}
+.lp2-drawer-nav a:hover { background: var(--bg-2); }
+.lp2-drawer-nav a.is-on { background: var(--accent-soft); color: var(--fg); }
+
+.lp2-drawer-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 0.5px solid var(--border);
+}
+/* override the generic .lp2-signin (which is display:none on phones) so the
+   drawer's sign-in link stays visible regardless of bar-level hides */
+.lp2-drawer-foot .lp2-signin { display: inline-block; font-size: 14px; padding: 6px 2px; }
+.lp2-drawer-cta { justify-content: center; height: 42px; font-size: 14px; }
+.lp2-drawer-prefs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
 }
 
-/* Phone: the brand + prefs + sign-in + CTA row no longer fits, so the CTA
-   button clips off the right edge. Drop the most dispensable items (theme
-   toggle + sign-in link) and tighten spacing so the primary CTA stays whole.
-   Language switch is kept — it's meaningful on a DE/EN product landing. */
-@media (max-width: 640px) {
-  .lp2-nav-inner { padding: 0 16px; gap: 12px; }
-  .lp2-nav-right { gap: 10px; }
-  .lp2-nav .lp2-nav-prefs app-theme-toggle { display: none; }
+/* ── Collapse to the drawer ────────────────────────────────────────
+   Once the viewport is narrow, drop the inline links + prefs + sign-in from
+   the bar (they live in the drawer) and surface the hamburger. The primary
+   CTA stays in the bar. */
+@media (max-width: 860px) {
+  .lp2-nav-inner { padding: 0 20px; gap: 12px; }
+  .lp2-nav-links { display: none; }
+  .lp2-nav-prefs { display: none; }
   .lp2-signin { display: none; }
+  .lp2-nav-burger { display: grid; }
+}
+
+/* Phone: tighten spacing so the brand + CTA + hamburger row stays whole. */
+@media (max-width: 640px) {
+  .lp2-nav-inner { padding: 0 16px; }
+  .lp2-nav-right { gap: 10px; }
   .lp2-nav-btn { padding: 0 13px; }
 }

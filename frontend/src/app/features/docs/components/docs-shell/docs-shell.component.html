@@ -5,35 +5,55 @@
     <div class="doc-scrim" (click)="drawerOpen.set(false)"></div>
 
     <aside class="doc-side">
-      <a class="doc-side-home" routerLink="/docs" routerLinkActive="is-on"
-        [routerLinkActiveOptions]="{ exact: true }">
-        <app-icon name="book" />{{ i18n.t('doc_overview') }}
-      </a>
+      <!-- Mobile only: drawer header with the brand (matches the dashboard). -->
+      <div class="doc-side-head">
+        <a routerLink="/docs"><app-brand /></a>
+        <button class="doc-side-x" type="button" (click)="drawerOpen.set(false)"
+          [attr.aria-label]="i18n.t('lp_nav_close')">
+          <app-icon name="close" />
+        </button>
+      </div>
 
-      <nav class="doc-nav">
-        @for (section of nav; track section.id) {
-          <div class="nav-sec" [class.is-collapsed]="isCollapsed(section.id)">
-            <button class="nav-sec-h" (click)="toggleSection(section.id)">
-              <app-icon [name]="section.icon" class="nav-sec-icon" />
-              <span>{{ section.title[i18n.lang()] }}</span>
-              <app-icon name="chevronDown" class="nav-sec-chev" />
-            </button>
-            @if (!isCollapsed(section.id)) {
-              <div class="nav-items">
-                @for (item of section.items; track item.slug) {
-                  <a class="nav-item" [routerLink]="link(item.slug)" routerLinkActive="is-on"
-                    [routerLinkActiveOptions]="{ exact: true }">
-                    @if (item.node) {
-                      <span class="ndot" [style.background]="nodeColor(item.node)"></span>
-                    }
-                    {{ itemTitle(item) }}
-                  </a>
-                }
-              </div>
-            }
-          </div>
-        }
-      </nav>
+      <div class="doc-side-scroll">
+        <a class="doc-side-home" routerLink="/docs" routerLinkActive="is-on"
+          [routerLinkActiveOptions]="{ exact: true }">
+          <app-icon name="book" />{{ i18n.t('doc_overview') }}
+        </a>
+
+        <nav class="doc-nav">
+          @for (section of nav; track section.id) {
+            <div class="nav-sec" [class.is-collapsed]="isCollapsed(section.id)">
+              <button class="nav-sec-h" (click)="toggleSection(section.id)">
+                <app-icon [name]="section.icon" class="nav-sec-icon" />
+                <span>{{ section.title[i18n.lang()] }}</span>
+                <app-icon name="chevronDown" class="nav-sec-chev" />
+              </button>
+              @if (!isCollapsed(section.id)) {
+                <div class="nav-items">
+                  @for (item of section.items; track item.slug) {
+                    <a class="nav-item" [routerLink]="link(item.slug)" routerLinkActive="is-on"
+                      [routerLinkActiveOptions]="{ exact: true }">
+                      @if (item.node) {
+                        <span class="ndot" [style.background]="nodeColor(item.node)"></span>
+                      }
+                      {{ itemTitle(item) }}
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </nav>
+      </div>
+
+      <!-- Mobile only: pinned footer (like the dashboard user area) — prefs + sign-in. -->
+      <div class="doc-side-foot">
+        <div class="doc-side-prefs">
+          <app-lang-switcher />
+          <app-theme-toggle />
+        </div>
+        <a class="doc-side-signin" routerLink="/auth/login">{{ i18n.t('lp_nav_signin') }}</a>
+      </div>
     </aside>
 
     <main class="doc-content">

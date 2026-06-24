@@ -289,3 +289,16 @@
     }
   }
 }
+
+/* Narrow screens: let wide tables scroll horizontally instead of forcing the
+   whole page to overflow. The table is injected via [innerHTML] and can't be
+   wrapped in markup, so making the table itself the scroll container is the
+   reliable fallback. */
+@media (max-width: 640px) {
+  .md table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

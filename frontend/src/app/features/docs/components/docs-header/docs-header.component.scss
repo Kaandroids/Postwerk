@@ -154,4 +154,27 @@
   .doc-head-signin {
     display: none;
   }
+
+  /* Language + theme move into the sidebar drawer (see docs-shell) so the
+     header stays a clean menu + brand + search + CTA row on mobile. */
+  .doc-head-right app-lang-switcher,
+  .doc-head-right app-theme-toggle {
+    display: none;
+  }
+}
+
+/* Phone: the in-page search on the docs home covers searching, so drop the
+   header search trigger — that frees the room to keep the brand wordmark and
+   still fit menu + brand + CTA without horizontal overflow on ~360px screens. */
+@media (max-width: 640px) {
+  .doc-search {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .doc-head {
+    padding: 0 12px;
+    gap: 8px;
+  }
 }
