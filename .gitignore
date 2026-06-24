@@ -37,3 +37,11 @@ logs/
 # ===== Claude Code (local dev guide + local settings) =====
 /CLAUDE.md
 .claude/settings.local.json
+
+# ===== Local dev seed (idempotent demo data + schema dump, not for the repo) =====
+.seed-demo-data.sql
+.seed-schema.sql
+
+# ===== Test artifacts (Playwright) =====
+test-results/
+playwright-report/
