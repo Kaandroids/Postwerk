@@ -183,6 +183,7 @@
   <div class="ae-canvas-wrap"
     [class.ae-panning]="panning()"
     (contextmenu)="onCanvasContextMenu($event)"
+    (wheel)="onCanvasWheel($event)"
     (mousedown)="onCanvasMouseDown($event)">
 
     <!-- Phone view-only badge — floats at the canvas top-left (out of the cramped toolbar) -->
@@ -211,7 +212,7 @@
     }
 
     <f-flow fDraggable
-      [fCanvasMoveTrigger]="disableCanvasDrag"
+      [fCanvasMoveTrigger]="canvasMoveTrigger"
       (fSelectionChange)="onSelectionChanged($event)"
       (fCreateConnection)="onConnectionCreated($event)"
       (fMoveNodes)="onNodeMoved($event)">
@@ -219,6 +220,7 @@
         <f-circle-pattern [color]="'rgba(128,128,128,0.35)'" [radius]="22" />
       </f-background>
       <f-canvas fZoom [fZoomMinimum]="0.2" [fZoomMaximum]="3"
+        [fWheelTrigger]="zoomOnPinch"
         (fCanvasChange)="onCanvasChange($event)">
 
         <!-- Nodes -->
