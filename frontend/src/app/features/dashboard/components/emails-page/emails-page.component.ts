@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { ViewportService } from '../../../../core/services/viewport.service';
 import { ComposePanelComponent } from '../compose-panel/compose-panel.component';
 import { EmailDetailComponent } from '../email-detail/email-detail.component';
+import { SimulateEmailDialogComponent } from '../../../../shared/components/simulate-email-dialog/simulate-email-dialog.component';
 import { relativeTime } from '../../../../shared/utils/relative-time.util';
 
 /** Email inbox page with folder-based list, message detail view, compose panel, and filter/search bar. */
@@ -20,7 +21,7 @@ import { relativeTime } from '../../../../shared/utils/relative-time.util';
   selector: 'app-emails-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageContentComponent, IconComponent, ClickOutsideDirective, FormsModule, ComposePanelComponent, EmailDetailComponent],
+  imports: [PageContentComponent, IconComponent, ClickOutsideDirective, FormsModule, ComposePanelComponent, EmailDetailComponent, SimulateEmailDialogComponent],
   templateUrl: './emails-page.component.html',
   styleUrl: './emails-page.component.scss',
 })
@@ -48,6 +49,8 @@ export class EmailsPageComponent implements OnInit, OnDestroy {
   protected expandedId = signal<string | null>(null);
   protected expandedEmail = signal<Email | null>(null);
   protected reprocessing = signal(false);
+  /** When set, the "simulate this email" dialog is open for this email. */
+  protected simulateTarget = signal<{ id: string; subject: string } | null>(null);
   protected searchQuery = signal('');
   protected readFilter = signal<'all' | 'unread' | 'read'>('all');
   protected dateFilter = signal<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
@@ -252,6 +255,16 @@ export class EmailsPageComponent implements OnInit, OnDestroy {
   /** Reprocess the currently-expanded email (invoked by the detail pane's reprocess output). */
   protected reprocessExpanded(): void {
     this.reprocessEmail();
+  }
+
+  /** Open the "simulate this email" dialog for the currently-expanded email. */
+  protected openSimulate(): void {
+    const email = this.expandedEmail();
+    if (email) this.simulateTarget.set({ id: email.id, subject: email.subject ?? '' });
+  }
+
+  protected closeSimulate(): void {
+    this.simulateTarget.set(null);
   }
 
   protected isDraftsFolder(): boolean {

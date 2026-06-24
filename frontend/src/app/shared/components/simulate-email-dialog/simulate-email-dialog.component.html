@@ -1,0 +1,82 @@
+<div class="sim-scrim" (click)="onScrim()"></div>
+<div class="sim-modal" role="dialog" aria-modal="true" data-testid="simulate-email-dialog"
+  [attr.aria-label]="i18n.t('sim_title')" (click)="$event.stopPropagation()">
+
+  <div class="sim-head">
+    <div class="sim-head-main">
+      <span class="sim-head-ic" aria-hidden="true"><app-icon name="play" /></span>
+      <div class="sim-head-text">
+        <div class="sim-eyebrow">{{ i18n.t('sim_eyebrow') }}</div>
+        <h2 class="sim-title">{{ emailSubject() || i18n.t('sim_title') }}</h2>
+      </div>
+    </div>
+    <button class="sim-close" type="button" (click)="close.emit()" data-testid="simulate-email-close"
+      [attr.aria-label]="i18n.t('confirm_cancel')">
+      <app-icon name="close" />
+    </button>
+  </div>
+
+  <div class="sim-body">
+    @if (loading()) {
+      <div class="sim-state"><app-icon name="clock" /><span>{{ i18n.t('sim_loading') }}</span></div>
+    } @else if (loadError()) {
+      <div class="sim-error" role="alert"><app-icon name="alertTriangle" /><span>{{ loadError() }}</span></div>
+    } @else if (result(); as res) {
+      <!-- Result view -->
+      <div class="sim-result-head">
+        <span class="sim-dot" [style.background]="selected()?.color"></span>
+        <span class="sim-result-name">{{ selected()?.name }}</span>
+      </div>
+      @if (res.simulatedActions.length === 0) {
+        <div class="sim-state sim-state--empty" data-testid="simulate-no-actions">
+          <app-icon name="info" /><span>{{ i18n.t('sim_no_actions') }}</span>
+        </div>
+      } @else {
+        <p class="sim-intro">{{ i18n.t('sim_would_do') }}</p>
+        <ul class="sim-actions">
+          @for (a of res.simulatedActions; track $index) {
+            <li class="sim-action">
+              <span class="sim-action-label">{{ a.nodeLabel }}</span>
+              <span class="sim-action-desc">{{ a.description }}</span>
+            </li>
+          }
+        </ul>
+      }
+      <p class="sim-hint">{{ i18n.t('sim_rate_hint') }}</p>
+    } @else if (running()) {
+      <div class="sim-state" data-testid="simulate-running"><span class="sim-spinner"></span><span>{{ i18n.t('sim_running') }}</span></div>
+    } @else {
+      @if (runError()) {
+        <div class="sim-error" role="alert"><app-icon name="alertTriangle" /><span>{{ runError() }}</span></div>
+      }
+      @if (automations().length === 0) {
+        <div class="sim-state sim-state--empty"><app-icon name="info" /><span>{{ i18n.t('sim_no_automations') }}</span></div>
+      } @else {
+        <p class="sim-intro">{{ i18n.t('sim_pick') }}</p>
+        <div class="sim-list">
+          @for (a of automations(); track a.id) {
+            <button class="sim-item" type="button" (click)="pick(a)" [attr.data-testid]="'simulate-pick-' + a.id">
+              <span class="sim-dot" [style.background]="a.color"></span>
+              <span class="sim-item-main">
+                <span class="sim-item-name">{{ a.name }}</span>
+                <span class="sim-item-meta">{{ statusLabel(a.status) }} · {{ a.nodeCount }} {{ i18n.t('sim_nodes') }}</span>
+              </span>
+              <app-icon name="play" />
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <div class="sim-foot">
+    @if (result()) {
+      <button class="sim-btn" type="button" (click)="reset()"><app-icon name="refresh" /> {{ i18n.t('sim_again') }}</button>
+      <a class="sim-btn sim-btn--solid" [routerLink]="['/dashboard/automations', selected()?.id, 'edit']" (click)="close.emit()">
+        {{ i18n.t('sim_open_automation') }}
+      </a>
+    } @else {
+      <button class="sim-btn" type="button" (click)="close.emit()">{{ i18n.t('confirm_cancel') }}</button>
+    }
+  </div>
+</div>

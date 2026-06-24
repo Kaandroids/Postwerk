@@ -61,7 +61,7 @@
     }
 
     <!-- Messages -->
-    <div class="chat-messages" #messagesContainer aria-live="polite">
+    <div class="chat-messages" #messagesContainer aria-live="polite" (click)="onMessagesClick($event)">
       @if (chat.messages().length === 0) {
         <!-- Welcome message -->
         <div class="chat-msg" data-role="assistant">

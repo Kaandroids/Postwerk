@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal, viewChild, ElementRef, AfterViewChecked, effect } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -75,6 +75,7 @@ export class AiChatPanelComponent implements AfterViewChecked {
   protected i18n = inject(I18nService);
   private sanitizer = inject(DomSanitizer);
   private planService = inject(PlanService);
+  private router = inject(Router);
 
   protected aiDisabled = signal(false);
   protected inputText = signal('');
@@ -210,6 +211,34 @@ export class AiChatPanelComponent implements AfterViewChecked {
 
   protected close(): void {
     this.chat.isOpen.set(false);
+  }
+
+  /**
+   * Intercepts clicks on links the assistant renders in its markdown. Internal links (root-relative or
+   * same-origin) are routed via the Angular Router and close the panel, so a deep link like
+   * "[Connect an email](/dashboard/email-accounts)" navigates in-app instead of triggering a full reload.
+   * External links fall through to the browser's default handling.
+   */
+  protected onMessagesClick(event: MouseEvent): void {
+    const anchor = (event.target as HTMLElement).closest('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+
+    let path: string | null = null;
+    if (href.startsWith('/')) {
+      path = href;
+    } else {
+      try {
+        const url = new URL(href, window.location.origin);
+        if (url.origin === window.location.origin) path = url.pathname + url.search + url.hash;
+      } catch { /* unparseable → treat as external */ }
+    }
+    if (path === null) return; // external link → let the browser handle it
+
+    event.preventDefault();
+    this.chat.isOpen.set(false);
+    this.router.navigateByUrl(path);
   }
 
   protected newChat(): void {

@@ -119,6 +119,17 @@ export class TestModePanelComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Deletes a single result so it no longer skews the accuracy statistics. */
+  deleteResult(result: TestModeResult): void {
+    this.automationService.deleteTestModeResult(this.automationId(), result.id).subscribe({
+      next: () => {
+        this.results.update(list => list.filter(r => r.id !== result.id));
+        this.totalElements.update(n => Math.max(0, n - 1));
+        this.loadStats();
+      },
+    });
+  }
+
   nextPage(): void {
     this.page.update(p => p + 1);
     this.loadResults();
