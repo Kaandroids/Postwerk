@@ -391,13 +391,17 @@ export class AutomationEditorComponent implements AfterViewInit {
     });
   }
 
-  // Canvas pan trigger. Mouse: never pan via drag (left-click selects; middle-mouse pans through
-  // onCanvasMouseDown). Touch/pen: there is no middle button, so a one-finger drag pans the canvas.
-  disableCanvasDrag = (event: MouseEvent | TouchEvent): boolean => {
-    if (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) return true;
-    const pt = (event as Partial<PointerEvent>).pointerType;
-    return pt === 'touch' || pt === 'pen';
-  };
+  // Canvas pan trigger (fCanvasMoveTrigger → true = allow a drag-pan). We allow it for every input:
+  // left-click drag on empty canvas pans (Figma-style), and so does one-finger touch/pen drag.
+  // Foblex only consults this for the LEFT button / touch (middle-button down is filtered upstream
+  // by its own isMouseLeftButton() check), so the middle-mouse pan in onCanvasMouseDown never clashes.
+  // Why: Mac trackpads / Magic Mouse have no middle button, so left-drag is the only pan they can do.
+  canvasMoveTrigger = (_event: MouseEvent | TouchEvent): boolean => true;
+
+  // fWheelTrigger → Foblex only zooms on the wheel when this returns true. We restrict zoom to a
+  // pinch gesture (macOS trackpad pinch fires a wheel event with ctrlKey) or Ctrl/Cmd+wheel; a plain
+  // wheel / two-finger trackpad scroll is left to onCanvasWheel, which pans (the Mac-native feel).
+  zoomOnPinch = (event: MouseEvent | TouchEvent | WheelEvent): boolean => event.ctrlKey || event.metaKey;
 
   /**
    * Single-tap on a node. On touch viewports (tablet + phone) a tap opens the config panel —
@@ -687,7 +691,26 @@ export class AutomationEditorComponent implements AfterViewInit {
     event.preventDefault();
     this.panning.set(true);
     this.panStart = { x: event.clientX, y: event.clientY };
-    this.canvasPosStart = { ...this.panSetPosition };
+    // Seed from the canvas' live transform so a middle-drag started after a native left-drag pan
+    // (or a wheel pan) continues from where the canvas actually sits, instead of jumping.
+    this.canvasPosStart = this.fCanvas ? { ...this.fCanvas.getPosition() } : { ...this.panSetPosition };
+  }
+
+  /**
+   * Trackpad / mouse-wheel pan. Foblex's fZoom owns zoom (pinch / Ctrl+Cmd, gated via {@link zoomOnPinch});
+   * a plain wheel reaches here and scrolls the canvas — what Mac users expect from a two-finger swipe.
+   * Reads the live transform each event (mirrors Foblex's own DragCanvasHandler) so it stays in sync
+   * with left-drag pans and zoom.
+   */
+  onCanvasWheel(event: WheelEvent): void {
+    if (event.ctrlKey || event.metaKey || !this.fCanvas) return;
+    event.preventDefault();
+    const base = this.fCanvas.getPosition();
+    const newPos = { x: base.x - event.deltaX, y: base.y - event.deltaY };
+    this.panSetPosition = newPos;
+    this.fCanvas._setPosition(newPos);
+    this.fCanvas.redraw();
+    this.fCanvas.emitCanvasChangeEvent();
   }
 
   @HostListener('window:mousemove', ['$event'])
