@@ -114,4 +114,17 @@ export class AutomationService {
   clearTestModeResults(id: string) {
     return this.api.delete<void>(`${this.basePath}/${id}/test-mode/results`);
   }
+
+  /** Runs one already-synced email through an automation in dry-run and returns the simulated result. */
+  simulateEmail(automationId: string, emailId: string) {
+    return this.api.post<TestModeResult>(
+      `${this.basePath}/${automationId}/test-mode/simulate/${emailId}`,
+      {}
+    );
+  }
+
+  /** Deletes a single test-mode result so it no longer counts toward the accuracy statistics. */
+  deleteTestModeResult(automationId: string, resultId: string) {
+    return this.api.delete<void>(`${this.basePath}/${automationId}/test-mode/results/${resultId}`);
+  }
 }

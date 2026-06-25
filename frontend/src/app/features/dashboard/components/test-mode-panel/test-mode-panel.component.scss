@@ -322,6 +322,28 @@
   flex-wrap: wrap;
 }
 .sm-q { font-size: 12.5px; color: var(--fg-muted); margin-right: auto; }
+.sm-del {
+  appearance: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 0.5px solid var(--border);
+  background: transparent;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  app-icon { width: 14px; height: 14px; }
+  &:hover {
+    background: color-mix(in srgb, var(--danger) 12%, var(--bg));
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+  }
+}
 .sm-fb {
   appearance: none;
   display: inline-flex;

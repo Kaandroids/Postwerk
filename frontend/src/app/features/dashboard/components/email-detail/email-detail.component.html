@@ -56,6 +56,11 @@
       {{ reprocessing() ? i18n.t('inbox_reprocessing') : i18n.t('inbox_reprocess') }}
     </button>
   }
+  @if (showSimulate()) {
+    <button class="ib-action-btn" data-testid="simulate-btn" (click)="simulate.emit()">
+      <app-icon name="play" /> {{ i18n.t('inbox_simulate') }}
+    </button>
+  }
   <button class="ib-action-btn danger" data-testid="delete-btn" (click)="deleted.emit()"><app-icon name="trash" /> {{ i18n.t('inbox_delete') }}</button>
 </div>
 

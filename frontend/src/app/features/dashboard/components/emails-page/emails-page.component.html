@@ -275,12 +275,14 @@
                   [email]="expandedEmail()!"
                   [showReply]="showReply()"
                   [showReprocess]="showReprocess()"
+                  [showSimulate]="showReply()"
                   [reprocessing]="reprocessing()"
                   (reply)="openReply()"
                   (forward)="openForward()"
                   (star)="starExpanded()"
                   (deleted)="deleteExpanded()"
-                  (reprocess)="reprocessExpanded()" />
+                  (reprocess)="reprocessExpanded()"
+                  (simulate)="openSimulate()" />
               } @else {
                 <div class="ib-empty" style="padding: 24px;">{{ i18n.t('loading') }}</div>
               }
@@ -306,3 +308,10 @@
 </app-page-content>
 
 <app-compose-panel #composePanel (sent)="onComposeSent()" />
+
+@if (simulateTarget(); as target) {
+  <app-simulate-email-dialog
+    [emailId]="target.id"
+    [emailSubject]="target.subject"
+    (close)="closeSimulate()" />
+}

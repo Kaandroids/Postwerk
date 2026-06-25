@@ -93,6 +93,10 @@
                   } @else {
                     <span class="sm-flag sm-flag-bad"><app-icon name="x" />{{ i18n.t('test_mode_mark_incorrect') }}</span>
                   }
+                  <button class="sm-del" (click)="deleteResult(r)" data-testid="test-mode-delete-result"
+                    [title]="i18n.t('test_mode_delete_result')" [attr.aria-label]="i18n.t('test_mode_delete_result')">
+                    <app-icon name="trash" />
+                  </button>
                 </div>
               </div>
             }

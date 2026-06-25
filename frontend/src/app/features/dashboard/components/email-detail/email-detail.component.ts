@@ -28,6 +28,7 @@ export class EmailDetailComponent {
   readonly email = input.required<Email>();
   readonly showReply = input<boolean>(false);
   readonly showReprocess = input<boolean>(false);
+  readonly showSimulate = input<boolean>(false);
   readonly reprocessing = input<boolean>(false);
 
   readonly reply = output<void>();
@@ -35,6 +36,7 @@ export class EmailDetailComponent {
   readonly star = output<void>();
   readonly deleted = output<void>();
   readonly reprocess = output<void>();
+  readonly simulate = output<void>();
 
   protected attachmentsOpen = signal(false);
   protected traceOpen = signal<string | null>(null); // trace ID that is expanded

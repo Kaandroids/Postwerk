@@ -327,4 +327,25 @@ public class AutomationController {
         testModeService.clearResults(ctx.organizationId(), id);
         return ResponseEntity.noContent().build();
     }
+
+    /** Runs one already-synced email through this automation in dry-run and records a simulation result. */
+    @PostMapping("/{id}/test-mode/simulate/{emailId}")
+    public ResponseEntity<TestModeResultResponse> simulateEmail(
+            OrgContext ctx,
+            @PathVariable UUID id,
+            @PathVariable UUID emailId) {
+        orgContext.require(ctx, Permission.AUTOMATION_TEST);
+        return ResponseEntity.ok(testModeService.simulateEmail(ctx.organizationId(), id, emailId));
+    }
+
+    /** Deletes a single test mode result (so it no longer counts toward the accuracy statistics). */
+    @DeleteMapping("/{id}/test-mode/results/{resultId}")
+    public ResponseEntity<Void> deleteTestModeResult(
+            OrgContext ctx,
+            @PathVariable UUID id,
+            @PathVariable UUID resultId) {
+        orgContext.require(ctx, Permission.AUTOMATION_TEST);
+        testModeService.deleteResult(ctx.organizationId(), id, resultId);
+        return ResponseEntity.noContent().build();
+    }
 }

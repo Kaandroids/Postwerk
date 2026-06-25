@@ -22,4 +22,14 @@ public interface TestModeService {
     TestModeStatsResponse getStats(UUID organizationId, UUID automationId);
 
     void clearResults(UUID organizationId, UUID automationId);
+
+    /**
+     * Runs a single already-synced email through an automation in dry-run (no side effects) and records
+     * the simulated actions as a test-mode result. Repeatable: uses an ephemeral trace so it neither
+     * persists a trace row nor blocks the email from future live processing.
+     */
+    TestModeResultResponse simulateEmail(UUID organizationId, UUID automationId, UUID emailId);
+
+    /** Deletes a single test-mode result so it no longer counts toward the accuracy statistics. */
+    void deleteResult(UUID organizationId, UUID automationId, UUID resultId);
 }

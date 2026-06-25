@@ -9,10 +9,13 @@ import com.postwerk.model.enums.NodeType;
 import com.postwerk.model.enums.TestResultFeedback;
 import com.postwerk.repository.AutomationRepository;
 import com.postwerk.repository.AutomationTestModeResultRepository;
+import com.postwerk.repository.EmailAccountRepository;
 import com.postwerk.repository.EmailRepository;
+import com.postwerk.service.AutomationExecutorService;
 import com.postwerk.service.TestModeService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,21 +30,34 @@ public class TestModeServiceImpl implements TestModeService {
     private final AutomationTestModeResultRepository resultRepository;
     private final AutomationRepository automationRepository;
     private final EmailRepository emailRepository;
+    private final EmailAccountRepository emailAccountRepository;
+    /** Lazy to break the executor &lt;-&gt; test-mode cycle (the executor records results via this service). */
+    private final AutomationExecutorService executor;
     private final ObjectMapper objectMapper;
 
     public TestModeServiceImpl(AutomationTestModeResultRepository resultRepository,
                                AutomationRepository automationRepository,
                                EmailRepository emailRepository,
+                               EmailAccountRepository emailAccountRepository,
+                               @Lazy AutomationExecutorService executor,
                                ObjectMapper objectMapper) {
         this.resultRepository = resultRepository;
         this.automationRepository = automationRepository;
         this.emailRepository = emailRepository;
+        this.emailAccountRepository = emailAccountRepository;
+        this.executor = executor;
         this.objectMapper = objectMapper;
     }
 
     @Override
     @Transactional
     public void recordTestModeExecution(Automation automation, Email email, EmailAutomationTrace trace) {
+        persistResult(automation, email, trace);
+    }
+
+    /** Builds + saves a test-mode result from a (live or ephemeral) trace. Shared by the live TESTING
+     *  recorder and the on-demand {@link #simulateEmail} path. */
+    private AutomationTestModeResult persistResult(Automation automation, Email email, EmailAutomationTrace trace) {
         List<SimulatedAction> actions = extractSimulatedActions(trace);
 
         String actionsJson;
@@ -58,7 +74,7 @@ public class TestModeServiceImpl implements TestModeService {
                 .simulatedActions(actionsJson)
                 .build();
 
-        resultRepository.save(result);
+        return resultRepository.save(result);
     }
 
     @Override
@@ -122,6 +138,38 @@ public class TestModeServiceImpl implements TestModeService {
     public void clearResults(UUID organizationId, UUID automationId) {
         verifyOwnership(organizationId, automationId);
         resultRepository.deleteByAutomationId(automationId);
+    }
+
+    @Override
+    @Transactional
+    public TestModeResultResponse simulateEmail(UUID organizationId, UUID automationId, UUID emailId) {
+        Automation automation = automationRepository.findByIdAndOrganizationId(automationId, organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("Automation not found"));
+        Email email = emailRepository.findById(emailId)
+                .orElseThrow(() -> new IllegalArgumentException("Email not found"));
+        // Verify the email belongs to this organization (via its account) before simulating against it.
+        EmailAccount account = emailAccountRepository.findByIdAndOrganizationId(email.getEmailAccountId(), organizationId)
+                .orElseThrow(() -> new IllegalArgumentException("Email not found"));
+
+        // Ephemeral dry-run: no persisted trace, no side effects, repeatable — and it does NOT block the
+        // email from being processed live later (the live path's existsByEmailIdAndAutomationId dedup
+        // only sees persisted traces).
+        EmailAutomationTrace trace = executor.runTestDryRun(automation, email, account);
+
+        return toResponse(persistResult(automation, email, trace));
+    }
+
+    @Override
+    @Transactional
+    public void deleteResult(UUID organizationId, UUID automationId, UUID resultId) {
+        verifyOwnership(organizationId, automationId);
+
+        AutomationTestModeResult result = resultRepository.findById(resultId)
+                .orElseThrow(() -> new IllegalArgumentException("Test mode result not found"));
+        if (!result.getAutomationId().equals(automationId)) {
+            throw new IllegalArgumentException("Result does not belong to this automation");
+        }
+        resultRepository.delete(result);
     }
 
     private List<SimulatedAction> extractSimulatedActions(EmailAutomationTrace trace) {
