@@ -57,11 +57,16 @@ jobs:
           cache: maven
           cache-dependency-path: backend/pom.xml
 
+      # Two runs: the first (unit-only) gives fast feedback; the second runs the
+      # WHOLE suite in one reactor, so the JaCoCo report it leaves at
+      # backend/target/site/jacoco is the COMBINED unit+integration report that
+      # the steps below publish. (`./mvnw clean test -Pcoverage-full` reproduces
+      # that single combined report locally.)
       - name: Run unit tests
         working-directory: backend
         run: ./mvnw test -Dsurefire.excludedGroups=integration
 
-      - name: Run integration tests
+      - name: Run integration tests (produces the combined coverage report)
         working-directory: backend
         run: ./mvnw test -Dsurefire.excludedGroups=
 
@@ -75,7 +80,9 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: Backend Coverage
           update-comment: true
-          min-coverage-overall: 0
+          # Hard gate lives in the build (jacoco-check in pom.xml). This is the
+          # secondary PR-comment view; keep it a touch below the build floor.
+          min-coverage-overall: 30
           min-coverage-changed-files: 0
 
       - name: Upload coverage to Codecov
@@ -120,6 +127,51 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npx ng build
+
+  frontend-unit:
+    name: Frontend Unit Tests
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        # `npm ci` is strict; the committed lock omits Linux-only optional deps
+        # (e.g. @emnapi/*) because it was last resolved on Windows. Fall back to
+        # `npm install` on Linux — same pragmatic approach as frontend/Dockerfile.
+        run: npm ci || npm install --no-audit --no-fund
+
+      - name: Run unit tests (Vitest) with coverage
+        working-directory: frontend
+        run: npx ng test --no-watch
+
+      # Coverage thresholds are not enforced yet (suite is young). The report is
+      # published so the trend is visible and can be ratcheted up over time.
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        continue-on-error: true
+        with:
+          files: frontend/coverage/frontend/lcov.info
+          flags: frontend
+          fail_ci_if_error: false
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/frontend/lcov-report/
+          retention-days: 14
 
   frontend-e2e:
     name: Frontend E2E Tests
@@ -170,7 +222,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [changes, backend-test, frontend-build, frontend-e2e]
+    needs: [changes, backend-test, frontend-build, frontend-unit, frontend-e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any required job failed or was cancelled
