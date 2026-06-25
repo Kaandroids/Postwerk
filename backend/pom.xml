@@ -285,8 +285,71 @@
                             <goal>report</goal>
                         </goals>
                     </execution>
+                    <!--
+                        Coverage GATE. These are conservative FLOORS that today's coverage already
+                        clears (so a plain `mvn test` unit-only run stays green); their job is to
+                        stop coverage from collapsing. Ratchet the minimums up as the suite grows.
+                        Bound to `test` because CI runs `mvn test` (not `mvn verify`).
+                    -->
+                    <execution>
+                        <id>jacoco-check</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <!-- Current unit-only coverage: INSTRUCTION 34.6% / LINE 36.1% / BRANCH 22.6%.
+                                             Floors sit a few points below so honest refactors don't trip the gate. -->
+                                        <limit>
+                                            <counter>INSTRUCTION</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.30</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.32</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.18</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+            Combined unit + integration coverage in ONE report.
+
+            A plain `mvn test` excludes @Tag("integration") tests (see the
+            surefire.excludedGroups default), so its JaCoCo report reflects unit
+            tests only. This profile clears the exclusion so the whole suite runs
+            in a single reactor → a single jacoco.exec → one merged report at
+            target/site/jacoco that shows the REAL total coverage.
+
+            Local:  ./mvnw clean test -Pcoverage-full   (requires Docker for Testcontainers)
+
+            In CI the same combined report is produced by the "Run integration
+            tests" step (it runs every test, then the bound report goal writes
+            the merged jacoco.xml that is uploaded to Codecov / the PR comment).
+        -->
+        <profile>
+            <id>coverage-full</id>
+            <properties>
+                <surefire.excludedGroups></surefire.excludedGroups>
+            </properties>
+        </profile>
+    </profiles>
 </project>
