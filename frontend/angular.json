@@ -88,7 +88,26 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "coverage": true,
+            "coverageReporters": [
+              "text-summary",
+              "html",
+              "lcov"
+            ],
+            "coverageInclude": [
+              "src/**/*.ts"
+            ],
+            "coverageExclude": [
+              "src/**/*.spec.ts",
+              "src/main.ts",
+              "src/environments/**",
+              "src/**/*.routes.ts",
+              "src/app/core/services/i18n.service.ts"
+            ]
+          }
         }
       }
     }
