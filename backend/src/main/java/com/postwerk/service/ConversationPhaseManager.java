@@ -29,8 +29,14 @@ public class ConversationPhaseManager {
             Pattern.CASE_INSENSITIVE
     );
 
+    // Anchored so it only fires when the message *starts* with a cancel word — words like
+    // "abbrechen"/"cancel" legitimately appear mid-sentence in this product (e.g. "automation to
+    // cancel an order"), so a loose `.*cancel.*` would false-positive. The optional second clause
+    // matches the FE cancel button copy ("Nein, abbrechen." / "No, cancel.") and natural variants,
+    // whose trailing keyword the old `[.!,\s]*$` tail could not consume → planning got stuck.
     private static final Pattern CANCELLATION_PATTERN = Pattern.compile(
-            "^(nein|no|abbrechen|cancel|nevermind|never mind|lass mal|doch nicht|stop|halt|nicht|nö|nope)[.!,\\s]*$",
+            "^(nein|no|abbrechen|cancel|nevermind|never mind|lass mal|doch nicht|stop|halt|nicht|nö|nope)"
+                    + "([.!,\\s]+(abbrechen|cancel|stop|verwerfen|discard|lass es))?[.!,\\s]*$",
             Pattern.CASE_INSENSITIVE
     );
 
