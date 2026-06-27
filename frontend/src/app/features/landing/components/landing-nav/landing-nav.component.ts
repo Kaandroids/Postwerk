@@ -20,11 +20,6 @@ import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle
     <div class="lp2-progress" [style.width.%]="progress()"></div>
     <nav class="lp2-nav" [attr.data-scrolled]="scrolled() ? '1' : '0'">
       <div class="lp2-nav-inner">
-        <button class="lp2-nav-burger" type="button" (click)="drawerOpen.set(true)"
-                [attr.aria-label]="i18n.t('lp_nav_menu')" aria-haspopup="dialog">
-          <app-icon name="menu" />
-        </button>
-
         <a class="lp2-nav-brand" routerLink="/landing"><app-brand /></a>
 
         <div class="lp2-nav-links">
@@ -39,6 +34,10 @@ import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle
           </div>
           <a class="lp2-signin" routerLink="/auth/login">{{ i18n.t('lp_nav_signin') }}</a>
           <a class="lp2-nav-btn" routerLink="/auth/register">{{ i18n.t('lp_nav_start') }}</a>
+          <button class="lp2-nav-burger" type="button" (click)="drawerOpen.set(true)"
+                  [attr.aria-label]="i18n.t('lp_nav_menu')" aria-haspopup="dialog">
+            <app-icon name="menu" />
+          </button>
         </div>
       </div>
     </nav>
@@ -53,18 +52,19 @@ import { ThemeToggleComponent } from '../../../../shared/components/theme-toggle
           </button>
         </div>
 
-        <nav class="lp2-drawer-nav">
-          <a routerLink="/landing" routerLinkActive="is-on" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">{{ i18n.t('lp_nav_home') }}</a>
-          <a routerLink="/docs" routerLinkActive="is-on" (click)="closeDrawer()">{{ i18n.t('lp_nav_docs') }}</a>
-        </nav>
+        <div class="lp2-drawer-scroll">
+          <nav class="lp2-drawer-nav">
+            <a routerLink="/landing" routerLinkActive="is-on" [routerLinkActiveOptions]="{ exact: true }" (click)="closeDrawer()">{{ i18n.t('lp_nav_home') }}</a>
+            <a routerLink="/docs" routerLinkActive="is-on" (click)="closeDrawer()">{{ i18n.t('lp_nav_docs') }}</a>
+          </nav>
+        </div>
 
         <div class="lp2-drawer-foot">
-          <a class="lp2-signin" routerLink="/auth/login" (click)="closeDrawer()">{{ i18n.t('lp_nav_signin') }}</a>
-          <a class="lp2-nav-btn lp2-drawer-cta" routerLink="/auth/register" (click)="closeDrawer()">{{ i18n.t('lp_nav_start') }}</a>
           <div class="lp2-drawer-prefs">
             <app-lang-switcher />
             <app-theme-toggle />
           </div>
+          <a class="lp2-drawer-signin" routerLink="/auth/login" (click)="closeDrawer()">{{ i18n.t('lp_nav_signin') }}</a>
         </div>
       </aside>
     </div>
