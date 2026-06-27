@@ -194,7 +194,8 @@
 }
 
 /* Pinned drawer footer (mobile only) — prefs + sign-in, like the dashboard
-   user area. Hidden on the desktop sidebar (header carries those controls). */
+   user area. Hidden on the desktop sidebar (header carries those controls).
+   No CTA here — the primary "start" button lives on the header bar. */
 .doc-side-foot {
   display: none;
   flex-shrink: 0;
@@ -239,22 +240,22 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  // Full-height drawer pinned to the LEFT — it's the same nav rail that lives
-  // on the left on desktop, so it slides back in from the left (docs convention).
+  // Full-height drawer pinned to the RIGHT — the hamburger sits on the far
+  // right of the header, so the nav rail slides in from the right to meet it.
   // The brand sits at the very top, matching the dashboard sidebar.
   .doc-side {
     position: fixed;
     top: 0;
-    left: 0;
-    right: auto;
+    right: 0;
+    left: auto;
     z-index: 55;
     height: 100vh;
     width: 300px;
     max-width: 88vw;
     background: var(--bg);
-    border-left: none;
-    border-right: 1px solid var(--border);
-    transform: translateX(-100%);
+    border-right: none;
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
     transition: transform 0.22s ease;
   }
 

@@ -130,8 +130,20 @@
     gap: 10px;
   }
 
+  /* hamburger now lives at the far right (last child of .doc-head-right) */
   .doc-head-menu {
     display: grid;
+  }
+
+  /* logo only — drop the wordmark and nudge the mark up a notch. ::ng-deep
+     reaches into the brand child's emulated styles. */
+  .doc-head-brand ::ng-deep .brand-name {
+    display: none;
+  }
+
+  .doc-head-brand ::ng-deep .brand-logo {
+    width: 34px;
+    height: 34px;
   }
 
   .doc-search {
@@ -153,6 +165,15 @@
 
   .doc-head-signin {
     display: none;
+  }
+
+  /* primary CTA sits just left of the hamburger (mirrors the landing bar);
+     trim it a touch so the logo + search + CTA + hamburger row stays whole.
+     (register "start" CTA when logged out, the Dashboard button when signed in) */
+  .doc-head-btn {
+    height: 34px;
+    padding: 0 13px;
+    font-size: 12.5px;
   }
 
   /* Language + theme move into the sidebar drawer (see docs-shell) so the

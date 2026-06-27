@@ -21,10 +21,6 @@ import { DocsService } from '../../docs.service';
   imports: [RouterLink, IconComponent, BrandComponent, LangSwitcherComponent, ThemeToggleComponent],
   template: `
     <header class="doc-head">
-      <button class="doc-head-menu" (click)="menu.emit()" [attr.aria-label]="i18n.t('lp_nav_menu')">
-        <app-icon name="menu" />
-      </button>
-
       <a class="doc-head-brand" routerLink="/docs"><app-brand /></a>
 
       <button class="doc-search" (click)="openSearch()">
@@ -42,6 +38,9 @@ import { DocsService } from '../../docs.service';
           <a class="doc-head-signin" routerLink="/auth/login">{{ i18n.t('lp_nav_signin') }}</a>
           <a class="doc-head-btn" routerLink="/auth/register">{{ i18n.t('lp_nav_start') }}</a>
         }
+        <button class="doc-head-menu" (click)="menu.emit()" [attr.aria-label]="i18n.t('lp_nav_menu')">
+          <app-icon name="menu" />
+        </button>
       </div>
     </header>
   `,
