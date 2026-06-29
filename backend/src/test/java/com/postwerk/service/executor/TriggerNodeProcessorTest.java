@@ -67,6 +67,21 @@ class TriggerNodeProcessorTest {
     }
 
     @Test
+    void process_emailMode_malformedAttachmentsJson_seedsEmptyList() {
+        Email email = createEmail(account.getId());
+        email.setInReplyTo(null);
+        email.setHasAttachments(true);
+        email.setAttachments("{not-json");
+        ExecutionContext context = new ExecutionContext(email, account, false);
+
+        NodeProcessorResult result = processor.process(buildNode("{\"triggerMode\":\"EMAIL\"}"), context, userId);
+
+        ExecutionContext outCtx = result.contextByHandle().get("new-email");
+        assertThat(outCtx.getVariable("email.attachments")).isInstanceOf(java.util.List.class);
+        assertThat((java.util.List<?>) outCtx.getVariable("email.attachments")).isEmpty();
+    }
+
+    @Test
     void process_emailMode_replyEmail_routesToReplyHandle() {
         Email email = createEmail(account.getId());
         email.setInReplyTo("<original@example.com>");

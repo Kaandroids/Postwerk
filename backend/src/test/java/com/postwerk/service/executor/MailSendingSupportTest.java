@@ -58,6 +58,21 @@ class MailSendingSupportTest {
     }
 
     @Test
+    void buildMessage_htmlBody_withAttachments_isMultipart_htmlFirstPart() throws Exception {
+        OutgoingMail mail = OutgoingMail.html("to@example.com", "Subj", "<p>hi</p>")
+                .withAttachments(List.of(new OutgoingAttachment("a.pdf", "application/pdf", new byte[]{1})));
+
+        MimeMessage msg = MailSendingSupport.buildMessage(session, account, mail);
+
+        assertThat(msg.getContent()).isInstanceOf(MimeMultipart.class);
+        MimeMultipart mp = (MimeMultipart) msg.getContent();
+        assertThat(mp.getCount()).isEqualTo(2);
+        // Content-Type headers are only written on send/saveChanges; the DataHandler knows the type now.
+        assertThat(mp.getBodyPart(0).getDataHandler().getContentType()).contains("text/html");
+        assertThat(mp.getBodyPart(1).getFileName()).isEqualTo("a.pdf");
+    }
+
+    @Test
     void buildMessage_setsCcAndBcc() throws Exception {
         MimeMessage msg = MailSendingSupport.buildMessage(session, account,
                 OutgoingMail.html("to@example.com", "cc@example.com", "bcc@example.com", "Subj", "<p>hi</p>"));
