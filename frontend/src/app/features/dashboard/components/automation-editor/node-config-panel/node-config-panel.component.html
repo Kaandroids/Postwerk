@@ -361,6 +361,29 @@
           </div>
         }
 
+        <!-- FOREACH config -->
+        @if (selectedNode()!.nodeType === 'FOREACH') {
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_foreach_source') }}</label>
+            <select class="ae-panel-input" data-testid="foreach-source"
+              (change)="setForeachField(selectedNode()!.id, 'sourceVariable', v($event))">
+              <option value="" [selected]="!getForeachSource(selectedNode()!)">{{ i18n.t('auto_foreach_source_hint') }}</option>
+              @for (sv of getSourceVariableOptions(selectedNode()!.id); track sv.key) {
+                <option [value]="sv.key" [selected]="sv.key === getForeachSource(selectedNode()!)">{{ sv.label }}</option>
+              }
+            </select>
+            <span class="ae-panel-hint">{{ i18n.t('auto_foreach_source_desc') }}</span>
+          </div>
+          <div class="ae-panel-field">
+            <label class="ae-panel-label">{{ i18n.t('auto_foreach_alias') }}</label>
+            <input class="ae-panel-input" type="text" data-testid="foreach-alias"
+              [value]="getForeachAlias(selectedNode()!)"
+              (input)="setForeachField(selectedNode()!.id, 'itemAlias', v($event))"
+              placeholder="item" />
+            <span class="ae-panel-hint">{{ i18n.t('auto_foreach_alias_desc') }}</span>
+          </div>
+        }
+
         <!-- EXTRACT config -->
         @if (selectedNode()!.nodeType === 'EXTRACT') {
           <div class="ae-panel-field">

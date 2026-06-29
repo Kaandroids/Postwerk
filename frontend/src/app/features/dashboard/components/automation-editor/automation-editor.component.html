@@ -434,6 +434,20 @@
                 </div>
               }
 
+              <!-- FOREACH: circle input + "each item" output (loop body runs per element) -->
+              @if (node.nodeType === 'FOREACH') {
+                <div class="ae-port-row ae-port-in-row">
+                  <div fNodeInput [fInputId]="getInputId(node)"
+                       class="ae-port-dot ae-port-circle ae-port-hollow ae-port-nc"></div>
+                  <span class="ae-port-label">{{ i18n.t('auto_port_email') }}</span>
+                </div>
+                <div class="ae-port-row ae-port-out-row">
+                  <span class="ae-port-label">{{ i18n.t('auto_port_each_item') }}</span>
+                  <div fNodeOutput [fOutputId]="getOutputId(node, 'each')" [fOutputMultiple]="true"
+                       class="ae-port-dot ae-port-circle ae-port-filled ae-port-nc"></div>
+                </div>
+              }
+
               <!-- LABEL: circle input + circle output (shows category name) -->
               @if (node.nodeType === 'LABEL') {
                 <div class="ae-port-row ae-port-in-row">

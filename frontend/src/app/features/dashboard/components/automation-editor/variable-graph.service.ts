@@ -164,6 +164,26 @@ export class VariableGraphService {
             groups.push({ label: n.label || this.i18n.t('auto_node_trigger'), icon: 'zap', color: '#10b981', variables: vars });
           }
         } catch { /* ignore */ }
+      } else if (n.nodeType === 'FOREACH') {
+        // Iterator — exposes the current element under the alias (default `item`). For
+        // email.attachments the element carries the attachment metadata fields; index/count always.
+        try {
+          const cfg = JSON.parse(n.config || '{}') as { sourceVariable?: string; itemAlias?: string };
+          const alias = cfg.itemAlias || 'item';
+          const vars: VariableItem[] = [];
+          if (cfg.sourceVariable === 'email.attachments') {
+            vars.push(
+              { key: `${alias}.name`, label: this.i18n.t('auto_var_attachment_name'), description: this.i18n.t('auto_var_attachment_name_desc') },
+              { key: `${alias}.contentType`, label: this.i18n.t('auto_var_attachment_type'), description: this.i18n.t('auto_var_attachment_type_desc') },
+              { key: `${alias}.size`, label: this.i18n.t('auto_var_attachment_size'), description: this.i18n.t('auto_var_attachment_size_desc') },
+            );
+          }
+          vars.push(
+            { key: `${alias}.index`, label: this.i18n.t('auto_var_foreach_index'), description: this.i18n.t('auto_var_foreach_index_desc') },
+            { key: `${alias}.count`, label: this.i18n.t('auto_var_foreach_count'), description: this.i18n.t('auto_var_foreach_count_desc') },
+          );
+          groups.push({ label: n.label || this.i18n.t('auto_node_foreach'), icon: 'layers', color: '#0891b2', variables: vars });
+        } catch { /* ignore */ }
       } else if (n.nodeType === 'VECTOR_SEARCH') {
         // Knowledge-base match — exposes vectorsearch_<nodeId>.confidence/.reason + the matched
         // entry's fields (vectorsearch_<nodeId>.match.<field>), cached from the KB's parameter set.

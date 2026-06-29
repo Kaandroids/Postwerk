@@ -50,4 +50,26 @@ describe('AutomationLintService', () => {
     const issues = service.lint('AUTOMATION', nodes, edges, [], []);
     expect(issues.filter(i => i.severity === 'error')).toEqual([]);
   });
+
+  it('flags FOREACH_NO_SOURCE when a foreach node has no source variable', () => {
+    const nodes = [n('t1', 'TRIGGER'), n('f1', 'FOREACH', '{}')];
+    const edges: GraphEdge[] = [{ outputId: 't1', inputId: 'f1' }];
+    const issues = service.lint('AUTOMATION', nodes, edges, [], []);
+    expect(issues.some(i => i.code === 'FOREACH_NO_SOURCE' && i.nodeId === 'f1' && i.severity === 'error')).toBe(true);
+  });
+
+  it('exposes the foreach item namespace downstream so item.* is not flagged dangling', () => {
+    const nodes = [
+      n('t1', 'TRIGGER', '{"triggerMode":"EMAIL"}'),
+      n('f1', 'FOREACH', '{"sourceVariable":"email.attachments","itemAlias":"item"}'),
+      n('s1', 'SEND_EMAIL', '{"to":"a@b.com","subject":"{{item.name}}","body":"x"}'),
+    ];
+    const edges: GraphEdge[] = [
+      { outputId: 't1', inputId: 'f1' },
+      { outputId: 'f1', inputId: 's1' },
+    ];
+    const issues = service.lint('AUTOMATION', nodes, edges, [], []);
+    expect(issues.some(i => i.code === 'FOREACH_NO_SOURCE')).toBe(false);
+    expect(issues.some(i => i.code === 'DANGLING_VARIABLE' && i.nodeId === 's1')).toBe(false);
+  });
 });

@@ -51,6 +51,22 @@ class TriggerNodeProcessorTest {
     }
 
     @Test
+    void process_emailMode_seedsAttachmentsAsList() {
+        Email email = createEmail(account.getId());
+        email.setInReplyTo(null);
+        email.setHasAttachments(true);
+        email.setAttachments("[{\"name\":\"a.pdf\",\"contentType\":\"application/pdf\",\"size\":\"1 KB\"}]");
+        ExecutionContext context = new ExecutionContext(email, account, false);
+
+        NodeProcessorResult result = processor.process(buildNode("{\"triggerMode\":\"EMAIL\"}"), context, userId);
+
+        ExecutionContext outCtx = result.contextByHandle().get("new-email");
+        Object attachments = outCtx.getVariable("email.attachments");
+        assertThat(attachments).isInstanceOf(java.util.List.class);
+        assertThat((java.util.List<?>) attachments).hasSize(1);
+    }
+
+    @Test
     void process_emailMode_replyEmail_routesToReplyHandle() {
         Email email = createEmail(account.getId());
         email.setInReplyTo("<original@example.com>");

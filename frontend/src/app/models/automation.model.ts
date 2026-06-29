@@ -177,7 +177,7 @@ export type AutomationKind = 'AUTOMATION' | 'INTEGRATION';
 /** Lifecycle status of an automation workflow. */
 export type AutomationStatus = 'ACTIVE' | 'TESTING' | 'PAUSED';
 /** Discriminator for the type of node in an automation flow. */
-export type NodeType = 'TRIGGER' | 'FILTER' | 'EXTRACT' | 'CATEGORIZE' | 'DELAY' | 'LABEL' | 'EMAIL_ACTION' | 'REMOVE_LABEL' | 'WEBHOOK' | 'SEND_EMAIL' | 'INPUT' | 'OUTPUT' | 'INTEGRATION_CALL' | 'VECTOR_SEARCH' | 'NOTIFY';
+export type NodeType = 'TRIGGER' | 'FILTER' | 'EXTRACT' | 'CATEGORIZE' | 'DELAY' | 'LABEL' | 'EMAIL_ACTION' | 'REMOVE_LABEL' | 'WEBHOOK' | 'SEND_EMAIL' | 'INPUT' | 'OUTPUT' | 'INTEGRATION_CALL' | 'VECTOR_SEARCH' | 'NOTIFY' | 'FOREACH';
 /** Status of an automation execution run. */
 export type ExecutionStatus = 'RUNNING' | 'SUCCESS' | 'FAILED';
 
@@ -329,6 +329,7 @@ export const NODE_PALETTE: NodePaletteItem[] = [
   { type: 'OUTPUT', labelKey: 'auto_node_output', subKey: 'auto_node_sub_output', icon: 'signout', color: '#f59e0b', descKey: 'auto_node_desc_output' },
   { type: 'VECTOR_SEARCH', labelKey: 'auto_node_vector_search', subKey: 'auto_node_sub_vector_search', icon: 'sparkle', color: '#0ea5e9', descKey: 'auto_node_desc_vector_search' },
   { type: 'NOTIFY', labelKey: 'auto_node_notify', subKey: 'auto_node_sub_notify', icon: 'bell', color: '#6d28d9', descKey: 'auto_node_desc_notify' },
+  { type: 'FOREACH', labelKey: 'auto_node_foreach', subKey: 'auto_node_sub_foreach', icon: 'layers', color: '#0891b2', descKey: 'auto_node_desc_foreach' },
 ];
 
 /** Metadata for a node type entry in the editor's drag-and-drop palette. */
@@ -372,7 +373,7 @@ export const PALETTE_GROUPS: PaletteGroup[] = [
   {
     labelKey: 'auto_palette_control',
     icon: 'clock',
-    items: NODE_PALETTE.filter(p => p.type === 'DELAY'),
+    items: NODE_PALETTE.filter(p => ['DELAY', 'FOREACH'].includes(p.type)),
   },
 ];
 
@@ -431,6 +432,15 @@ export interface CategorizeNodeConfig {
   threshold: number;
   /** Source variables fed to the AI. Selecting `email.attachments` feeds the email's attachments. */
   sourceVariables?: string[];
+}
+
+/** Configuration for a FOREACH node — iterates a list source variable, binding each element under an alias. */
+export interface ForEachNodeConfig {
+  /** The list-valued source variable to iterate, e.g. `email.attachments`. */
+  sourceVariable: string;
+  /** Namespace the current element is bound under for the loop body (default `item`). */
+  itemAlias?: string;
+  [key: string]: unknown;
 }
 
 /** Predefined cron presets for the TRIGGER node's CRON mode. */
@@ -508,6 +518,7 @@ export const NODE_DEFAULT_CONFIG: Record<NodeType, Record<string, unknown>> = {
   INTEGRATION_CALL: { integrationId: '', inputMappings: {}, instanceSettings: {} },
   VECTOR_SEARCH: { knowledgeBaseId: '', queryVariable: '', topK: 5, confidenceThreshold: 90 },
   NOTIFY: { recipientType: 'USER', contentSource: 'MANUAL', title: '', message: '', severity: 'INFO', category: 'SYSTEM' },
+  FOREACH: { sourceVariable: '', itemAlias: 'item' },
 };
 
 /** Configuration for an INPUT node — references the ParameterSet defining the integration's input shape. */

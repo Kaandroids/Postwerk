@@ -68,7 +68,8 @@ class AutomationExecutorServiceTest {
                 new DelayNodeProcessor(delayNodeExecutor, objectMapper),
                 new LabelNodeProcessor(labelNodeExecutor, objectMapper),
                 new EmailActionNodeProcessor(List.of(), templateRepository, objectMapper, new VariableResolver()),
-                new RemoveLabelNodeProcessor(removeLabelNodeExecutor, objectMapper)
+                new RemoveLabelNodeProcessor(removeLabelNodeExecutor, objectMapper),
+                new ForEachNodeProcessor(objectMapper)
         );
 
         org.mockito.Mockito.lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
@@ -197,6 +198,35 @@ class AutomationExecutorServiceTest {
         executor.processEmail(email);
 
         verify(traceService).addNodeTrace(any(), eq(filter), eq(NodeResultStatus.MATCHED), any());
+    }
+
+    @Test
+    void processEmail_foreachNode_runsBodyOncePerItem() {
+        setupAutomationExecution();
+        // Two attachments on the email -> email.attachments has 2 elements -> FOREACH fans out 2x.
+        email.setHasAttachments(true);
+        email.setAttachments("[{\"name\":\"a.pdf\",\"contentType\":\"application/pdf\",\"size\":\"1 KB\"},"
+                + "{\"name\":\"b.png\",\"contentType\":\"image/png\",\"size\":\"2 KB\"}]");
+
+        var trigger = TestFixtures.createNode(automation, NodeType.TRIGGER, "Trigger");
+        var foreach = TestFixtures.createNode(automation, NodeType.FOREACH, "For each attachment");
+        foreach.setConfig("{\"sourceVariable\":\"email.attachments\"}");
+        var filter = TestFixtures.createNode(automation, NodeType.FILTER, "Body");
+        filter.setConfig("{\"checks\":[{\"label\":\"T\",\"groups\":[{\"conditions\":[{\"field\":\"email.from\",\"operator\":\"CONTAINS\",\"value\":\"example\"}]}]}]}");
+
+        var e1 = TestFixtures.createEdge(automation, trigger, foreach, "new-email");
+        var e2 = TestFixtures.createEdge(automation, foreach, filter, "each");
+
+        when(nodeRepository.findByAutomationId(automation.getId())).thenReturn(List.of(trigger, foreach, filter));
+        when(edgeRepository.findByAutomationId(automation.getId())).thenReturn(List.of(e1, e2));
+        when(variableFilterEvaluator.evaluate(anyString(), anyMap()))
+                .thenReturn(new VariableFilterEvaluator.VariableFilterResult(0, List.of()));
+
+        executor.processEmail(email);
+
+        // The FOREACH ran once, and its body (FILTER) ran once per attachment.
+        verify(traceService).addNodeTrace(any(), eq(foreach), eq(NodeResultStatus.PASSED), any());
+        verify(traceService, times(2)).addNodeTrace(any(), eq(filter), eq(NodeResultStatus.MATCHED), any());
     }
 
     @Test
