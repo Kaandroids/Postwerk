@@ -233,6 +233,8 @@ export interface EmailActionNodeConfig {
   body?: string;           // when contentSource === 'MANUAL'
   // FORWARD mode
   toAddress?: string;
+  /** When true (FORWARD), the original email's attachments are re-attached to the forwarded message. */
+  includeAttachments?: boolean;
   // MOVE_FOLDER mode
   folder?: string;
 }
