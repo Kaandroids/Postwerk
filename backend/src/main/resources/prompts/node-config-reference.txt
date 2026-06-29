@@ -9,7 +9,7 @@ is supplied by each surface's own system prompt.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 VARIABLES INJECTED BY NODE TYPE (available to downstream nodes)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- TRIGGER (EMAIL): email.from, email.fromName, email.to, email.cc, email.subject, email.body, email.hasAttachments, email.isRead, email.folder, email.receivedAt, email.isReply
+- TRIGGER (EMAIL): email.from, email.fromName, email.to, email.cc, email.subject, email.body, email.hasAttachments, email.attachments (the attachment files — add to an EXTRACT/CATEGORIZE sourceVariables to feed PDFs/images to the AI), email.isRead, email.folder, email.receivedAt, email.isReply
 - TRIGGER (WEBHOOK): trigger.<fieldName> (mapped from parameterSetId, or all top-level JSON keys), trigger.body, trigger.receivedAt
 - EXTRACT: extraction_0.<fieldName>, extraction_1.<fieldName>, ... (one namespace per linked parameter set, fields from its parameters)
 - CATEGORIZE: category.id, category.name, category.color, category.confidence
@@ -90,6 +90,10 @@ Config: {"sourceVariables": ["email.body"], "extractions": [{"parameterSetId": "
     reference upstream variables instead, e.g. ["extraction_0.summary"], ["trigger.payload"], or
     ["input.text"] (integrations). If omitted it falls back to email.body, but you MUST set it
     explicitly so the editor shows the configured input (an empty value displays a "no input" warning).
+  - To read FILE ATTACHMENTS (e.g. extract data from an invoice PDF/scan), add "email.attachments"
+    to sourceVariables, e.g. ["email.body", "email.attachments"]. The AI then also receives the
+    email's PDF/image/text attachments (Office files like Excel/Word are skipped). All attachments go
+    in one call; per-attachment processing will use a future iterator node.
   - Each extraction references a ParameterSet (create with create_parameter_set first)
   - label: display name in the UI
   - The AI reads the source variable(s) and fills in each parameter defined in the parameter set
@@ -123,6 +127,8 @@ Config: {"sourceVariables": ["email.body"], "categoryIds": ["category-uuid-1", "
     triggering email (default). Reference upstream variables (e.g. ["extraction_0.summary"],
     ["trigger.payload"], ["input.text"]) when classifying API/webhook/integration text. If omitted it
     falls back to email.body; set it explicitly so the editor does not show a "no input" warning.
+  - Add "email.attachments" to sourceVariables to also classify based on the email's PDF/image/text
+    attachments (e.g. classify by an attached document); Office files are skipped.
   - categoryIds: list of category UUIDs to classify into (use IDs from create_category)
   - threshold: minimum confidence score (0-100, default 70)
 IMPORTANT: CATEGORIZE already does TWO things automatically:

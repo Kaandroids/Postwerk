@@ -94,13 +94,13 @@ public class ExtractNodeExecutor {
     }
 
     /**
-     * Fetches the email's attachments for inline AI input when the node opts in via
-     * {@code includeAttachments}. Only Gemini-readable types within the size/count budget are
-     * returned (see {@link AiAttachmentSupport}); everything else is dropped. Returns an empty list
-     * when the option is off or no email/account is available (e.g. API/webhook-sourced runs).
+     * Feeds the email's attachments to the AI when {@code email.attachments} is selected as a source
+     * variable. Only Gemini-readable types within the size/count budget are returned (see
+     * {@link AiAttachmentSupport}); everything else is dropped. Returns an empty list when the
+     * attachments source is not selected or no email/account is available (e.g. API/webhook runs).
      */
     private List<AiAttachment> resolveAttachments(JsonNode config, Email email, ExecutionContext context) {
-        if (!NodeConfigReader.bool(config, "includeAttachments", false)
+        if (!readSourceVariables(config).contains(AiAttachmentSupport.SOURCE_KEY)
                 || email == null || context == null || context.getAccount() == null) {
             return List.of();
         }
@@ -114,17 +114,15 @@ public class ExtractNodeExecutor {
     }
 
     private String resolveSourceVariables(JsonNode config, Email email, ExecutionContext context) {
-        List<String> vars = new ArrayList<>();
-        if (config.has("sourceVariables") && config.get("sourceVariables").isArray()) {
-            for (JsonNode v : config.get("sourceVariables")) {
-                vars.add(v.asText());
-            }
-        }
+        List<String> vars = readSourceVariables(config);
         if (vars.isEmpty()) {
             vars.add("email.body");
         }
         StringBuilder sb = new StringBuilder();
         for (String varKey : vars) {
+            if (AiAttachmentSupport.SOURCE_KEY.equals(varKey)) {
+                continue; // attachments are fed as binary parts, not text
+            }
             if ("email.body".equals(varKey) || context == null) {
                 sb.append(email != null ? EmailTextBuilder.build(email) : "");
             } else {
@@ -134,6 +132,17 @@ public class ExtractNodeExecutor {
             sb.append("\n\n");
         }
         return sb.toString().trim();
+    }
+
+    /** Reads the configured source-variable keys; empty list when none are set. */
+    private static List<String> readSourceVariables(JsonNode config) {
+        List<String> vars = new ArrayList<>();
+        if (config.has("sourceVariables") && config.get("sourceVariables").isArray()) {
+            for (JsonNode v : config.get("sourceVariables")) {
+                vars.add(v.asText());
+            }
+        }
+        return vars;
     }
 
 }

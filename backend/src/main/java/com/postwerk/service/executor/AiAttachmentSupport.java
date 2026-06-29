@@ -22,6 +22,13 @@ public final class AiAttachmentSupport {
     private AiAttachmentSupport() {
     }
 
+    /**
+     * Source-variable key that, when selected on an EXTRACT/CATEGORIZE node, feeds the email's
+     * attachments to the AI (instead of being treated as text). This is how users opt in to
+     * attachment input — by adding {@code email.attachments} as a source variable.
+     */
+    public static final String SOURCE_KEY = "email.attachments";
+
     /** Content types Gemini can ingest inline. A trailing {@code /} matches the whole family (e.g. {@code image/}). */
     public static final Set<String> ALLOWED_TYPES = Set.of("application/pdf", "image/", "text/");
 

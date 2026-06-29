@@ -11,6 +11,7 @@ Every automation uses a unified variable system. Variables are accumulated as da
   TRIGGER (EMAIL mode) injects email.* variables:
     → email.from, email.fromName, email.to, email.cc, email.subject, email.body
     → email.hasAttachments, email.isRead, email.folder, email.receivedAt, email.isReply
+    → email.attachments — the attachment files; add to an EXTRACT/CATEGORIZE sourceVariables to feed PDFs/images/text to the AI (Office files skipped)
 
   TRIGGER (WEBHOOK mode = INBOUND receiver) injects trigger.* variables from the incoming request:
     → trigger.body (raw request body), trigger.receivedAt (ISO timestamp)
