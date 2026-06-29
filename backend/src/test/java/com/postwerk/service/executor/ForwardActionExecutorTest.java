@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -118,5 +119,39 @@ class ForwardActionExecutorTest {
         ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
         verify(mailSendingSupport).send(eq(account), captor.capture());
         assertThat(captor.getValue().attachments()).isEmpty();
+    }
+
+    @Test
+    void attachmentSourceAll_reAttachesOriginalFiles() throws Exception {
+        email.setHasAttachments(true);
+        when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
+                .thenReturn(new AttachmentFetchResult(
+                        List.of(new FetchedAttachment(0, "invoice.pdf", "application/pdf", new byte[12])),
+                        List.of()));
+        var config = cfg("{\"toAddress\":\"datev@x.com\",\"attachmentSource\":\"email.attachments\"}");
+
+        executor.execute(email, account, config, ctx);
+
+        ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
+        verify(mailSendingSupport).send(eq(account), captor.capture());
+        assertThat(captor.getValue().attachments()).extracting(a -> a.filename()).containsExactly("invoice.pdf");
+    }
+
+    @Test
+    void attachmentSource_foreachItem_attachesOnlyTheCurrentOneByIndex() throws Exception {
+        email.setHasAttachments(true);
+        ExecutionContext itemCtx = ctx.withVariables(Map.of("item" + AiAttachmentSupport.ITEM_INDEX_SUFFIX, 1));
+        ArgumentCaptor<AttachmentSelection> selCaptor = ArgumentCaptor.forClass(AttachmentSelection.class);
+        when(attachmentResolver.fetch(eq(account), eq(email), selCaptor.capture()))
+                .thenReturn(new AttachmentFetchResult(
+                        List.of(new FetchedAttachment(1, "p2.pdf", "application/pdf", new byte[8])), List.of()));
+        var config = cfg("{\"toAddress\":\"datev@x.com\",\"attachmentSource\":\"item\"}");
+
+        executor.execute(email, account, config, itemCtx);
+
+        assertThat(selCaptor.getValue().indices()).containsExactly(1);
+        ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
+        verify(mailSendingSupport).send(eq(account), captor.capture());
+        assertThat(captor.getValue().attachments()).extracting(a -> a.filename()).containsExactly("p2.pdf");
     }
 }

@@ -655,16 +655,39 @@ export class NodeConfigPanelComponent {
     return this.parseConfig<CategorizeNodeConfig>(node, {} as CategorizeNodeConfig).threshold ?? 70;
   }
 
-  // ── Attachment-to-AI opt-in (EXTRACT & CATEGORIZE) ──────
-  /** Whether the node feeds the email's attachments (PDF/image/text) to the AI model. */
-  getIncludeAttachments(node: FlowNode): boolean {
-    return this.parseConfig<Record<string, unknown>>(node, {})['includeAttachments'] === true;
+  // ── FORWARD attachments (none / all original / current FOREACH item) ──────
+  /** The configured FORWARD attachment source key (back-compat: legacy includeAttachments=true → all). */
+  getForwardAttachmentSource(node: FlowNode): string {
+    const cfg = this.parseConfig<Record<string, unknown>>(node, {});
+    if ('attachmentSource' in cfg) return (cfg['attachmentSource'] as string) || '';
+    return cfg['includeAttachments'] === true ? 'email.attachments' : '';
   }
 
-  toggleIncludeAttachments(nodeId: string): void {
+  setForwardAttachmentSource(nodeId: string, value: string): void {
     const config = this.parseConfigById<Record<string, unknown>>(nodeId, {});
-    config['includeAttachments'] = config['includeAttachments'] !== true;
+    config['attachmentSource'] = value;
+    delete config['includeAttachments']; // superseded by attachmentSource
     this.updateNodeConfig(nodeId, config);
+  }
+
+  /** Attachment sources a FORWARD can use: all of the email's attachments, or a FOREACH item (the current one). */
+  getAttachmentSourceOptions(nodeId: string): { key: string; label: string }[] {
+    const upstream = this.variableGraph.getUpstreamNodes(nodeId, this.nodes(), this.edges());
+    const opts: { key: string; label: string }[] = [];
+    if (this.variableGraph.hasUpstreamEmailTrigger(upstream)) {
+      opts.push({ key: 'email.attachments', label: this.i18n.t('auto_var_email_attachments') });
+    }
+    for (const n of upstream) {
+      if (n.nodeType !== 'FOREACH') continue;
+      try {
+        const cfg = JSON.parse(n.config || '{}') as { sourceVariable?: string; itemAlias?: string };
+        if (cfg.sourceVariable === 'email.attachments') {
+          const alias = cfg.itemAlias || 'item';
+          opts.push({ key: alias, label: `${this.i18n.t('auto_var_attachment_current')} (${alias})` });
+        }
+      } catch { /* ignore */ }
+    }
+    return opts;
   }
 
   // ── FOREACH config (source list variable + item alias) ──────
