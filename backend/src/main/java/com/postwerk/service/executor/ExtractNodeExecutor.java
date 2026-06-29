@@ -1,5 +1,6 @@
 package com.postwerk.service.executor;
 
+import com.postwerk.dto.AiAttachment;
 import com.postwerk.dto.ParameterItemDto;
 import com.postwerk.model.Email;
 import com.postwerk.model.ParameterSet;
@@ -34,12 +35,14 @@ public class ExtractNodeExecutor {
     private final GeminiService geminiService;
     private final ParameterSetRepository parameterSetRepository;
     private final ObjectMapper objectMapper;
+    private final AttachmentContentResolver attachmentResolver;
 
     public ExtractNodeExecutor(GeminiService geminiService, ParameterSetRepository parameterSetRepository,
-                               ObjectMapper objectMapper) {
+                               ObjectMapper objectMapper, AttachmentContentResolver attachmentResolver) {
         this.geminiService = geminiService;
         this.parameterSetRepository = parameterSetRepository;
         this.objectMapper = objectMapper;
+        this.attachmentResolver = attachmentResolver;
     }
 
     public Map<String, Map<String, Object>> execute(Email email, JsonNode config, UUID userId,
@@ -52,6 +55,7 @@ public class ExtractNodeExecutor {
         }
 
         String emailText = resolveSourceVariables(config, email, context);
+        List<AiAttachment> attachments = resolveAttachments(config, email, context);
 
         for (int i = 0; i < extractions.size(); i++) {
             String key = "extraction_" + i;
@@ -76,7 +80,8 @@ public class ExtractNodeExecutor {
                         new TypeReference<>() {}
                 );
 
-                Map<String, Object> extracted = geminiService.extract(context.getOrganizationId(), userId, emailText, parameters);
+                Map<String, Object> extracted = geminiService.extract(
+                        context.getOrganizationId(), userId, emailText, parameters, attachments);
                 results.put(key, extracted);
 
             } catch (Exception e) {
@@ -86,6 +91,26 @@ public class ExtractNodeExecutor {
         }
 
         return results;
+    }
+
+    /**
+     * Fetches the email's attachments for inline AI input when the node opts in via
+     * {@code includeAttachments}. Only Gemini-readable types within the size/count budget are
+     * returned (see {@link AiAttachmentSupport}); everything else is dropped. Returns an empty list
+     * when the option is off or no email/account is available (e.g. API/webhook-sourced runs).
+     */
+    private List<AiAttachment> resolveAttachments(JsonNode config, Email email, ExecutionContext context) {
+        if (!NodeConfigReader.bool(config, "includeAttachments", false)
+                || email == null || context == null || context.getAccount() == null) {
+            return List.of();
+        }
+        AttachmentContentResolver.AttachmentFetchResult result =
+                attachmentResolver.fetch(context.getAccount(), email, AiAttachmentSupport.selection());
+        if (!result.skipped().isEmpty()) {
+            log.info("EXTRACT: sent {} attachment(s) to AI, skipped {}",
+                    result.fetched().size(), result.skipped().size());
+        }
+        return AiAttachmentSupport.toAiAttachments(result);
     }
 
     private String resolveSourceVariables(JsonNode config, Email email, ExecutionContext context) {

@@ -1,5 +1,6 @@
 package com.postwerk.service.impl;
 
+import com.postwerk.dto.AiAttachment;
 import com.postwerk.dto.CategoryCandidate;
 import com.postwerk.dto.ClassificationResult;
 import com.postwerk.dto.ParameterItemDto;
@@ -89,7 +90,8 @@ public class GeminiServiceImpl implements GeminiService {
     @Override
     @Retry(name = "gemini")
     @CircuitBreaker(name = "gemini")
-    public Map<String, Object> extract(UUID organizationId, UUID userId, String emailText, List<ParameterItemDto> parameters) throws Exception {
+    public Map<String, Object> extract(UUID organizationId, UUID userId, String emailText,
+                                       List<ParameterItemDto> parameters, List<AiAttachment> attachments) throws Exception {
         quotaService.checkAiTokenQuota(organizationId);
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Gemini API key is not configured");
@@ -106,7 +108,7 @@ public class GeminiServiceImpl implements GeminiService {
 
         String prompt = "Extract structured data from this email. Return only valid JSON.\n\n" + emailText;
 
-        GenerateContentResponse response = client.models.generateContent(model, prompt, config);
+        GenerateContentResponse response = generate(client, prompt, attachments, config);
         aiUsageService.recordGenerateContent(organizationId, userId, model, "EXTRACT", response);
 
         String json = response.text();
@@ -116,7 +118,8 @@ public class GeminiServiceImpl implements GeminiService {
     @Override
     @Retry(name = "gemini")
     @CircuitBreaker(name = "gemini")
-    public ClassificationResult classify(UUID organizationId, UUID userId, String emailText, List<CategoryCandidate> candidates) throws Exception {
+    public ClassificationResult classify(UUID organizationId, UUID userId, String emailText,
+                                         List<CategoryCandidate> candidates, List<AiAttachment> attachments) throws Exception {
         quotaService.checkAiTokenQuota(organizationId);
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalStateException("Gemini API key is not configured");
@@ -153,7 +156,7 @@ public class GeminiServiceImpl implements GeminiService {
                 "categories", candidateBlock(candidates)
         ));
 
-        GenerateContentResponse response = client.models.generateContent(model, prompt, config);
+        GenerateContentResponse response = generate(client, prompt, attachments, config);
         aiUsageService.recordGenerateContent(organizationId, userId, model, "CLASSIFY", response);
 
         String json = response.text();
@@ -219,6 +222,27 @@ public class GeminiServiceImpl implements GeminiService {
         String reason = (String) result.getOrDefault("reason", "");
 
         return new ClassificationResult(matchedId, confidence, reason);
+    }
+
+    /**
+     * Issues a {@code generateContent} call, attaching any inline attachment {@link Part}s alongside the
+     * text prompt. With no attachments this is the plain text-prompt call (unchanged behaviour);
+     * otherwise the prompt and each attachment become parts of a single multimodal {@code user}
+     * {@link Content}. Gemini counts the attachment tokens in the returned usage metadata, so billing
+     * is recorded as before by the callers.
+     */
+    private GenerateContentResponse generate(Client client, String prompt,
+                                             List<AiAttachment> attachments, GenerateContentConfig config) {
+        if (attachments == null || attachments.isEmpty()) {
+            return client.models.generateContent(model, prompt, config);
+        }
+        List<Part> parts = new ArrayList<>();
+        parts.add(Part.fromText(prompt));
+        for (AiAttachment a : attachments) {
+            parts.add(Part.fromBytes(a.data(), a.mimeType()));
+        }
+        Content content = Content.builder().role("user").parts(parts).build();
+        return client.models.generateContent(model, List.of(content), config);
     }
 
     /** Renders candidates as an {@code ID/Name/Description (+examples)} block for the classify/match prompts. */

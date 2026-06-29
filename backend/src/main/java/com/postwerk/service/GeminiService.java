@@ -1,5 +1,6 @@
 package com.postwerk.service;
 
+import com.postwerk.dto.AiAttachment;
 import com.postwerk.dto.CategoryCandidate;
 import com.postwerk.dto.ClassificationResult;
 import com.postwerk.dto.ParameterItemDto;
@@ -16,9 +17,31 @@ import java.util.UUID;
  */
 public interface GeminiService {
 
-    Map<String, Object> extract(UUID organizationId, UUID userId, String emailText, List<ParameterItemDto> parameters) throws Exception;
+    /** Text-only extraction — convenience for callers with no attachments. */
+    default Map<String, Object> extract(UUID organizationId, UUID userId, String emailText,
+                                        List<ParameterItemDto> parameters) throws Exception {
+        return extract(organizationId, userId, emailText, parameters, List.of());
+    }
 
-    ClassificationResult classify(UUID organizationId, UUID userId, String emailText, List<CategoryCandidate> candidates) throws Exception;
+    /**
+     * Extracts structured data from the email text, optionally also passing {@code attachments}
+     * (PDFs/images/text) to the model as inline multimodal parts.
+     */
+    Map<String, Object> extract(UUID organizationId, UUID userId, String emailText,
+                                List<ParameterItemDto> parameters, List<AiAttachment> attachments) throws Exception;
+
+    /** Text-only classification — convenience for callers with no attachments. */
+    default ClassificationResult classify(UUID organizationId, UUID userId, String emailText,
+                                          List<CategoryCandidate> candidates) throws Exception {
+        return classify(organizationId, userId, emailText, candidates, List.of());
+    }
+
+    /**
+     * Classifies the email against the candidate categories, optionally also passing {@code attachments}
+     * (PDFs/images/text) to the model as inline multimodal parts.
+     */
+    ClassificationResult classify(UUID organizationId, UUID userId, String emailText,
+                                  List<CategoryCandidate> candidates, List<AiAttachment> attachments) throws Exception;
 
     /**
      * Picks the single best-matching candidate for a free-text query (knowledge-base semantic match).

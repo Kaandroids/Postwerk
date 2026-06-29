@@ -408,6 +408,15 @@
               }
             </select>
           </div>
+          <div class="ae-panel-field">
+            <label class="ae-checkbox-label">
+              <input type="checkbox" data-testid="extract-include-attachments"
+                [checked]="getIncludeAttachments(selectedNode()!)"
+                (change)="toggleIncludeAttachments(selectedNode()!.id)" />
+              {{ i18n.t('auto_include_attachments') }}
+            </label>
+            <span class="ae-panel-hint">{{ i18n.t('auto_include_attachments_hint') }}</span>
+          </div>
         }
 
         <!-- FILTER config (multi-check format) -->
@@ -546,6 +555,15 @@
                 class="ae-threshold-slider" />
               <span class="ae-threshold-value">{{ getCategorizeThreshold(selectedNode()!) }}%</span>
             </div>
+          </div>
+          <div class="ae-panel-field">
+            <label class="ae-checkbox-label">
+              <input type="checkbox" data-testid="categorize-include-attachments"
+                [checked]="getIncludeAttachments(selectedNode()!)"
+                (change)="toggleIncludeAttachments(selectedNode()!.id)" />
+              {{ i18n.t('auto_include_attachments') }}
+            </label>
+            <span class="ae-panel-hint">{{ i18n.t('auto_include_attachments_hint') }}</span>
           </div>
           <div class="ae-panel-section">
             <div class="ae-panel-section-title">{{ i18n.t('auto_categorize_categories') }}</div>

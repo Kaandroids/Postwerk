@@ -655,6 +655,18 @@ export class NodeConfigPanelComponent {
     return this.parseConfig<CategorizeNodeConfig>(node, {} as CategorizeNodeConfig).threshold ?? 70;
   }
 
+  // ── Attachment-to-AI opt-in (EXTRACT & CATEGORIZE) ──────
+  /** Whether the node feeds the email's attachments (PDF/image/text) to the AI model. */
+  getIncludeAttachments(node: FlowNode): boolean {
+    return this.parseConfig<Record<string, unknown>>(node, {})['includeAttachments'] === true;
+  }
+
+  toggleIncludeAttachments(nodeId: string): void {
+    const config = this.parseConfigById<Record<string, unknown>>(nodeId, {});
+    config['includeAttachments'] = config['includeAttachments'] !== true;
+    this.updateNodeConfig(nodeId, config);
+  }
+
   // ── Source variable helpers (EXTRACT & CATEGORIZE) ──────
   getSourceVariables(node: FlowNode): string[] {
     return this.parseConfig<Record<string, unknown>>(node, {})['sourceVariables'] as string[] || [];
