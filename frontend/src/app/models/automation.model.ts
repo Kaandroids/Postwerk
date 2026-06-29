@@ -414,6 +414,8 @@ export interface TriggerNodeConfig {
 export interface ExtractNodeConfig {
   extractions: ExtractionEntry[];
   sourceVariables?: string[];
+  /** When true, the email's PDF/image/text attachments are sent to the AI alongside the text. */
+  includeAttachments?: boolean;
 }
 
 /** A single extraction target linking a parameter set to a display label. */
@@ -427,6 +429,8 @@ export interface CategorizeNodeConfig {
   categoryIds: string[];
   threshold: number;
   sourceVariables?: string[];
+  /** When true, the email's PDF/image/text attachments are sent to the AI alongside the text. */
+  includeAttachments?: boolean;
 }
 
 /** Predefined cron presets for the TRIGGER node's CRON mode. */

@@ -1,5 +1,6 @@
 package com.postwerk.service.executor;
 
+import com.postwerk.dto.AiAttachment;
 import com.postwerk.dto.CategoryCandidate;
 import com.postwerk.dto.ClassificationResult;
 import com.postwerk.model.AuditAction;
@@ -53,19 +54,22 @@ public class CategorizeNodeExecutor {
     private final EmailRepository emailRepository;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
+    private final AttachmentContentResolver attachmentResolver;
 
     public CategorizeNodeExecutor(EmbeddingService embeddingService,
                                    GeminiService geminiService,
                                    CategoryRepository categoryRepository,
                                    EmailRepository emailRepository,
                                    AuditService auditService,
-                                   ObjectMapper objectMapper) {
+                                   ObjectMapper objectMapper,
+                                   AttachmentContentResolver attachmentResolver) {
         this.embeddingService = embeddingService;
         this.geminiService = geminiService;
         this.categoryRepository = categoryRepository;
         this.emailRepository = emailRepository;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
+        this.attachmentResolver = attachmentResolver;
     }
 
     /**
@@ -141,8 +145,10 @@ public class CategorizeNodeExecutor {
                     "Emails that do not clearly fit into any of the above categories. Use this for newsletters, promotions, general announcements, spam, or anything ambiguous.",
                     null, null));
 
-            // 8. Classify via Gemini
-            ClassificationResult result = geminiService.classify(context.getOrganizationId(), userId, emailText, candidates);
+            // 8. Classify via Gemini (optionally with the email's attachments as inline AI input)
+            List<AiAttachment> attachments = resolveAttachments(config, email, context);
+            ClassificationResult result = geminiService.classify(
+                    context.getOrganizationId(), userId, emailText, candidates, attachments);
 
             // 9. Audit log — always, regardless of threshold (skip in dry-run)
             boolean accepted = result.confidence() >= threshold
@@ -241,6 +247,26 @@ public class CategorizeNodeExecutor {
         } catch (Exception e) {
             return "{}";
         }
+    }
+
+    /**
+     * Fetches the email's attachments for inline AI input when the node opts in via
+     * {@code includeAttachments}. Only Gemini-readable types within the size/count budget are
+     * returned (see {@link AiAttachmentSupport}); the embedding/vector step still uses text only.
+     * Returns an empty list when the option is off or no email/account is available.
+     */
+    private List<AiAttachment> resolveAttachments(JsonNode config, Email email, ExecutionContext context) {
+        if (!NodeConfigReader.bool(config, "includeAttachments", false)
+                || email == null || context == null || context.getAccount() == null) {
+            return List.of();
+        }
+        AttachmentContentResolver.AttachmentFetchResult result =
+                attachmentResolver.fetch(context.getAccount(), email, AiAttachmentSupport.selection());
+        if (!result.skipped().isEmpty()) {
+            log.info("CATEGORIZE: sent {} attachment(s) to AI, skipped {}",
+                    result.fetched().size(), result.skipped().size());
+        }
+        return AiAttachmentSupport.toAiAttachments(result);
     }
 
     private String resolveSourceVariables(JsonNode config, Email email, ExecutionContext context) {
