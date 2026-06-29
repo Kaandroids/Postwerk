@@ -75,12 +75,19 @@ public class ForEachNodeProcessor extends AbstractNodeProcessor {
         int total = items.size();
         int iterations = Math.min(total, MAX_ITERATIONS);
 
+        boolean attachmentSource = AiAttachmentSupport.SOURCE_KEY.equals(sourceVariable);
+
         List<ExecutionContext> contexts = new ArrayList<>(iterations);
         for (int i = 0; i < iterations; i++) {
             Map<String, Object> vars = new LinkedHashMap<>();
             bindElement(vars, alias, items.get(i));
             vars.put(alias + ".index", i);
             vars.put(alias + ".count", total);
+            // When iterating the email's attachments, tag the element with its attachment index so a
+            // downstream AI/forward node can fetch just this one's bytes (see AiAttachmentSupport).
+            if (attachmentSource) {
+                vars.put(alias + AiAttachmentSupport.ITEM_INDEX_SUFFIX, i);
+            }
             contexts.add(context.withVariables(vars));
         }
 

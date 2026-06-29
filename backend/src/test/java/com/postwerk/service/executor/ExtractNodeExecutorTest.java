@@ -100,6 +100,25 @@ class ExtractNodeExecutorTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void foreachItemSource_fetchesOnlyTheCurrentAttachmentByIndex() throws Exception {
+        // Inside a FOREACH over email.attachments the item alias carries its attachment index.
+        ExecutionContext itemCtx = ctx.withVariables(
+                Map.of("item" + AiAttachmentSupport.ITEM_INDEX_SUFFIX, 2));
+        ArgumentCaptor<AttachmentSelection> selCaptor = ArgumentCaptor.forClass(AttachmentSelection.class);
+        when(attachmentResolver.fetch(eq(account), eq(email), selCaptor.capture()))
+                .thenReturn(new AttachmentFetchResult(
+                        List.of(new FetchedAttachment(2, "p2.pdf", "application/pdf", new byte[8])), List.of()));
+
+        executor.execute(email, cfg("item"), userId, itemCtx);
+
+        assertThat(selCaptor.getValue().indices()).containsExactly(2);
+        ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);
+        verify(geminiService).extract(eq(orgId), eq(userId), anyString(), anyList(), captor.capture());
+        assertThat(captor.getValue()).extracting(a -> a.filename()).containsExactly("p2.pdf");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void withoutAttachmentsSource_noFetch_andNoAttachmentsSent() throws Exception {
         executor.execute(email, cfg("email.body"), userId, ctx);
 

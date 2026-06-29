@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -101,6 +102,24 @@ class CategorizeNodeExecutorTest {
         verify(geminiService).classify(eq(orgId), eq(userId), anyString(), anyList(), captor.capture());
         assertThat(captor.getValue()).hasSize(1);
         assertThat(captor.getValue().get(0).mimeType()).isEqualTo("image/png");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void foreachItemSource_classifiesOnlyTheCurrentAttachmentByIndex() throws Exception {
+        ExecutionContext itemCtx = ctx.withVariables(
+                Map.of("item" + AiAttachmentSupport.ITEM_INDEX_SUFFIX, 1));
+        ArgumentCaptor<AttachmentSelection> selCaptor = ArgumentCaptor.forClass(AttachmentSelection.class);
+        when(attachmentResolver.fetch(eq(account), eq(email), selCaptor.capture()))
+                .thenReturn(new AttachmentFetchResult(
+                        List.of(new FetchedAttachment(1, "scan.png", "image/png", new byte[8])), List.of()));
+
+        executor.executeDetailed(email, cfg("item"), userId, false, itemCtx);
+
+        assertThat(selCaptor.getValue().indices()).containsExactly(1);
+        ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);
+        verify(geminiService).classify(eq(orgId), eq(userId), anyString(), anyList(), captor.capture());
+        assertThat(captor.getValue()).hasSize(1);
     }
 
     @Test

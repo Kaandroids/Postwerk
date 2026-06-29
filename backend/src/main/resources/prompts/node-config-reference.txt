@@ -93,7 +93,9 @@ Config: {"sourceVariables": ["email.body"], "extractions": [{"parameterSetId": "
   - To read FILE ATTACHMENTS (e.g. extract data from an invoice PDF/scan), add "email.attachments"
     to sourceVariables, e.g. ["email.body", "email.attachments"]. The AI then also receives the
     email's PDF/image/text attachments (Office files like Excel/Word are skipped). All attachments go
-    in one call; per-attachment processing will use a future iterator node.
+    in one call. To process attachments ONE AT A TIME (e.g. one invoice per PDF), put a FOREACH node
+    (sourceVariable "email.attachments") before this node and use its item alias (default "item") as
+    the sourceVariable here — the AI then reads just the current attachment.
   - Each extraction references a ParameterSet (create with create_parameter_set first)
   - label: display name in the UI
   - The AI reads the source variable(s) and fills in each parameter defined in the parameter set

@@ -173,6 +173,8 @@ export class VariableGraphService {
           const vars: VariableItem[] = [];
           if (cfg.sourceVariable === 'email.attachments') {
             vars.push(
+              // The element itself — add as an EXTRACT/CATEGORIZE source to feed THIS one attachment to the AI.
+              { key: alias, label: this.i18n.t('auto_var_attachment_current'), description: this.i18n.t('auto_var_attachment_current_desc') },
               { key: `${alias}.name`, label: this.i18n.t('auto_var_attachment_name'), description: this.i18n.t('auto_var_attachment_name_desc') },
               { key: `${alias}.contentType`, label: this.i18n.t('auto_var_attachment_type'), description: this.i18n.t('auto_var_attachment_type_desc') },
               { key: `${alias}.size`, label: this.i18n.t('auto_var_attachment_size'), description: this.i18n.t('auto_var_attachment_size_desc') },

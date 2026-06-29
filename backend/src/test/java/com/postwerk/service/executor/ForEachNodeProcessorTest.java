@@ -101,10 +101,13 @@ class ForEachNodeProcessorTest {
         assertThat(c0.getVariable("item.index")).isEqualTo(0);
         assertThat(c0.getVariable("item.count")).isEqualTo(2);
         assertThat(c0.getVariable("email.subject")).isEqualTo("Hi"); // unchanged passthrough
+        // email.attachments source → tag each element with its attachment index for downstream AI fetch.
+        assertThat(c0.getVariable("item.__attachmentIndex")).isEqualTo(0);
 
         ExecutionContext c1 = result.fanOutContexts().get(1);
         assertThat(c1.getVariable("item.name")).isEqualTo("b.png");
         assertThat(c1.getVariable("item.index")).isEqualTo(1);
+        assertThat(c1.getVariable("item.__attachmentIndex")).isEqualTo(1);
     }
 
     @Test
@@ -129,6 +132,8 @@ class ForEachNodeProcessorTest {
         assertThat(result.fanOutContexts()).hasSize(2);
         assertThat(result.fanOutContexts().get(0).getVariable("item")).isEqualTo("x");
         assertThat(result.fanOutContexts().get(1).getVariable("item")).isEqualTo("y");
+        // Non-attachment source → no attachment-index marker is bound.
+        assertThat(result.fanOutContexts().get(0).getVariable("item.__attachmentIndex")).isNull();
     }
 
     @Test
