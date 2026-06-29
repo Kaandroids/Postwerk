@@ -22,7 +22,9 @@ public enum NodeType {
     OUTPUT,
     INTEGRATION_CALL,
     VECTOR_SEARCH,
-    NOTIFY;
+    NOTIFY,
+    /** Iterates a list source variable, running its downstream once per element (fan-out). */
+    FOREACH;
 
     /**
      * Node types that perform an external/observable side effect (send/forward/move email, label,

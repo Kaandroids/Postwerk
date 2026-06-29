@@ -122,6 +122,9 @@ export class AutomationLintService {
           issues.push(this.error('NOTIFY_NO_MESSAGE', node.id, { label }));
         }
         break;
+      case 'FOREACH':
+        if (this.isBlank(cfg['sourceVariable'])) issues.push(this.error('FOREACH_NO_SOURCE', node.id, { label }));
+        break;
       default:
         break;
     }
@@ -183,6 +186,9 @@ export class AutomationLintService {
         for (const v of sv) this.addReference(v, referenced);
         break;
       }
+      case 'FOREACH':
+        this.addReference(cfg['sourceVariable'], referenced);
+        break;
       default:
         break;
     }
@@ -216,6 +222,7 @@ export class AutomationLintService {
         case 'INTEGRATION_CALL': ns.add('integration_' + (up.nodeKey ?? up.id)); break;
         case 'VECTOR_SEARCH': ns.add('vectorsearch_' + (up.nodeKey ?? up.id)); break;
         case 'NOTIFY': ns.add('notify_' + (up.nodeKey ?? up.id)); break;
+        case 'FOREACH': ns.add(String(cfg['itemAlias'] ?? 'item') || 'item'); break;
         default: break;
       }
     }

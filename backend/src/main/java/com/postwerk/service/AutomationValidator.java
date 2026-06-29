@@ -162,6 +162,12 @@ public class AutomationValidator {
                                 "Notify node '" + label(node) + "' has no message."));
                     }
                 }
+                case "FOREACH" -> {
+                    if (isBlank(cfg.path("sourceVariable").asText(""))) {
+                        issues.add(ValidationIssue.error("FOREACH_NO_SOURCE", node.id(),
+                                "For-each node '" + label(node) + "' has no source list variable selected."));
+                    }
+                }
                 default -> { /* no required-config rule */ }
             }
 
@@ -228,6 +234,7 @@ public class AutomationValidator {
                     for (JsonNode v : sv) addReference(v.asText(""), referenced);
                 }
             }
+            case "FOREACH" -> addReference(cfg.path("sourceVariable").asText(""), referenced);
             default -> { /* node has no variable-bearing fields */ }
         }
 
@@ -262,6 +269,10 @@ public class AutomationValidator {
                 case "INTEGRATION_CALL" -> ns.add("integration_" + nsKey(up));
                 case "VECTOR_SEARCH" -> ns.add("vectorsearch_" + nsKey(up));
                 case "NOTIFY" -> ns.add("notify_" + nsKey(up));
+                case "FOREACH" -> {
+                    String alias = cfg.path("itemAlias").asText("item");
+                    ns.add(isBlank(alias) ? "item" : alias);
+                }
                 default -> { /* produces no variables */ }
             }
         }

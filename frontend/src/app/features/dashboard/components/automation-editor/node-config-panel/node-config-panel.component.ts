@@ -667,6 +667,21 @@ export class NodeConfigPanelComponent {
     this.updateNodeConfig(nodeId, config);
   }
 
+  // ── FOREACH config (source list variable + item alias) ──────
+  getForeachSource(node: FlowNode): string {
+    return (this.parseConfig<Record<string, unknown>>(node, {})['sourceVariable'] as string) || '';
+  }
+
+  getForeachAlias(node: FlowNode): string {
+    return (this.parseConfig<Record<string, unknown>>(node, {})['itemAlias'] as string) || 'item';
+  }
+
+  setForeachField(nodeId: string, field: 'sourceVariable' | 'itemAlias', value: string): void {
+    const config = this.parseConfigById<Record<string, unknown>>(nodeId, {});
+    config[field] = value;
+    this.updateNodeConfig(nodeId, config);
+  }
+
   // ── Source variable helpers (EXTRACT & CATEGORIZE) ──────
   getSourceVariables(node: FlowNode): string[] {
     return this.parseConfig<Record<string, unknown>>(node, {})['sourceVariables'] as string[] || [];

@@ -5,6 +5,7 @@ import com.postwerk.model.Email;
 import com.postwerk.model.enums.NodeResultStatus;
 import com.postwerk.model.enums.NodeType;
 import com.postwerk.util.SafeStrings;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -80,6 +82,7 @@ public class TriggerNodeProcessor implements NodeProcessor {
         emailVars.put("email.subject", SafeStrings.nullToEmpty(email.getSubject()));
         emailVars.put("email.body", SafeStrings.nullToEmpty(email.getBodyText()));
         emailVars.put("email.hasAttachments", email.isHasAttachments());
+        emailVars.put("email.attachments", parseAttachments(email.getAttachments()));
         emailVars.put("email.isRead", email.isRead());
         emailVars.put("email.folder", SafeStrings.nullToEmpty(email.getFolder()));
         emailVars.put("email.receivedAt", email.getReceivedAt() != null ? email.getReceivedAt().toString() : "");
@@ -94,6 +97,23 @@ public class TriggerNodeProcessor implements NodeProcessor {
                 NodeResultStatus.PASSED, detail,
                 Set.of(handle),
                 Map.of(handle, enrichedContext));
+    }
+
+    /**
+     * Parses the email's attachment metadata JSON into a real list so it can be referenced as the
+     * {@code email.attachments} variable (e.g. as a FOREACH source). Each element is a map with
+     * {@code name}/{@code size}/{@code contentType}. Returns an empty list when absent or invalid.
+     */
+    private List<Map<String, Object>> parseAttachments(String json) {
+        if (json == null || json.isBlank() || json.equals("[]")) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse email attachments JSON: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     private NodeProcessorResult processCron() {

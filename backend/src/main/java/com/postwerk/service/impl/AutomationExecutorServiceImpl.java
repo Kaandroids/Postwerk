@@ -877,7 +877,17 @@ public class AutomationExecutorServiceImpl implements AutomationExecutorService 
 
         List<EdgeInfo> outEdges = adjacency.getOrDefault(node.getId(), List.of());
 
-        if (result.followAllEdges()) {
+        if (!result.fanOutContexts().isEmpty()) {
+            // List fan-out (FOREACH): traverse the body handle once per iteration context, in order.
+            for (EdgeInfo edge : outEdges) {
+                if (!result.fanOutHandle().equals(edge.sourceHandle)) continue;
+                AutomationNode targetNode = findNodeById(allNodes, edge.targetId);
+                if (targetNode == null) continue;
+                for (ExecutionContext iterationCtx : result.fanOutContexts()) {
+                    processNode(targetNode, iterationCtx, allNodes, adjacency, userId, trace);
+                }
+            }
+        } else if (result.followAllEdges()) {
             for (EdgeInfo edge : outEdges) {
                 AutomationNode targetNode = findNodeById(allNodes, edge.targetId);
                 if (targetNode != null) {
