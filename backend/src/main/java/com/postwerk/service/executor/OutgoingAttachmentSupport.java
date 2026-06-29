@@ -32,6 +32,11 @@ public final class OutgoingAttachmentSupport {
         return AttachmentSelection.all(MAX_COUNT, MAX_PER_FILE_BYTES, MAX_TOTAL_BYTES);
     }
 
+    /** Selects a single attachment by index (the FOREACH per-item forward), any type, within the size budget. */
+    public static AttachmentSelection selectionForIndex(int index) {
+        return new AttachmentSelection(java.util.Set.of(index), null, 1, MAX_PER_FILE_BYTES, MAX_TOTAL_BYTES);
+    }
+
     /** Maps the successfully fetched attachments to {@link OutgoingAttachment} MIME parts. */
     public static List<OutgoingAttachment> toOutgoing(AttachmentFetchResult result) {
         return result.fetched().stream()

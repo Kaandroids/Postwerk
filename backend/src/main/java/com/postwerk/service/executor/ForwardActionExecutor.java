@@ -72,7 +72,7 @@ public class ForwardActionExecutor implements ActionExecutor {
                 .append("Subject: ").append(email.getSubject() != null ? email.getSubject() : "").append("\n\n")
                 .append(email.getBodyText() != null ? email.getBodyText() : "");
 
-        List<OutgoingAttachment> attachments = resolveAttachments(config, email, account);
+        List<OutgoingAttachment> attachments = resolveAttachments(config, email, account, context);
         mailSendingSupport.send(account,
                 OutgoingMail.plainText(toAddress, subject, body.toString()).withAttachments(attachments));
 
@@ -80,23 +80,51 @@ public class ForwardActionExecutor implements ActionExecutor {
     }
 
     /**
-     * Re-attaches the original email's files when the node opts in via {@code includeAttachments}.
-     * Bytes are fetched on demand from IMAP (see {@link AttachmentContentResolver}); oversized or
-     * excess attachments are dropped within the SMTP-size budget. Returns an empty list when the
-     * option is off or the source email has no attachments.
+     * Attaches files to the forward based on the configured {@code attachmentSource}:
+     * {@code email.attachments} re-attaches all the original files; the alias of a FOREACH iterating
+     * the attachments (e.g. {@code item}) attaches just the current one. Bytes are fetched on demand
+     * from IMAP within the SMTP-size budget. The legacy boolean {@code includeAttachments} is honoured
+     * as "all" for already-saved nodes. Returns an empty list when no source is configured.
      */
-    private List<OutgoingAttachment> resolveAttachments(JsonNode config, Email email, EmailAccount account) {
-        if (!NodeConfigReader.bool(config, "includeAttachments", false)
-                || email == null || !email.isHasAttachments()) {
+    private List<OutgoingAttachment> resolveAttachments(JsonNode config, Email email, EmailAccount account,
+                                                        ExecutionContext context) {
+        if (email == null) {
             return List.of();
         }
-        AttachmentContentResolver.AttachmentFetchResult result =
-                attachmentResolver.fetch(account, email, OutgoingAttachmentSupport.selection());
+        AttachmentContentResolver.AttachmentSelection selection = attachmentSelection(config, email, context);
+        if (selection == null) {
+            return List.of();
+        }
+        AttachmentContentResolver.AttachmentFetchResult result = attachmentResolver.fetch(account, email, selection);
         if (!result.skipped().isEmpty()) {
             log.info("FORWARD: attached {} file(s), skipped {}",
                     result.fetched().size(), result.skipped().size());
         }
         return OutgoingAttachmentSupport.toOutgoing(result);
+    }
+
+    /**
+     * Resolves the configured attachment source to a selection, or {@code null} when nothing should be
+     * attached: {@code email.attachments} (or the legacy {@code includeAttachments=true}) → all original
+     * files; a FOREACH item alias carrying {@code <alias>.__attachmentIndex} → that single attachment.
+     */
+    private AttachmentContentResolver.AttachmentSelection attachmentSelection(JsonNode config, Email email,
+                                                                              ExecutionContext context) {
+        String source = NodeConfigReader.text(config, "attachmentSource", null);
+        if ((source == null || source.isBlank()) && NodeConfigReader.bool(config, "includeAttachments", false)) {
+            source = AiAttachmentSupport.SOURCE_KEY; // legacy "all original attachments" toggle
+        }
+        if (source == null || source.isBlank()) {
+            return null;
+        }
+        if (AiAttachmentSupport.SOURCE_KEY.equals(source)) {
+            return email.isHasAttachments() ? OutgoingAttachmentSupport.selection() : null;
+        }
+        if (context != null
+                && context.getVariable(source + AiAttachmentSupport.ITEM_INDEX_SUFFIX) instanceof Number index) {
+            return OutgoingAttachmentSupport.selectionForIndex(index.intValue());
+        }
+        return null;
     }
 
     private String resolveNoteSubject(JsonNode config, ExecutionContext context) {

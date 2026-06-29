@@ -707,13 +707,15 @@
                 </div>
               }
               <div class="ae-panel-field">
-                <label class="ae-checkbox-label">
-                  <input type="checkbox" data-testid="forward-include-attachments"
-                    [checked]="getIncludeAttachments(selectedNode()!)"
-                    (change)="toggleIncludeAttachments(selectedNode()!.id)" />
-                  {{ i18n.t('auto_forward_include_attachments') }}
-                </label>
-                <span class="ae-panel-hint">{{ i18n.t('auto_forward_include_attachments_hint') }}</span>
+                <label class="ae-panel-label">{{ i18n.t('auto_forward_attachments') }}</label>
+                <select class="ae-panel-input" data-testid="forward-attachment-source"
+                  (change)="setForwardAttachmentSource(selectedNode()!.id, v($event))">
+                  <option value="" [selected]="!getForwardAttachmentSource(selectedNode()!)">{{ i18n.t('auto_forward_attachments_none') }}</option>
+                  @for (opt of getAttachmentSourceOptions(selectedNode()!.id); track opt.key) {
+                    <option [value]="opt.key" [selected]="opt.key === getForwardAttachmentSource(selectedNode()!)">{{ opt.label }}</option>
+                  }
+                </select>
+                <span class="ae-panel-hint">{{ i18n.t('auto_forward_attachments_hint') }}</span>
               </div>
             }
 

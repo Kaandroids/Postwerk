@@ -237,6 +237,10 @@ Config (manual):   {"actionMode": "FORWARD", "toAddress": "target@example.com", 
   - templateId: used when contentSource=VORLAGE — template subject/body form the note.
   - subject / body: used when contentSource=MANUAL. Both support {{variableKey}} placeholders.
   - If neither is set, a plain "Fwd:" with the original content is sent.
+  - attachmentSource (optional): which files to attach to the forward. "email.attachments" attaches
+    ALL of the email's original files (e.g. forward an invoice email with its PDFs to DATEV). Inside a
+    FOREACH over email.attachments, set it to that node's item alias (default "item") to attach only
+    the CURRENT attachment — so each PDF is forwarded as its own email. Omit for no attachments.
 
 MOVE_FOLDER mode — Moves the email to a specific IMAP folder:
 Config: {"actionMode": "MOVE_FOLDER", "folder": "Archive/Invoices"}
