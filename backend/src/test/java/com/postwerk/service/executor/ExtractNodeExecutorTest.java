@@ -10,6 +10,8 @@ import com.postwerk.service.GeminiService;
 import com.postwerk.service.executor.AttachmentContentResolver.AttachmentFetchResult;
 import com.postwerk.service.executor.AttachmentContentResolver.AttachmentSelection;
 import com.postwerk.service.executor.AttachmentContentResolver.FetchedAttachment;
+import com.postwerk.service.executor.AttachmentContentResolver.SkipReason;
+import com.postwerk.service.executor.AttachmentContentResolver.SkippedAttachment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,7 +83,8 @@ class ExtractNodeExecutorTest {
         when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
                 .thenReturn(new AttachmentFetchResult(
                         List.of(new FetchedAttachment(0, "invoice.pdf", "application/pdf", new byte[16])),
-                        List.of()));
+                        List.of(new SkippedAttachment(1, "sheet.xlsx",
+                                "application/vnd.ms-excel", SkipReason.UNSUPPORTED_TYPE))));
 
         executor.execute(email, cfg(true), userId, ctx);
 

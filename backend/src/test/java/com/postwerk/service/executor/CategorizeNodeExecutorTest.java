@@ -13,6 +13,8 @@ import com.postwerk.service.GeminiService;
 import com.postwerk.service.executor.AttachmentContentResolver.AttachmentFetchResult;
 import com.postwerk.service.executor.AttachmentContentResolver.AttachmentSelection;
 import com.postwerk.service.executor.AttachmentContentResolver.FetchedAttachment;
+import com.postwerk.service.executor.AttachmentContentResolver.SkipReason;
+import com.postwerk.service.executor.AttachmentContentResolver.SkippedAttachment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -87,7 +89,8 @@ class CategorizeNodeExecutorTest {
         when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
                 .thenReturn(new AttachmentFetchResult(
                         List.of(new FetchedAttachment(0, "scan.png", "image/png", new byte[8])),
-                        List.of()));
+                        List.of(new SkippedAttachment(1, "big.pdf",
+                                "application/pdf", SkipReason.TOO_LARGE))));
 
         executor.executeDetailed(email, cfg(true), userId, false, ctx);
 

@@ -1,9 +1,11 @@
 package com.postwerk.service.impl;
 
+import com.postwerk.dto.AiAttachment;
 import com.postwerk.service.AiUsageService;
 import com.postwerk.service.PromptService;
 import com.postwerk.service.QuotaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.genai.types.Part;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -79,5 +82,19 @@ class GeminiServiceImplTest {
                 .hasMessageContaining("API key");
 
         verifyNoInteractions(aiUsageService, promptService);
+    }
+
+    @Test
+    void buildParts_textOnly_whenNoAttachments() {
+        List<Part> parts = GeminiServiceImpl.buildParts("prompt text", List.of());
+        assertThat(parts).hasSize(1); // just the text prompt
+    }
+
+    @Test
+    void buildParts_addsOneInlinePartPerAttachment() {
+        List<Part> parts = GeminiServiceImpl.buildParts("prompt text", List.of(
+                new AiAttachment("invoice.pdf", "application/pdf", new byte[]{1, 2, 3}),
+                new AiAttachment("scan.png", "image/png", new byte[]{4, 5})));
+        assertThat(parts).hasSize(3); // text + 2 attachments
     }
 }

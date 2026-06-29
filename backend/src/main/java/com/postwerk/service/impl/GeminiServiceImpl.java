@@ -236,13 +236,22 @@ public class GeminiServiceImpl implements GeminiService {
         if (attachments == null || attachments.isEmpty()) {
             return client.models.generateContent(model, prompt, config);
         }
+        Content content = Content.builder().role("user").parts(buildParts(prompt, attachments)).build();
+        return client.models.generateContent(model, List.of(content), config);
+    }
+
+    /**
+     * Builds the multimodal request parts: the text prompt first, then one inline part
+     * ({@link Part#fromBytes}) per attachment. Package-private and pure so the part assembly can be
+     * unit-tested without the live Gemini client.
+     */
+    static List<Part> buildParts(String prompt, List<AiAttachment> attachments) {
         List<Part> parts = new ArrayList<>();
         parts.add(Part.fromText(prompt));
         for (AiAttachment a : attachments) {
             parts.add(Part.fromBytes(a.data(), a.mimeType()));
         }
-        Content content = Content.builder().role("user").parts(parts).build();
-        return client.models.generateContent(model, List.of(content), config);
+        return parts;
     }
 
     /** Renders candidates as an {@code ID/Name/Description (+examples)} block for the classify/match prompts. */
