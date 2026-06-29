@@ -198,6 +198,14 @@
 
   p { margin: 0 0 8px; &:last-child { margin: 0; } }
   code { background: var(--bg); padding: 2px 5px; border-radius: 4px; font-size: 13px; }
+  /* Autolinked emails/URLs inherit the bubble's text colour so they stay
+     legible on both the dark user bubble and the light AI bubble. */
+  a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 0.6px;
+  }
 }
 .wiz-msg[data-from="ai"] .wiz-bubble {
   background: color-mix(in srgb, var(--bg) 62%, transparent);
