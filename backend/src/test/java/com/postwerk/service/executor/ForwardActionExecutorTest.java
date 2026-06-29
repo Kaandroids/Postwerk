@@ -4,6 +4,9 @@ import com.postwerk.TestFixtures;
 import com.postwerk.model.Email;
 import com.postwerk.model.EmailAccount;
 import com.postwerk.repository.TemplateRepository;
+import com.postwerk.service.executor.AttachmentContentResolver.AttachmentFetchResult;
+import com.postwerk.service.executor.AttachmentContentResolver.AttachmentSelection;
+import com.postwerk.service.executor.AttachmentContentResolver.FetchedAttachment;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +39,7 @@ class ForwardActionExecutorTest {
     @Mock private MailSendingSupport mailSendingSupport;
     @Mock private TemplateRepository templateRepository;
     @Mock private VariableResolver variableResolver;
+    @Mock private AttachmentContentResolver attachmentResolver;
 
     private ForwardActionExecutor executor;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -44,7 +49,8 @@ class ForwardActionExecutorTest {
 
     @BeforeEach
     void setUp() {
-        executor = new ForwardActionExecutor(mailSendingSupport, templateRepository, variableResolver);
+        executor = new ForwardActionExecutor(mailSendingSupport, templateRepository, variableResolver,
+                attachmentResolver);
         account = TestFixtures.createEmailAccount(UUID.randomUUID());
         email = TestFixtures.createEmail(UUID.randomUUID());
         ctx = new ExecutionContext(email, account);
@@ -80,5 +86,37 @@ class ForwardActionExecutorTest {
         assertThat(captor.getValue().to()).isEqualTo("team@x.com");
         assertThat(captor.getValue().subject()).isEqualTo("Note subj");
         assertThat(captor.getValue().html()).isFalse(); // forward is plain text
+        assertThat(captor.getValue().attachments()).isEmpty(); // no opt-in -> no attachments
+        verify(attachmentResolver, never()).fetch(any(), any(), any());
+    }
+
+    @Test
+    void includeAttachments_reAttachesOriginalFiles() throws Exception {
+        email.setHasAttachments(true);
+        when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
+                .thenReturn(new AttachmentFetchResult(
+                        List.of(new FetchedAttachment(0, "invoice.pdf", "application/pdf", new byte[12])),
+                        List.of()));
+        var config = cfg("{\"toAddress\":\"datev@x.com\",\"includeAttachments\":true}");
+
+        executor.execute(email, account, config, ctx);
+
+        ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
+        verify(mailSendingSupport).send(eq(account), captor.capture());
+        assertThat(captor.getValue().attachments()).hasSize(1);
+        assertThat(captor.getValue().attachments().get(0).filename()).isEqualTo("invoice.pdf");
+    }
+
+    @Test
+    void includeAttachments_butNoAttachmentsOnEmail_doesNotFetch() throws Exception {
+        email.setHasAttachments(false);
+        var config = cfg("{\"toAddress\":\"datev@x.com\",\"includeAttachments\":true}");
+
+        executor.execute(email, account, config, ctx);
+
+        verify(attachmentResolver, never()).fetch(any(), any(), any());
+        ArgumentCaptor<OutgoingMail> captor = ArgumentCaptor.forClass(OutgoingMail.class);
+        verify(mailSendingSupport).send(eq(account), captor.capture());
+        assertThat(captor.getValue().attachments()).isEmpty();
     }
 }

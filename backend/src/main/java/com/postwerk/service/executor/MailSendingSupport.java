@@ -9,7 +9,9 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import org.springframework.stereotype.Component;
 
 /**
@@ -48,6 +50,21 @@ public class MailSendingSupport {
      */
     public MimeMessage send(EmailAccount account, OutgoingMail mail) throws MessagingException {
         Session session = mailConnectionFactory.createSmtpSession(account);
+        MimeMessage message = buildMessage(session, account, mail);
+
+        Transport.send(message);
+        emailSyncService.appendToSentFolder(account, message);
+        return message;
+    }
+
+    /**
+     * Builds the {@link MimeMessage} for {@code mail} without sending it. When the mail has no
+     * attachments the body is set directly (single-part, unchanged behaviour); otherwise the body
+     * becomes the first part of a {@link MimeMultipart} followed by one base64 part per attachment.
+     * Package-private and side-effect free so the message assembly can be unit-tested.
+     */
+    static MimeMessage buildMessage(Session session, EmailAccount account, OutgoingMail mail)
+            throws MessagingException {
         MimeMessage message = new MimeMessage(session);
         message.setFrom(new InternetAddress(account.getEmail()));
         message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(mail.to()));
@@ -60,14 +77,30 @@ public class MailSendingSupport {
         }
 
         message.setSubject(SafeStrings.stripCrlf(mail.subject()));
-        if (mail.html()) {
-            message.setContent(mail.body(), "text/html; charset=UTF-8");
+
+        if (mail.attachments().isEmpty()) {
+            setBody(message, mail);
         } else {
-            message.setText(mail.body(), "UTF-8");
+            MimeMultipart multipart = new MimeMultipart();
+            MimeBodyPart bodyPart = new MimeBodyPart();
+            setBody(bodyPart, mail);
+            multipart.addBodyPart(bodyPart);
+
+            for (OutgoingAttachment att : mail.attachments()) {
+                MimeBodyPart attPart = new MimeBodyPart();
+                attPart.setFileName(att.filename());
+                attPart.setContent(att.data(), att.contentType());
+                attPart.setHeader("Content-Transfer-Encoding", "base64");
+                multipart.addBodyPart(attPart);
+            }
+            message.setContent(multipart);
         }
 
-        Transport.send(message);
-        emailSyncService.appendToSentFolder(account, message);
         return message;
+    }
+
+    /** Sets the body on a {@link MimeMessage} or {@link MimeBodyPart}, honouring the HTML/plain flag (UTF-8). */
+    private static void setBody(jakarta.mail.Part part, OutgoingMail mail) throws MessagingException {
+        part.setContent(mail.body(), (mail.html() ? "text/html" : "text/plain") + "; charset=UTF-8");
     }
 }

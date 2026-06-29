@@ -701,6 +701,15 @@
                   </div>
                 </div>
               }
+              <div class="ae-panel-field">
+                <label class="ae-checkbox-label">
+                  <input type="checkbox" data-testid="forward-include-attachments"
+                    [checked]="getIncludeAttachments(selectedNode()!)"
+                    (change)="toggleIncludeAttachments(selectedNode()!.id)" />
+                  {{ i18n.t('auto_forward_include_attachments') }}
+                </label>
+                <span class="ae-panel-hint">{{ i18n.t('auto_forward_include_attachments_hint') }}</span>
+              </div>
             }
 
             @if (getEmailActionMode(selectedNode()!) === 'MOVE_FOLDER') {

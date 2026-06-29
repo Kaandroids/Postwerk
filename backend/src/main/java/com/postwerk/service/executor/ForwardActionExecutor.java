@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -30,12 +31,15 @@ public class ForwardActionExecutor implements ActionExecutor {
     private final MailSendingSupport mailSendingSupport;
     private final TemplateRepository templateRepository;
     private final VariableResolver variableResolver;
+    private final AttachmentContentResolver attachmentResolver;
 
     public ForwardActionExecutor(MailSendingSupport mailSendingSupport,
-                                 TemplateRepository templateRepository, VariableResolver variableResolver) {
+                                 TemplateRepository templateRepository, VariableResolver variableResolver,
+                                 AttachmentContentResolver attachmentResolver) {
         this.mailSendingSupport = mailSendingSupport;
         this.templateRepository = templateRepository;
         this.variableResolver = variableResolver;
+        this.attachmentResolver = attachmentResolver;
     }
 
     @Override
@@ -68,9 +72,31 @@ public class ForwardActionExecutor implements ActionExecutor {
                 .append("Subject: ").append(email.getSubject() != null ? email.getSubject() : "").append("\n\n")
                 .append(email.getBodyText() != null ? email.getBodyText() : "");
 
-        mailSendingSupport.send(account, OutgoingMail.plainText(toAddress, subject, body.toString()));
+        List<OutgoingAttachment> attachments = resolveAttachments(config, email, account);
+        mailSendingSupport.send(account,
+                OutgoingMail.plainText(toAddress, subject, body.toString()).withAttachments(attachments));
 
-        log.info("Forwarded email {} to {}", email.getId(), toAddress);
+        log.info("Forwarded email {} to {} with {} attachment(s)", email.getId(), toAddress, attachments.size());
+    }
+
+    /**
+     * Re-attaches the original email's files when the node opts in via {@code includeAttachments}.
+     * Bytes are fetched on demand from IMAP (see {@link AttachmentContentResolver}); oversized or
+     * excess attachments are dropped within the SMTP-size budget. Returns an empty list when the
+     * option is off or the source email has no attachments.
+     */
+    private List<OutgoingAttachment> resolveAttachments(JsonNode config, Email email, EmailAccount account) {
+        if (!NodeConfigReader.bool(config, "includeAttachments", false)
+                || email == null || !email.isHasAttachments()) {
+            return List.of();
+        }
+        AttachmentContentResolver.AttachmentFetchResult result =
+                attachmentResolver.fetch(account, email, OutgoingAttachmentSupport.selection());
+        if (!result.skipped().isEmpty()) {
+            log.info("FORWARD: attached {} file(s), skipped {}",
+                    result.fetched().size(), result.skipped().size());
+        }
+        return OutgoingAttachmentSupport.toOutgoing(result);
     }
 
     private String resolveNoteSubject(JsonNode config, ExecutionContext context) {
