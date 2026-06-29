@@ -79,6 +79,7 @@ export class VariableGraphService {
           { key: 'email.body', label: this.i18n.t('auto_var_email_body'), description: this.i18n.t('auto_var_email_body_desc') },
           { key: 'email.receivedAt', label: this.i18n.t('auto_var_email_receivedAt'), description: this.i18n.t('auto_var_email_receivedAt_desc') },
           { key: 'email.hasAttachments', label: this.i18n.t('auto_var_email_hasAttachments'), description: this.i18n.t('auto_var_email_hasAttachments_desc') },
+          { key: 'email.attachments', label: this.i18n.t('auto_var_email_attachments'), description: this.i18n.t('auto_var_email_attachments_desc') },
           { key: 'email.folder', label: this.i18n.t('auto_var_email_folder'), description: this.i18n.t('auto_var_email_folder_desc') },
         ],
       });

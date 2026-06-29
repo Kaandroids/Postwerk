@@ -250,13 +250,13 @@ public class CategorizeNodeExecutor {
     }
 
     /**
-     * Fetches the email's attachments for inline AI input when the node opts in via
-     * {@code includeAttachments}. Only Gemini-readable types within the size/count budget are
-     * returned (see {@link AiAttachmentSupport}); the embedding/vector step still uses text only.
-     * Returns an empty list when the option is off or no email/account is available.
+     * Feeds the email's attachments to the AI when {@code email.attachments} is selected as a source
+     * variable. Only Gemini-readable types within the size/count budget are returned (see
+     * {@link AiAttachmentSupport}); the embedding/vector step still uses text only. Returns an empty
+     * list when the attachments source is not selected or no email/account is available.
      */
     private List<AiAttachment> resolveAttachments(JsonNode config, Email email, ExecutionContext context) {
-        if (!NodeConfigReader.bool(config, "includeAttachments", false)
+        if (!readSourceVariables(config).contains(AiAttachmentSupport.SOURCE_KEY)
                 || email == null || context == null || context.getAccount() == null) {
             return List.of();
         }
@@ -276,6 +276,9 @@ public class CategorizeNodeExecutor {
         }
         StringBuilder sb = new StringBuilder();
         for (String varKey : vars) {
+            if (AiAttachmentSupport.SOURCE_KEY.equals(varKey)) {
+                continue; // attachments are fed as binary parts, not text
+            }
             if (varKey.startsWith("email.")) {
                 // email.* sources: prefer a resolved context variable (e.g. email.subject),
                 // otherwise fall back to the full email text representation.

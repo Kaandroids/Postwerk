@@ -13,9 +13,9 @@ import { VariableGraphService } from '../variable-graph.service';
 interface TestNode { id: string; nodeType: string; label: string; position: { x: number; y: number }; config: string; }
 
 /**
- * Focuses on the EXTRACT/CATEGORIZE "Send attachments to AI" opt-in. The component is created without
- * change detection (no template render / no effects), so only the config read/write logic is exercised
- * against the `nodes` signal; all injected services are stubbed.
+ * Focuses on the FORWARD "include the original email's attachments" opt-in (get/toggleIncludeAttachments).
+ * The component is created without change detection (no template render / no effects), so only the config
+ * read/write logic is exercised against the `nodes` signal; all injected services are stubbed.
  */
 describe('NodeConfigPanelComponent — include-attachments toggle', () => {
   function setup(initialConfig = '{}') {
@@ -38,7 +38,7 @@ describe('NodeConfigPanelComponent — include-attachments toggle', () => {
       toggleIncludeAttachments: (id: string) => void;
     };
     const nodes: WritableSignal<TestNode[]> = signal([
-      { id: 'n1', nodeType: 'EXTRACT', label: 'Extract', position: { x: 0, y: 0 }, config: initialConfig },
+      { id: 'n1', nodeType: 'EMAIL_ACTION', label: 'Forward', position: { x: 0, y: 0 }, config: initialConfig },
     ]);
     comp.nodes = nodes;
     return { comp, nodes };

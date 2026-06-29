@@ -415,9 +415,8 @@ export interface TriggerNodeConfig {
 /** Configuration for an EXTRACT node defining which parameter sets to extract from emails. */
 export interface ExtractNodeConfig {
   extractions: ExtractionEntry[];
+  /** Source variables fed to the AI. Selecting `email.attachments` feeds the email's attachments. */
   sourceVariables?: string[];
-  /** When true, the email's PDF/image/text attachments are sent to the AI alongside the text. */
-  includeAttachments?: boolean;
 }
 
 /** A single extraction target linking a parameter set to a display label. */
@@ -430,9 +429,8 @@ export interface ExtractionEntry {
 export interface CategorizeNodeConfig {
   categoryIds: string[];
   threshold: number;
+  /** Source variables fed to the AI. Selecting `email.attachments` feeds the email's attachments. */
   sourceVariables?: string[];
-  /** When true, the email's PDF/image/text attachments are sent to the AI alongside the text. */
-  includeAttachments?: boolean;
 }
 
 /** Predefined cron presets for the TRIGGER node's CRON mode. */

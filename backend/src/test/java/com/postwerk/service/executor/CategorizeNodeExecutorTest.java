@@ -78,21 +78,24 @@ class CategorizeNodeExecutorTest {
                 .thenReturn(new ClassificationResult(categoryId.toString(), 90, "matches"));
     }
 
-    private JsonNode cfg(boolean includeAttachments) throws Exception {
-        return mapper.readTree("{\"includeAttachments\":" + includeAttachments
-                + ",\"categoryIds\":[\"" + categoryId + "\"],\"threshold\":70}");
+    /** Config with the given source variables, one category and a threshold. */
+    private JsonNode cfg(String... sourceVars) throws Exception {
+        String arr = java.util.Arrays.stream(sourceVars)
+                .map(s -> "\"" + s + "\"").collect(java.util.stream.Collectors.joining(","));
+        return mapper.readTree("{\"sourceVariables\":[" + arr
+                + "],\"categoryIds\":[\"" + categoryId + "\"],\"threshold\":70}");
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void includeAttachments_fetchesAndForwardsThemToClassify() throws Exception {
+    void attachmentsSourceVariable_fetchesAndForwardsThemToClassify() throws Exception {
         when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
                 .thenReturn(new AttachmentFetchResult(
                         List.of(new FetchedAttachment(0, "scan.png", "image/png", new byte[8])),
                         List.of(new SkippedAttachment(1, "big.pdf",
                                 "application/pdf", SkipReason.TOO_LARGE))));
 
-        executor.executeDetailed(email, cfg(true), userId, false, ctx);
+        executor.executeDetailed(email, cfg("email.body", "email.attachments"), userId, false, ctx);
 
         ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);
         verify(geminiService).classify(eq(orgId), eq(userId), anyString(), anyList(), captor.capture());
@@ -102,8 +105,8 @@ class CategorizeNodeExecutorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void withoutOptIn_noFetch_andNoAttachmentsSent() throws Exception {
-        executor.executeDetailed(email, cfg(false), userId, false, ctx);
+    void withoutAttachmentsSource_noFetch_andNoAttachmentsSent() throws Exception {
+        executor.executeDetailed(email, cfg("email.body"), userId, false, ctx);
 
         verify(attachmentResolver, never()).fetch(any(), any(), any());
         ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);

@@ -72,21 +72,24 @@ class ExtractNodeExecutorTest {
                 .thenReturn(Map.of("field", "value"));
     }
 
-    private JsonNode cfg(boolean includeAttachments) throws Exception {
-        return mapper.readTree("{\"includeAttachments\":" + includeAttachments
-                + ",\"extractions\":[{\"parameterSetId\":\"" + paramSetId + "\"}]}");
+    /** Config with the given source variables and one extraction. */
+    private JsonNode cfg(String... sourceVars) throws Exception {
+        String arr = java.util.Arrays.stream(sourceVars)
+                .map(s -> "\"" + s + "\"").collect(java.util.stream.Collectors.joining(","));
+        return mapper.readTree("{\"sourceVariables\":[" + arr
+                + "],\"extractions\":[{\"parameterSetId\":\"" + paramSetId + "\"}]}");
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void includeAttachments_fetchesAndForwardsThemToGemini() throws Exception {
+    void attachmentsSourceVariable_fetchesAndForwardsThemToGemini() throws Exception {
         when(attachmentResolver.fetch(eq(account), eq(email), any(AttachmentSelection.class)))
                 .thenReturn(new AttachmentFetchResult(
                         List.of(new FetchedAttachment(0, "invoice.pdf", "application/pdf", new byte[16])),
                         List.of(new SkippedAttachment(1, "sheet.xlsx",
                                 "application/vnd.ms-excel", SkipReason.UNSUPPORTED_TYPE))));
 
-        executor.execute(email, cfg(true), userId, ctx);
+        executor.execute(email, cfg("email.attachments"), userId, ctx);
 
         ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);
         verify(geminiService).extract(eq(orgId), eq(userId), anyString(), anyList(), captor.capture());
@@ -97,8 +100,8 @@ class ExtractNodeExecutorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void withoutOptIn_noFetch_andNoAttachmentsSent() throws Exception {
-        executor.execute(email, cfg(false), userId, ctx);
+    void withoutAttachmentsSource_noFetch_andNoAttachmentsSent() throws Exception {
+        executor.execute(email, cfg("email.body"), userId, ctx);
 
         verify(attachmentResolver, never()).fetch(any(), any(), any());
         ArgumentCaptor<List<AiAttachment>> captor = ArgumentCaptor.forClass(List.class);
