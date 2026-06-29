@@ -29,6 +29,13 @@ public final class AiAttachmentSupport {
      */
     public static final String SOURCE_KEY = "email.attachments";
 
+    /**
+     * Suffix of the internal variable a FOREACH-over-{@code email.attachments} binds on each element
+     * ({@code <alias>.__attachmentIndex}). It lets a downstream AI node fed the loop alias as a source
+     * variable fetch just that one attachment's bytes by index.
+     */
+    public static final String ITEM_INDEX_SUFFIX = ".__attachmentIndex";
+
     /** Content types Gemini can ingest inline. A trailing {@code /} matches the whole family (e.g. {@code image/}). */
     public static final Set<String> ALLOWED_TYPES = Set.of("application/pdf", "image/", "text/");
 
@@ -41,9 +48,14 @@ public final class AiAttachmentSupport {
     /** Cumulative size cap (bytes) across all attachments in one AI call, under Gemini's inline budget. */
     public static final long MAX_TOTAL_BYTES = 18L * 1024 * 1024;
 
-    /** The attachment selection used when feeding an email's attachments to a Gemini AI node. */
+    /** The attachment selection used when feeding all of an email's attachments to a Gemini AI node. */
     public static AttachmentSelection selection() {
         return new AttachmentSelection(null, ALLOWED_TYPES, MAX_COUNT, MAX_PER_FILE_BYTES, MAX_TOTAL_BYTES);
+    }
+
+    /** Selection targeting a single attachment by index (the FOREACH per-item case), same type/size guards. */
+    public static AttachmentSelection selectionForIndex(int index) {
+        return new AttachmentSelection(Set.of(index), ALLOWED_TYPES, 1, MAX_PER_FILE_BYTES, MAX_TOTAL_BYTES);
     }
 
     /** Maps the successfully fetched attachments to inline {@link AiAttachment} parts. */

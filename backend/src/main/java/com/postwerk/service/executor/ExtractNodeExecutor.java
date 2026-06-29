@@ -94,23 +94,47 @@ public class ExtractNodeExecutor {
     }
 
     /**
-     * Feeds the email's attachments to the AI when {@code email.attachments} is selected as a source
-     * variable. Only Gemini-readable types within the size/count budget are returned (see
-     * {@link AiAttachmentSupport}); everything else is dropped. Returns an empty list when the
-     * attachments source is not selected or no email/account is available (e.g. API/webhook runs).
+     * Feeds the email's attachments to the AI based on the selected source variables: {@code
+     * email.attachments} feeds all of them; the alias of a FOREACH iterating the attachments (e.g.
+     * {@code item}) feeds just the current one. Only Gemini-readable types within the size/count
+     * budget are returned (see {@link AiAttachmentSupport}). Empty when no attachment source is
+     * selected or no email/account is available (e.g. API/webhook runs).
      */
     private List<AiAttachment> resolveAttachments(JsonNode config, Email email, ExecutionContext context) {
-        if (!readSourceVariables(config).contains(AiAttachmentSupport.SOURCE_KEY)
-                || email == null || context == null || context.getAccount() == null) {
+        if (email == null || context == null || context.getAccount() == null) {
             return List.of();
         }
-        AttachmentContentResolver.AttachmentFetchResult result =
-                attachmentResolver.fetch(context.getAccount(), email, AiAttachmentSupport.selection());
-        if (!result.skipped().isEmpty()) {
-            log.info("EXTRACT: sent {} attachment(s) to AI, skipped {}",
-                    result.fetched().size(), result.skipped().size());
+        List<AiAttachment> attachments = new ArrayList<>();
+        for (String sv : readSourceVariables(config)) {
+            AttachmentContentResolver.AttachmentSelection selection = attachmentSelectionFor(sv, context);
+            if (selection == null) {
+                continue;
+            }
+            AttachmentContentResolver.AttachmentFetchResult result =
+                    attachmentResolver.fetch(context.getAccount(), email, selection);
+            if (!result.skipped().isEmpty()) {
+                log.info("EXTRACT: sent {} attachment(s) to AI, skipped {}",
+                        result.fetched().size(), result.skipped().size());
+            }
+            attachments.addAll(AiAttachmentSupport.toAiAttachments(result));
         }
-        return AiAttachmentSupport.toAiAttachments(result);
+        return attachments;
+    }
+
+    /**
+     * The attachment selection for a source variable, or {@code null} if it isn't an attachment
+     * source: {@code email.attachments} → all attachments; a FOREACH item alias carrying
+     * {@code <alias>.__attachmentIndex} → that single attachment.
+     */
+    private AttachmentContentResolver.AttachmentSelection attachmentSelectionFor(String sv, ExecutionContext context) {
+        if (AiAttachmentSupport.SOURCE_KEY.equals(sv)) {
+            return AiAttachmentSupport.selection();
+        }
+        if (context != null
+                && context.getVariable(sv + AiAttachmentSupport.ITEM_INDEX_SUFFIX) instanceof Number index) {
+            return AiAttachmentSupport.selectionForIndex(index.intValue());
+        }
+        return null;
     }
 
     private String resolveSourceVariables(JsonNode config, Email email, ExecutionContext context) {
@@ -120,8 +144,8 @@ public class ExtractNodeExecutor {
         }
         StringBuilder sb = new StringBuilder();
         for (String varKey : vars) {
-            if (AiAttachmentSupport.SOURCE_KEY.equals(varKey)) {
-                continue; // attachments are fed as binary parts, not text
+            if (attachmentSelectionFor(varKey, context) != null) {
+                continue; // attachments (all or the current FOREACH item) are fed as binary parts, not text
             }
             if ("email.body".equals(varKey) || context == null) {
                 sb.append(email != null ? EmailTextBuilder.build(email) : "");
