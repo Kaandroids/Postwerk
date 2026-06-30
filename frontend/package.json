@@ -8,6 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test --no-watch",
+    "coverage:floor": "node scripts/check-coverage-floor.mjs",
     "e2e": "npx playwright test --project=chromium",
     "e2e:ui": "npx playwright test --ui",
     "e2e:headed": "npx playwright test --headed",
