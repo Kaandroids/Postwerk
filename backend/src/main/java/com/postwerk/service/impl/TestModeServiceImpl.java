@@ -177,7 +177,10 @@ public class TestModeServiceImpl implements TestModeService {
         if (trace.getNodeTraces() == null) return actions;
 
         for (EmailNodeTrace nt : trace.getNodeTraces()) {
-            if (!nt.getNodeType().isAction()) continue;
+            // The feed surfaces every side-effecting action PLUS the FOREACH iterator. FOREACH is
+            // control-flow (not a supervised side effect, so deliberately NOT in ACTION_TYPES), but
+            // showing "Loop over X (N×)" makes a fan-out visible in the simulation timeline.
+            if (!nt.getNodeType().isAction() && nt.getNodeType() != NodeType.FOREACH) continue;
 
             String description = buildActionDescription(nt);
             actions.add(new SimulatedAction(
@@ -198,8 +201,19 @@ public class TestModeServiceImpl implements TestModeService {
             case WEBHOOK -> "Call webhook: " + detail.getOrDefault("url", "unknown");
             case SEND_EMAIL -> "Send email to: " + detail.getOrDefault("to", "unknown");
             case INTEGRATION_CALL -> "Call integration: " + detail.getOrDefault("integration", "unknown");
+            case FOREACH -> buildForEachDescription(detail);
             default -> nt.getNodeType().name();
         };
+    }
+
+    private String buildForEachDescription(Map<String, Object> detail) {
+        Object source = detail.getOrDefault("source", "list");
+        Object count = detail.getOrDefault("count", 0);
+        String description = "Loop over " + source + " (" + count + "×)";
+        if (detail.containsKey("truncatedFrom")) {
+            description += " — truncated from " + detail.get("truncatedFrom");
+        }
+        return description;
     }
 
     private String buildEmailActionDescription(Map<String, Object> detail) {

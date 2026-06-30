@@ -146,6 +146,68 @@ class TestModeServiceImplTest {
         assertThat(response.simulatedActions().get(0).description()).contains("team@acme.com");
     }
 
+    @Test
+    void simulateEmail_surfacesForEachLoopInTheFeed() {
+        Automation automation = automation();
+        Email email = email();
+        EmailAccount account = EmailAccount.builder().id(accountId).organizationId(orgId).build();
+        EmailAutomationTrace trace = EmailAutomationTrace.builder()
+                .id(UUID.randomUUID())
+                .nodeTraces(List.of(
+                        // FOREACH is control-flow (not an ACTION_TYPE) but must still appear in the feed.
+                        EmailNodeTrace.builder().nodeType(NodeType.FOREACH).nodeLabel("Each attachment")
+                                .resultDetail("{\"count\":3,\"source\":\"email.attachments\",\"alias\":\"item\"}").build(),
+                        EmailNodeTrace.builder().nodeType(NodeType.EXTRACT).nodeLabel("Read PDF").build()))
+                .build();
+
+        when(automationRepository.findByIdAndOrganizationId(automationId, orgId)).thenReturn(Optional.of(automation));
+        when(emailRepository.findById(emailId)).thenReturn(Optional.of(email));
+        when(emailAccountRepository.findByIdAndOrganizationId(accountId, orgId)).thenReturn(Optional.of(account));
+        when(executor.runTestDryRun(automation, email, account)).thenReturn(trace);
+        when(resultRepository.save(any())).thenAnswer(inv -> {
+            AutomationTestModeResult r = inv.getArgument(0);
+            if (r.getId() == null) r.setId(UUID.randomUUID());
+            return r;
+        });
+
+        TestModeResultResponse response = service.simulateEmail(orgId, automationId, emailId);
+
+        // EXTRACT is not an action → dropped; only the FOREACH iterator surfaces.
+        assertThat(response.simulatedActions()).hasSize(1);
+        assertThat(response.simulatedActions().get(0).nodeType()).isEqualTo("FOREACH");
+        assertThat(response.simulatedActions().get(0).nodeLabel()).isEqualTo("Each attachment");
+        assertThat(response.simulatedActions().get(0).description()).isEqualTo("Loop over email.attachments (3×)");
+    }
+
+    @Test
+    void simulateEmail_notesTruncationOnAForEachLoop() {
+        Automation automation = automation();
+        Email email = email();
+        EmailAccount account = EmailAccount.builder().id(accountId).organizationId(orgId).build();
+        EmailAutomationTrace trace = EmailAutomationTrace.builder()
+                .id(UUID.randomUUID())
+                .nodeTraces(List.of(
+                        EmailNodeTrace.builder().nodeType(NodeType.FOREACH).nodeLabel("Each row")
+                                .resultDetail("{\"count\":100,\"source\":\"rows\",\"alias\":\"row\",\"truncatedFrom\":250}").build()))
+                .build();
+
+        when(automationRepository.findByIdAndOrganizationId(automationId, orgId)).thenReturn(Optional.of(automation));
+        when(emailRepository.findById(emailId)).thenReturn(Optional.of(email));
+        when(emailAccountRepository.findByIdAndOrganizationId(accountId, orgId)).thenReturn(Optional.of(account));
+        when(executor.runTestDryRun(automation, email, account)).thenReturn(trace);
+        when(resultRepository.save(any())).thenAnswer(inv -> {
+            AutomationTestModeResult r = inv.getArgument(0);
+            if (r.getId() == null) r.setId(UUID.randomUUID());
+            return r;
+        });
+
+        TestModeResultResponse response = service.simulateEmail(orgId, automationId, emailId);
+
+        assertThat(response.simulatedActions()).hasSize(1);
+        assertThat(response.simulatedActions().get(0).description())
+                .isEqualTo("Loop over rows (100×) — truncated from 250");
+    }
+
     // ── deleteResult ─────────────────────────────────────────────────────
 
     @Test
