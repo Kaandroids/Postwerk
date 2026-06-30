@@ -275,6 +275,12 @@ export class AutomationEditorComponent implements AfterViewInit {
     } else if (n.nodeType === 'NOTIFY') {
       // NOTIFY always injects notify_<id>.sent + notify_<id>.recipientCount downstream.
       info['fields'] = ['sent', 'recipientCount'];
+    } else if (n.nodeType === 'FOREACH') {
+      try {
+        const cfg = JSON.parse(n.config || '{}');
+        info['sourceVariable'] = cfg.sourceVariable || '';
+        info['itemAlias'] = cfg.itemAlias || 'item';
+      } catch { /* ignore */ }
     }
     return info as { id: string; nodeType: string; label: string };
   }));

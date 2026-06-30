@@ -44,12 +44,12 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
 
     private static final String BASE_URL = "/api/v1/automations";
 
-    // ─── Helper Methods ───────────────────────────────────────────────
+    // â”€â”€â”€ Helper Methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private Automation createAndSaveAutomation(UUID userId) {
         Automation automation = TestFixtures.createAutomation(userId);
         automation.setId(null); // let DB generate
-        // Persisted directly (bypassing the service) — stamp the user's personal org so the
+        // Persisted directly (bypassing the service) â€” stamp the user's personal org so the
         // NOT NULL organization_id constraint (#4 V68) is satisfied.
         automation.setOrganizationId(organizationRepository.findByOwnerUserIdAndPersonalTrue(userId)
                 .orElseThrow().getId());
@@ -66,7 +66,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                         "Invoice #123",
                         "Please find attached the invoice for order #123.",
                         null, null, null, null, null
-                ),
+                , null),
                 List.of(new TestAssertion(
                         UUID.randomUUID(),
                         "SUCCESS",
@@ -87,7 +87,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                         "Subject " + name,
                         "Body content for " + name,
                         null, null, null, null, null
-                ),
+                , null),
                 List.of(),
                 null
         );
@@ -121,7 +121,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
         return trace;
     }
 
-    // ─── GET /{id}/tests — List Test Cases ────────────────────────────
+    // â”€â”€â”€ GET /{id}/tests â€” List Test Cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void getTestCases_emptyList_returns200() throws Exception {
@@ -174,7 +174,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ─── POST /{id}/tests — Create Test Case ─────────────────────────
+    // â”€â”€â”€ POST /{id}/tests â€” Create Test Case â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void createTestCase_success_returns201() throws Exception {
@@ -211,7 +211,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "", // blank name
                 "Description",
-                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body", null, null, null, null, null),
+                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body", null, null, null, null, null, null),
                 List.of(),
                 null
         );
@@ -259,7 +259,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                     .andExpect(status().isCreated());
         }
 
-        // 21st should fail — limit guard throws IllegalStateException → 400 Bad Request
+        // 21st should fail â€” limit guard throws IllegalStateException â†’ 400 Bad Request
         mockMvc.perform(post(BASE_URL + "/" + automation.getId() + "/tests")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -282,7 +282,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ─── PUT /{id}/tests/{testId} — Update Test Case ─────────────────
+    // â”€â”€â”€ PUT /{id}/tests/{testId} â€” Update Test Case â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void updateTestCase_success_returns200() throws Exception {
@@ -304,7 +304,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
         AutomationTestCaseRequest updateRequest = new AutomationTestCaseRequest(
                 "Updated name",
                 "Updated description",
-                new TestEmailInput("new-sender@example.com", "new-recipient@example.com", "Updated Subject", "Updated body", null, null, null, null, null),
+                new TestEmailInput("new-sender@example.com", "new-recipient@example.com", "Updated Subject", "Updated body", null, null, null, null, null, null),
                 List.of(),
                 null
         );
@@ -353,7 +353,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
         AutomationTestCaseRequest invalidRequest = new AutomationTestCaseRequest(
                 "",
                 "Description",
-                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body", null, null, null, null, null),
+                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body", null, null, null, null, null, null),
                 List.of(),
                 null
         );
@@ -365,7 +365,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
-    // ─── DELETE /{id}/tests/{testId} — Delete Test Case ───────────────
+    // â”€â”€â”€ DELETE /{id}/tests/{testId} â€” Delete Test Case â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void deleteTestCase_success_returns204() throws Exception {
@@ -406,7 +406,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ─── POST /{id}/tests/{testId}/run — Run Single Test ──────────────
+    // â”€â”€â”€ POST /{id}/tests/{testId}/run â€” Run Single Test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runTest_success_returns200() throws Exception {
@@ -462,7 +462,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ─── POST /{id}/tests/run-all — Run All Tests ─────────────────────
+    // â”€â”€â”€ POST /{id}/tests/run-all â€” Run All Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runAllTests_success_returns200() throws Exception {
@@ -524,7 +524,7 @@ class AutomationTestControllerIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ─── Unauthenticated ──────────────────────────────────────────────
+    // â”€â”€â”€ Unauthenticated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void testEndpoints_unauthenticated_returns401() throws Exception {

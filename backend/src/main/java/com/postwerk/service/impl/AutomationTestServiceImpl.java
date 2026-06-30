@@ -291,6 +291,16 @@ public class AutomationTestServiceImpl implements AutomationTestService {
             builder.inReplyTo(input.inReplyTo());
         }
 
+        // Seed mock attachment metadata so a FOREACH over email.attachments iterates in dry-run.
+        if (input.attachments() != null && !input.attachments().isEmpty()) {
+            try {
+                builder.attachments(objectMapper.writeValueAsString(input.attachments()));
+                builder.hasAttachments(true);
+            } catch (Exception e) {
+                log.warn("Failed to serialize attachments for synthetic email: {}", e.getMessage());
+            }
+        }
+
         if (input.categoryIds() != null && !input.categoryIds().isEmpty()) {
             try {
                 String categoryJson = objectMapper.writeValueAsString(input.categoryIds());

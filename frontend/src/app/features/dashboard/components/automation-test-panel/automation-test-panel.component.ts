@@ -10,6 +10,7 @@ import {
   AutomationTestCase,
   AutomationTestResult,
   TestEmailInput,
+  TestAttachment,
   TestAssertion,
   NodeTraceResult,
   RunAllTestsResponse,
@@ -75,6 +76,7 @@ const STATUS_BY_TYPE: Record<string, string[]> = {
   INTEGRATION_CALL: ['EXECUTED', 'SIMULATED', 'ERROR', 'SKIPPED'],
   VECTOR_SEARCH: ['MATCHED', 'NOT_MATCHED', 'ERROR'],
   NOTIFY: ['SIMULATED', 'ERROR'],
+  FOREACH: ['PASSED', 'SKIPPED'],
 };
 
 /** Maps a node trace result status to its theme color variable. */
@@ -141,6 +143,8 @@ export class AutomationTestPanelComponent {
   formReceivedAt = signal('');
   formInReplyTo = signal('');
   formCategoryIds = signal<string[]>([]);
+  /** Mock attachments (name/contentType/size) seeded onto the test email — drives FOREACH over email.attachments. */
+  formAttachments = signal<TestAttachment[]>([]);
   formInputFields = signal<Record<string, string>>({});
   /** Webhook trigger payload as editable key/value rows (→ `trigger.*` variables). */
   formTriggerPayload = signal<{ key: string; value: string }[]>([]);
@@ -237,11 +241,26 @@ export class AutomationTestPanelComponent {
     this.formReceivedAt.set('');
     this.formInReplyTo.set('');
     this.formCategoryIds.set([]);
+    this.formAttachments.set([]);
     this.formInputFields.set({});
     this.formTriggerPayload.set([]);
     this.formAssertions.set([]);
     this.formAssertionParamSetIds.set([]);
     this.testMode.set('setup');
+  }
+
+  // ── Mock attachment rows (FOREACH over email.attachments) ──────
+  addAttachment(): void {
+    this.formAttachments.update(list => [...list, { name: '', contentType: 'application/pdf', size: 0 }]);
+  }
+
+  removeAttachment(index: number): void {
+    this.formAttachments.update(list => list.filter((_, i) => i !== index));
+  }
+
+  updateAttachment(index: number, field: keyof TestAttachment, value: string): void {
+    this.formAttachments.update(list => list.map((att, i) =>
+      i === index ? { ...att, [field]: field === 'size' ? (Number(value) || 0) : value } : att));
   }
 
   private loadFormFrom(tc: AutomationTestCase): void {
@@ -254,6 +273,7 @@ export class AutomationTestPanelComponent {
     this.formReceivedAt.set(tc.emailInput.receivedAt || '');
     this.formInReplyTo.set(tc.emailInput.inReplyTo || '');
     this.formCategoryIds.set(tc.emailInput.categoryIds ? [...tc.emailInput.categoryIds] : []);
+    this.formAttachments.set(tc.emailInput.attachments ? tc.emailInput.attachments.map(a => ({ ...a })) : []);
     const seeded: Record<string, string> = {};
     const inFields = tc.emailInput.inputFields || {};
     for (const f of this.inputFieldNames()) seeded[f] = String(inFields[f] ?? '');
@@ -371,6 +391,7 @@ export class AutomationTestPanelComponent {
       categoryIds: this.formCategoryIds().length > 0 ? this.formCategoryIds() : null,
       inputFields: inputFields && Object.keys(inputFields).length > 0 ? inputFields : null,
       triggerPayload: triggerPayload && Object.keys(triggerPayload).length > 0 ? triggerPayload : null,
+      attachments: this.formAttachments().length > 0 ? this.formAttachments() : null,
     };
     const req: AutomationTestCaseRequest = {
       name: this.formName(),
@@ -566,6 +587,13 @@ export class AutomationTestPanelComponent {
       case 'CATEGORIZE':
         if (d['categoryName']) items.push({ label: this.i18n.t('auto_test_category_label'), value: String(d['categoryName']) });
         if (d['confidence'] !== undefined) items.push({ label: this.i18n.t('auto_test_confidence_label'), value: `${Number(d['confidence'])}%` });
+        break;
+
+      case 'FOREACH':
+        if (d['source']) items.push({ label: this.i18n.t('auto_foreach_source'), value: String(d['source']) });
+        if (d['count'] !== undefined) items.push({ label: this.i18n.t('auto_var_foreach_count'), value: String(d['count']) });
+        if (d['alias']) items.push({ label: this.i18n.t('auto_foreach_alias'), value: String(d['alias']) });
+        if (d['truncatedFrom'] !== undefined) items.push({ label: '', value: `(${d['truncatedFrom']} → ${d['count']})` });
         break;
 
       case 'VECTOR_SEARCH': {

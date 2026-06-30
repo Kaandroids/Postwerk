@@ -21,6 +21,15 @@ export interface TestEmailInput {
   triggerPayload?: Record<string, unknown> | null;
   /** Seeded INPUT-node field values when testing an integration (kind=INTEGRATION). */
   inputFields?: Record<string, unknown> | null;
+  /** Mock attachment metadata so a FOREACH over email.attachments can be exercised in a dry-run test. */
+  attachments?: TestAttachment[] | null;
+}
+
+/** A mock attachment for a test case (metadata only — name/type/size). */
+export interface TestAttachment {
+  name: string;
+  contentType: string;
+  size: number;
 }
 
 export interface TestAssertion {

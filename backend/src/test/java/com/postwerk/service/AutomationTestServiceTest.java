@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -54,7 +55,7 @@ class AutomationTestServiceTest {
                 emailAccountRepository,
                 executorService,
                 objectMapper,
-                null // self — will be set via reflection
+                null // self â€” will be set via reflection
         );
         // Set self field via reflection so self.executeTest() calls work
         Field selfField = AutomationTestServiceImpl.class.getDeclaredField("self");
@@ -68,7 +69,7 @@ class AutomationTestServiceTest {
         automation = buildAutomation();
     }
 
-    // ─── getTestCases ─────────────────────────────────────────────────
+    // â”€â”€â”€ getTestCases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void getTestCases_returnsTestCasesForAutomation() throws Exception {
@@ -124,7 +125,7 @@ class AutomationTestServiceTest {
         assertThat(result.get(0).lastResult().totalCount()).isEqualTo(1);
     }
 
-    // ─── createTestCase ───────────────────────────────────────────────
+    // â”€â”€â”€ createTestCase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void createTestCase_success_savesAndReturns() throws Exception {
@@ -142,7 +143,7 @@ class AutomationTestServiceTest {
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "My Test",
                 "Test description",
-                new TestEmailInput("sender@example.com", "receiver@example.com", "Hello", "Body content", null, null, null, null, null),
+                new TestEmailInput("sender@example.com", "receiver@example.com", "Hello", "Body content", null, null, null, null, null, null),
                 List.of(new TestAssertion(UUID.randomUUID(), "PASSED", null, null)),
                 null
         );
@@ -165,7 +166,7 @@ class AutomationTestServiceTest {
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "Overflow Test",
                 null,
-                new TestEmailInput("a@b.com", "c@d.com", "Sub", "Body", null, null, null, null, null),
+                new TestEmailInput("a@b.com", "c@d.com", "Sub", "Body", null, null, null, null, null, null),
                 null,
                 null
         );
@@ -183,7 +184,7 @@ class AutomationTestServiceTest {
 
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "Test", null,
-                new TestEmailInput("a@b.com", "c@d.com", "Sub", "Body", null, null, null, null, null),
+                new TestEmailInput("a@b.com", "c@d.com", "Sub", "Body", null, null, null, null, null, null),
                 null,
                 null
         );
@@ -192,7 +193,7 @@ class AutomationTestServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ─── updateTestCase ───────────────────────────────────────────────
+    // â”€â”€â”€ updateTestCase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void updateTestCase_success_updatesAndReturns() throws Exception {
@@ -206,7 +207,7 @@ class AutomationTestServiceTest {
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "Updated Name",
                 "Updated desc",
-                new TestEmailInput("new@sender.com", "new@receiver.com", "New Subject", "New Body", null, null, null, null, null),
+                new TestEmailInput("new@sender.com", "new@receiver.com", "New Subject", "New Body", null, null, null, null, null, null),
                 null,
                 null
         );
@@ -226,7 +227,7 @@ class AutomationTestServiceTest {
 
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "X", null,
-                new TestEmailInput("a@b.com", "c@d.com", "S", "B", null, null, null, null, null),
+                new TestEmailInput("a@b.com", "c@d.com", "S", "B", null, null, null, null, null, null),
                 null,
                 null
         );
@@ -245,7 +246,7 @@ class AutomationTestServiceTest {
 
         AutomationTestCaseRequest request = new AutomationTestCaseRequest(
                 "X", null,
-                new TestEmailInput("a@b.com", "c@d.com", "S", "B", null, null, null, null, null),
+                new TestEmailInput("a@b.com", "c@d.com", "S", "B", null, null, null, null, null, null),
                 null,
                 null
         );
@@ -254,7 +255,7 @@ class AutomationTestServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ─── deleteTestCase ───────────────────────────────────────────────
+    // â”€â”€â”€ deleteTestCase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void deleteTestCase_success_deletesResultsAndTestCase() {
@@ -296,7 +297,7 @@ class AutomationTestServiceTest {
         verify(testCaseRepository, never()).delete(any());
     }
 
-    // ─── runTest ──────────────────────────────────────────────────────
+    // â”€â”€â”€ runTest â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runTest_success_executesAndReturnsPassed() throws Exception {
@@ -408,7 +409,7 @@ class AutomationTestServiceTest {
         verify(emailAccountRepository, never()).findById(any());
     }
 
-    // ─── runAllTests ──────────────────────────────────────────────────
+    // â”€â”€â”€ runAllTests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runAllTests_allPassed_returnsCorrectCounts() throws Exception {
@@ -497,7 +498,7 @@ class AutomationTestServiceTest {
         assertThat(response.results()).isEmpty();
     }
 
-    // ─── Assertion evaluation ─────────────────────────────────────────
+    // â”€â”€â”€ Assertion evaluation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runTest_withFailedAssertion_returnsFailed() throws Exception {
@@ -506,7 +507,7 @@ class AutomationTestServiceTest {
         UUID nodeId = UUID.randomUUID();
         // Test case expects node to have status "EXTRACTED" but node actually returns "PASSED"
         String emailInputJson = objectMapper.writeValueAsString(
-                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body text", null, null, null, null, null));
+                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body text", null, null, null, null, null, null));
         String assertionsJson = objectMapper.writeValueAsString(
                 List.of(new TestAssertion(nodeId, "EXTRACTED", null, null)));
 
@@ -548,12 +549,49 @@ class AutomationTestServiceTest {
     }
 
     @Test
+    void runTest_seedsMockAttachmentsOntoSyntheticEmail() throws Exception {
+        when(automationRepository.findByIdAndOrganizationId(automationId, orgId)).thenReturn(Optional.of(automation));
+
+        UUID nodeId = UUID.randomUUID();
+        String emailInputJson = objectMapper.writeValueAsString(
+                new TestEmailInput("from@test.com", "to@test.com", "Subj", "Body", null, null, null, null, null,
+                        List.of(Map.of("name", "invoice.pdf", "contentType", "application/pdf", "size", 1024))));
+        String assertionsJson = objectMapper.writeValueAsString(
+                List.of(new TestAssertion(nodeId, "PASSED", null, null)));
+        AutomationTestCase tc = AutomationTestCase.builder()
+                .id(testCaseId).automationId(automationId).name("Attachments Test")
+                .emailInput(emailInputJson).assertions(assertionsJson).sortOrder(0)
+                .createdAt(Instant.now()).updatedAt(Instant.now()).build();
+        when(testCaseRepository.findById(testCaseId)).thenReturn(Optional.of(tc));
+
+        EmailAutomationTrace trace = buildTrace(nodeId);
+        ArgumentCaptor<Email> emailCaptor = ArgumentCaptor.forClass(Email.class);
+        when(executorService.runTestDryRun(eq(automation), emailCaptor.capture(), any(EmailAccount.class), any(), any(), any()))
+                .thenReturn(trace);
+        EmailAccount account = new EmailAccount();
+        account.setId(automation.getAccountIds()[0]);
+        when(emailAccountRepository.findById(automation.getAccountIds()[0])).thenReturn(Optional.of(account));
+        when(testResultRepository.save(any(AutomationTestResult.class))).thenAnswer(invocation -> {
+            AutomationTestResult saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            saved.setExecutedAt(Instant.now());
+            return saved;
+        });
+
+        service.runTest(orgId, automationId, testCaseId);
+
+        Email synthetic = emailCaptor.getValue();
+        assertThat(synthetic.isHasAttachments()).isTrue();
+        assertThat(synthetic.getAttachments()).contains("invoice.pdf").contains("application/pdf");
+    }
+
+    @Test
     void runTest_withMatchingAssertion_returnsPassed() throws Exception {
         when(automationRepository.findByIdAndOrganizationId(automationId, orgId)).thenReturn(Optional.of(automation));
 
         UUID nodeId = UUID.randomUUID();
         String emailInputJson = objectMapper.writeValueAsString(
-                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body text", null, null, null, null, null));
+                new TestEmailInput("from@test.com", "to@test.com", "Subject", "Body text", null, null, null, null, null, null));
         String assertionsJson = objectMapper.writeValueAsString(
                 List.of(new TestAssertion(nodeId, "PASSED", null, null)));
 
@@ -593,7 +631,7 @@ class AutomationTestServiceTest {
         assertThat(response.assertionResults().get(0).passed()).isTrue();
     }
 
-    // ─── inReplyTo & categoryIds on synthetic email ─────────────────
+    // â”€â”€â”€ inReplyTo & categoryIds on synthetic email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
     void runTest_withInReplyTo_syntheticEmailHasInReplyToSet() throws Exception {
@@ -601,7 +639,7 @@ class AutomationTestServiceTest {
 
         String emailInputJson = objectMapper.writeValueAsString(
                 new TestEmailInput("from@test.com", "to@test.com", "Re: Hello", "Reply body", null,
-                        "<original-msg-123@example.com>", null, null, null));
+                        "<original-msg-123@example.com>", null, null, null, null));
         AutomationTestCase tc = AutomationTestCase.builder()
                 .id(testCaseId).automationId(automationId).name("Reply Test")
                 .emailInput(emailInputJson).sortOrder(0)
@@ -635,7 +673,7 @@ class AutomationTestServiceTest {
         UUID catId2 = UUID.randomUUID();
         String emailInputJson = objectMapper.writeValueAsString(
                 new TestEmailInput("from@test.com", "to@test.com", "Categorized", "Body", null,
-                        null, List.of(catId1.toString(), catId2.toString()), null, null));
+                        null, List.of(catId1.toString(), catId2.toString()), null, null, null));
         AutomationTestCase tc = AutomationTestCase.builder()
                 .id(testCaseId).automationId(automationId).name("Category Test")
                 .emailInput(emailInputJson).sortOrder(0)
@@ -666,7 +704,7 @@ class AutomationTestServiceTest {
         when(automationRepository.findByIdAndOrganizationId(automationId, orgId)).thenReturn(Optional.of(automation));
 
         String emailInputJson = objectMapper.writeValueAsString(
-                new TestEmailInput("from@test.com", "to@test.com", "Normal", "Body", null, null, null, null, null));
+                new TestEmailInput("from@test.com", "to@test.com", "Normal", "Body", null, null, null, null, null, null));
         AutomationTestCase tc = AutomationTestCase.builder()
                 .id(testCaseId).automationId(automationId).name("Normal Test")
                 .emailInput(emailInputJson).sortOrder(0)
@@ -692,7 +730,7 @@ class AutomationTestServiceTest {
         assertThat(response.status()).isEqualTo("PASSED");
     }
 
-    // ─── Helpers ──────────────────────────────────────────────────────
+    // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private Automation buildAutomation() {
         return Automation.builder()
@@ -710,7 +748,7 @@ class AutomationTestServiceTest {
     private AutomationTestCase buildTestCase(String name, int sortOrder) {
         try {
             String emailInputJson = objectMapper.writeValueAsString(
-                    new TestEmailInput("sender@test.com", "receiver@test.com", "Test Subject", "Test body content", null, null, null, null, null));
+                    new TestEmailInput("sender@test.com", "receiver@test.com", "Test Subject", "Test body content", null, null, null, null, null, null));
             return AutomationTestCase.builder()
                     .id(testCaseId)
                     .automationId(automationId)
