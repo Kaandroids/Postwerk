@@ -1,0 +1,28 @@
+# Codecov configuration.
+#
+# Two independent coverage reports are uploaded, tagged with flags `backend` (JaCoCo) and
+# `frontend` (Vitest lcov). CI is path-filtered, so a backend-only or frontend-only PR uploads
+# just ONE flag. Without carryforward, the combined "project" coverage on such a commit drops the
+# other stack's contribution (it counts those files as 0%), which is why a string of frontend-only
+# PRs made the project number collapse even though backend coverage never changed.
+#
+# `carryforward: true` keeps each flag's last-known coverage when it isn't re-uploaded, so the
+# combined project number always reflects BOTH stacks (~backend + ~frontend) instead of whichever
+# flag happened to run.
+
+coverage:
+  status:
+    project:
+      default:
+        informational: true   # report the trend; the merge gate is the required "CI OK" check
+    patch:
+      default:
+        informational: false  # the per-PR changed-lines status we rely on
+
+flag_management:
+  default_rules:
+    carryforward: true
+
+comment:
+  layout: "condensed_header, flags, files"
+  require_changes: false
