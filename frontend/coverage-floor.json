@@ -1,4 +1,4 @@
 {
-  "lines": 19.4,
+  "lines": 42.5,
   "_comment": "Ratcheting frontend line-coverage floor enforced by scripts/check-coverage-floor.mjs. Raise this in each coverage PR; never lower it without a documented reason."
 }
