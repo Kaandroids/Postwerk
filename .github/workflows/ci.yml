@@ -85,6 +85,8 @@ jobs:
           min-coverage-overall: 30
           min-coverage-changed-files: 0
 
+      # Flag `backend`; combined with the `frontend` flag on Codecov. carryforward (codecov.yml)
+      # keeps this flag's coverage in the project number on frontend-only PRs.
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         continue-on-error: true
