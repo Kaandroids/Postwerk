@@ -190,6 +190,24 @@
                   <input class="tp-finput tp-mono" type="text" [value]="formInReplyTo()" (input)="formInReplyTo.set(v($event))"
                     data-testid="test-email-in-reply-to" placeholder="<message-id@example.com>" />
                 </label>
+                <div class="tp-ffield tp-full" data-testid="test-email-attachments">
+                  <span class="tp-flabel">{{ i18n.t('auto_test_attachments') }}</span>
+                  @for (att of formAttachments(); track $index; let i = $index) {
+                    <div class="tp-pl-row" data-testid="test-attachment-row">
+                      <input class="tp-finput" type="text" [value]="att.name" (input)="updateAttachment(i, 'name', v($event))"
+                        [placeholder]="i18n.t('auto_test_attachment_name')" data-testid="test-attachment-name" />
+                      <input class="tp-finput tp-mono" type="text" [value]="att.contentType" (input)="updateAttachment(i, 'contentType', v($event))"
+                        placeholder="application/pdf" data-testid="test-attachment-type" />
+                      <input class="tp-finput" type="number" [value]="att.size" (input)="updateAttachment(i, 'size', v($event))"
+                        [placeholder]="i18n.t('auto_test_attachment_size')" data-testid="test-attachment-size" />
+                      <button class="tp-icon-btn tp-icon-btn-danger" type="button" (click)="removeAttachment(i)"
+                        [attr.aria-label]="i18n.t('auto_cancel')"><app-icon name="x" /></button>
+                    </div>
+                  }
+                  <button class="tp-add-btn" type="button" (click)="addAttachment()" data-testid="test-attachment-add">
+                    <app-icon name="plus" />{{ i18n.t('auto_test_attachment_add') }}
+                  </button>
+                </div>
               </div>
               @if (allCategories().length > 0) {
                 <div class="tp-pane-body tp-pane-cats">

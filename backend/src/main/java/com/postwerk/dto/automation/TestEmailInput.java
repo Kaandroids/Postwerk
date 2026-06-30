@@ -14,6 +14,9 @@ import java.util.Map;
  *       automations (the inbound payload the user expects to receive).</li>
  *   <li><b>{@code inputFields}</b> — seeds {@code input.*} variables for INTEGRATION-kind
  *       automations started from their INPUT node.</li>
+ *   <li><b>{@code attachments}</b> — mock attachment metadata ({@code name}/{@code contentType}/
+ *       {@code size}) seeded onto the synthetic email so a FOREACH over {@code email.attachments}
+ *       can be exercised in a dry-run test.</li>
  * </ul>
  */
 public record TestEmailInput(
@@ -25,5 +28,6 @@ public record TestEmailInput(
         String inReplyTo,
         List<String> categoryIds,
         Map<String, Object> triggerPayload,
-        Map<String, Object> inputFields
+        Map<String, Object> inputFields,
+        List<Map<String, Object>> attachments
 ) {}

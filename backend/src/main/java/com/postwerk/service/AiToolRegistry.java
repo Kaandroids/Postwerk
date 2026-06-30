@@ -149,7 +149,7 @@ public class AiToolRegistry {
                     "Complete or cancel the current plan first.");
         }
 
-        // Holder for the automation id whose flow was just replaced; non-null → attach validation issues.
+        // Holder for the automation id whose flow was just replaced; non-null â†’ attach validation issues.
         final UUID[] flowValidationId = {null};
         try {
             Object result = switch (name) {
@@ -268,12 +268,12 @@ public class AiToolRegistry {
         return new FlowUpdateRequest(nodes, edges, viewport);
     }
 
-    // ─── Tool Declarations ──────────────────────────────────────────────
+    // â”€â”€â”€ Tool Declarations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private FunctionDeclaration proposeAutomationPlan() {
         return FunctionDeclaration.builder()
                 .name("propose_automation_plan")
-                .description("Call this BEFORE presenting your automation plan. This activates planning mode — " +
+                .description("Call this BEFORE presenting your automation plan. This activates planning mode â€” " +
                         "automation write tools become available only after the user confirms. " +
                         "After calling this tool, you MUST present the full detailed plan in your text response.")
                 .parameters(Schema.builder()
@@ -634,7 +634,7 @@ public class AiToolRegistry {
                 categoryIds,
                 null,
                 null
-        );
+        , null);
 
         List<TestAssertion> assertions = new ArrayList<>();
         Object assertionsObj = args.get("assertions");
