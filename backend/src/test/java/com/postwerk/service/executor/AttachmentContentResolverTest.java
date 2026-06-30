@@ -123,6 +123,33 @@ class AttachmentContentResolverTest {
     }
 
     @Test
+    void fetch_typeAllowlist_isCaseInsensitive() {
+        // Metadata content type in upper case, allowlist in lower case → still matches.
+        email.setAttachments("[{\"name\":\"p.PDF\",\"size\":\"1 KB\",\"contentType\":\"APPLICATION/PDF\"}]");
+        when(emailSyncService.downloadAttachment(eq(account), eq(12345L), eq(0), eq("INBOX")))
+                .thenReturn(new Object[]{"p.PDF", "application/pdf", new byte[40]});
+
+        AttachmentFetchResult result = resolver.fetch(account, email,
+                new AttachmentSelection(null, Set.of("application/pdf"), 10, 1_000_000, 1_000_000));
+
+        assertThat(result.fetched()).hasSize(1);
+        assertThat(result.skipped()).isEmpty();
+    }
+
+    @Test
+    void fetch_totalSizeCap_acceptsExactlyAtTheBoundary() {
+        stubDownload(0, "invoice.pdf", "application/pdf", 400);
+        stubDownload(1, "photo.png", "image/png", 600);
+
+        // 400 + 600 == 1000 cap exactly → both fit (the cap is inclusive).
+        AttachmentFetchResult result = resolver.fetch(account, email,
+                new AttachmentSelection(Set.of(0, 1), null, 10, 1_000_000, 1_000));
+
+        assertThat(result.fetched()).extracting(a -> a.index()).containsExactly(0, 1);
+        assertThat(result.skipped()).isEmpty();
+    }
+
+    @Test
     void fetch_perFileSizeCap_skipsOversized() {
         stubDownload(0, "invoice.pdf", "application/pdf", 5_000);
         stubDownload(1, "photo.png", "image/png", 50);

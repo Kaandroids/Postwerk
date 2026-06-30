@@ -137,6 +137,17 @@ class ForEachNodeProcessorTest {
     }
 
     @Test
+    void blankAlias_fallsBackToDefaultItem() {
+        ExecutionContext ctx = ctxWith(Map.of("email.attachments",
+                List.of(attachment("a.pdf", "application/pdf"))));
+
+        NodeProcessorResult result = processor.process(
+                node("{\"sourceVariable\":\"email.attachments\",\"itemAlias\":\"\"}"), ctx, userId);
+
+        assertThat(result.fanOutContexts().get(0).getVariable("item.name")).isEqualTo("a.pdf");
+    }
+
+    @Test
     void iterationsAreCappedAtMaxIterations() {
         List<Object> big = new ArrayList<>();
         for (int i = 0; i < ForEachNodeProcessor.MAX_ITERATIONS + 1; i++) {
