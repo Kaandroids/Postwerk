@@ -155,8 +155,13 @@ jobs:
         working-directory: frontend
         run: npx ng test --no-watch
 
-      # Coverage thresholds are not enforced yet (suite is young). The report is
-      # published so the trend is visible and can be ratcheted up over time.
+      # Ratcheting coverage gate (analogue of the backend jacoco-check): fails if line
+      # coverage drops below the floor committed in frontend/coverage-floor.json. Each
+      # coverage PR raises the floor, so the suite can only grow — never silently regress.
+      - name: Enforce coverage floor (ratchet)
+        working-directory: frontend
+        run: npm run coverage:floor
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         continue-on-error: true
